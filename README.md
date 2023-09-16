@@ -1,6 +1,4 @@
-<h1 aling="center">
-——[ɴᴏᴛᴇ]:- ɢɪᴠᴇ ᴄʀᴇᴅɪᴛ ᴛᴏ [ᴠᴇɴᴏᴍ](https://t.me/venom_bolti_public)
-</h1>
+  <p align="center"><a href="https://t.me/venom_bolti_public"> <img src="https://img.shields.io/badge/Give%20Me%20Credit-Red?style=for-the-badge&logo=Owner" width="220" height="38.45"/></a></p>
 
 
 <h2 align="center">
