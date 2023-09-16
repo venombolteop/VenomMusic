@@ -1,3 +1,8 @@
+<h1 aling="center">
+——[ɴᴏᴛᴇ]:- ɢɪᴠᴇ ᴄʀᴇᴅɪᴛ ᴛᴏ [ᴠᴇɴᴏᴍ](https://t.me/venom_bolti_public)
+</h1>
+
+
 <h2 align="center">
     ──「  𝐈𝛕ᷟ͢𝚣⃪ꙴ ⋆‌⃝ʜᴏᴛ𓃭 ⃟ᴍᴜsɪᴄ⛦⃕͜༆ 」──
 </h2>
