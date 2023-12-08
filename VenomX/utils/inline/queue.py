@@ -1,4 +1,5 @@
 from typing import Union
+from config import OWNER_ID, SUPPORT_CHAT
 
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -24,10 +25,10 @@ def queue_markup(
         ],
          [
             InlineKeyboardButton(
-                text="🥀 ᴏᴡɴᴇʀ 🥀", url="https://t.me/Venom_bolti_public",
+                text="🥀 ᴏᴡɴᴇʀ 🥀", url=f"tg://openmessage?user_id={OWNER_ID}",
             ),
             InlineKeyboardButton(
-                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url="https://t.me/Venom_Chatting",
+                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url=SUPPORT_CHAT,
             ),
         ],
     ]
@@ -50,10 +51,10 @@ def queue_markup(
         ],
          [
             InlineKeyboardButton(
-                text="🥀 ᴏᴡɴᴇʀ 🥀", url="https://t.me/Venom_bolti_public",
+                text="🥀 ᴏᴡɴᴇʀ 🥀", url=f"tg://openmessage?user_id={OWNER_ID}",
             ),
             InlineKeyboardButton(
-                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url="https://t.me/Venom_Chatting",
+                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url=SUPPORT_CHAT,
             ),
         ],
     ]
@@ -76,10 +77,10 @@ def queue_back_markup(_, CPLAY):
            ],
              [
             InlineKeyboardButton(
-                text="🥀 ᴏᴡɴᴇʀ 🥀", url="https://t.me/Venom_bolti_public",
+                text="🥀 ᴏᴡɴᴇʀ 🥀", url=f"tg://openmessage?user_id={OWNER_ID}",
             ),
             InlineKeyboardButton(
-                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url="https://t.me/Venom_Chatting",
+                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url=SUPPORT_CHAT,
             ),
         ],
         ]
@@ -97,10 +98,10 @@ def aq_markup(_, chat_id):
         ],
          [
             InlineKeyboardButton(
-                text="🥀 ᴏᴡɴᴇʀ 🥀", url="https://t.me/Venom_bolti_public",
+                text="🥀 ᴏᴡɴᴇʀ 🥀", url=f"tg://openmessage?user_id={OWNER_ID}",
             ),
             InlineKeyboardButton(
-                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url="https://t.me/Venom_Chatting",
+                text="🥀 sᴜᴩᴩᴏʀᴛ 🥀", url=SUPPORT_CHAT,
             ),
         ],
     ]
