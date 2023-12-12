@@ -5,11 +5,11 @@ from pyrogram import idle
 from pytgcalls.exceptions import NoActiveGroupCall
 
 import config
-from Susanta import LOGGER, app, userbot
-from Susanta.core.call import Bhandari
-from Susanta.misc import sudo
-from Susanta.plugins import ALL_MODULES
-from Susanta.utils.database import get_banned_users, get_gbanned
+from VenomX import LOGGER, app, userbot
+from VenomX.core.call import Bhandari
+from VenomX.misc import sudo
+from VenomX.plugins import ALL_MODULES
+from VenomX.utils.database import get_banned_users, get_gbanned
 from config import BANNED_USERS
 
 
@@ -35,27 +35,27 @@ async def init():
         pass
     await app.start()
     for all_module in ALL_MODULES:
-        importlib.import_module("Susanta.plugins" + all_module)
-    LOGGER("Susanta.plugins").info("Successfully Imported Modules...")
+        importlib.import_module("VenomX.plugins" + all_module)
+    LOGGER("VenomX.plugins").info("Successfully Imported Modules...")
     await userbot.start()
     await Bhandari.start()
     try:
         await Bhandari.stream_call("https://te.legra.ph/file/29f784eb49d230ab62e9e.mp4")
     except NoActiveGroupCall:
-        LOGGER("Susanta").error(
+        LOGGER("VenomX").error(
             "Please turn on the videochat of your log group\channel.\n\nStopping Bot..."
         )
         exit()
     except:
         pass
     await Bhandari.decorators()
-    LOGGER("Susanta").info(
+    LOGGER("VenomX").info(
         "Music Bot Started Successfully, Now Gib your girlfriend chumt to @Susanta_bhandari"
     )
     await idle()
     await app.stop()
     await userbot.stop()
-    LOGGER("Susanta").info("Stopping Susanta Music Bot...")
+    LOGGER("VenomX").info("Stopping Susanta Music Bot...")
 
 
 if __name__ == "__main__":
