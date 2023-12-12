@@ -5,11 +5,11 @@ from pyrogram import idle
 from pytgcalls.exceptions import NoActiveGroupCall
 
 import config
-from VenomX import LOGGER, app, userbot
-from VenomX.core.call import Ayush
-from VenomX.misc import sudo
-from VenomX.plugins import ALL_MODULES
-from VenomX.utils.database import get_banned_users, get_gbanned
+from Susanta import LOGGER, app, userbot
+from Susanta.core.call import Bhandari
+from Susanta.misc import sudo
+from Susanta.plugins import ALL_MODULES
+from Susanta.utils.database import get_banned_users, get_gbanned
 from config import BANNED_USERS
 
 
