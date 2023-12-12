@@ -35,27 +35,27 @@ async def init():
         pass
     await app.start()
     for all_module in ALL_MODULES:
-        importlib.import_module("VenomX.plugins" + all_module)
-    LOGGER("VenomX.plugins").info("Successfully Imported Modules...")
+        importlib.import_module("Susanta.plugins" + all_module)
+    LOGGER("Susanta.plugins").info("Successfully Imported Modules...")
     await userbot.start()
-    await Ayush.start()
+    await Bhandari.start()
     try:
-        await Ayush.stream_call("https://te.legra.ph/file/29f784eb49d230ab62e9e.mp4")
+        await Bhandari.stream_call("https://te.legra.ph/file/29f784eb49d230ab62e9e.mp4")
     except NoActiveGroupCall:
-        LOGGER("VenomX").error(
+        LOGGER("Susanta").error(
             "Please turn on the videochat of your log group\channel.\n\nStopping Bot..."
         )
         exit()
     except:
         pass
-    await Ayush.decorators()
-    LOGGER("VenomX").info(
-        "Music Bot Started Successfully, Now Gib your girlfriend chumt to @Venom_bolti_public"
+    await Bhandari.decorators()
+    LOGGER("Susanta").info(
+        "Music Bot Started Successfully, Now Gib your girlfriend chumt to @Susanta_bhandari"
     )
     await idle()
     await app.stop()
     await userbot.stop()
-    LOGGER("VenomX").info("Stopping VenomX Music Bot...")
+    LOGGER("Susanta").info("Stopping Susanta Music Bot...")
 
 
 if __name__ == "__main__":
