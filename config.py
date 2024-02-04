@@ -84,7 +84,6 @@ chatstats = {}
 userstats = {}
 clean = {}
 
-autoclean = []
 
 START_IMG_URL = getenv(
     "START_IMG_URL", "https://telegra.ph/file/8a5171024a3bc5569ee3f.jpg"
