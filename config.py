@@ -42,8 +42,8 @@ GIT_TOKEN = getenv(
     "GIT_TOKEN", None
 )  # Fill this variable if your upstream repository is private
 
-SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/VenomOwners")
-SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/Venom_Chatz")
+SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/lundlelobsdk")
+SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/lundlelobsdkmera")
 
 # Set this to True if you want the assistant to automatically leave chats after an interval
 AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", "False"))
@@ -51,8 +51,8 @@ AUTO_SUGGESTION_MODE = getenv("AUTO_SUGGESTION_MODE", "False")
 AUTO_SUGGESTION_TIME = int(
     getenv("AUTO_SUGGESTION_TIME", "5400"))
 # Get this credentials from https://developer.spotify.com/dashboard
-SPOTIFY_CLIENT_ID = getenv("SPOTIFY_CLIENT_ID", "")
-SPOTIFY_CLIENT_SECRET = getenv("SPOTIFY_CLIENT_SECRET", "")
+SPOTIFY_CLIENT_ID = getenv("SPOTIFY_CLIENT_ID", "4b75b8708dfc478e9f1a37e0a2c024d4")
+SPOTIFY_CLIENT_SECRET = getenv("SPOTIFY_CLIENT_SECRET", "7241b5213810432d83923cc18b8bbea5")
 
 
 # Maximum limit for fetching playlist's track from youtube, spotify, apple links.
@@ -86,21 +86,21 @@ clean = {}
 
 
 START_IMG_URL = getenv(
-    "START_IMG_URL", "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
+    "START_IMG_URL", "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
 )
 PING_IMG_URL = getenv(
-    "PING_IMG_URL", "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
+    "PING_IMG_URL", "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
 )
-PLAYLIST_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-STATS_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-TELEGRAM_AUDIO_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-TELEGRAM_VIDEO_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-STREAM_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-SOUNCLOUD_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-YOUTUBE_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-SPOTIFY_ARTIST_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-SPOTIFY_ALBUM_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
-SPOTIFY_PLAYLIST_IMG_URL = "https://te.legra.ph/file/4629b93da2548b9d4d29e.jpg"
+PLAYLIST_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+STATS_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+TELEGRAM_AUDIO_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+TELEGRAM_VIDEO_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+STREAM_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+SOUNCLOUD_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+YOUTUBE_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+SPOTIFY_ARTIST_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+SPOTIFY_ALBUM_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
+SPOTIFY_PLAYLIST_IMG_URL = "https://lh3.googleusercontent.com/pw/ABLVV87fU6FgeNJr7q0ebTfn4klgaf1-MHnHkNmahyCY9och-LUKY2NsRyFNI3qw7g9VWTPgoyN6xDfZ6hFXacSa0eNSKy3K1ZFR7574HmDpflveoqjrXweDNcLmYwXcwOxuEbD8JoQgZCAokbF44EcsfOI=w720-h1280-s-no-gm?authuser=0"
 
 
 def time_to_seconds(time):
