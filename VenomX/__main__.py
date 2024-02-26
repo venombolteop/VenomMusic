@@ -50,7 +50,12 @@ async def init():
         pass
     await Ayush.decorators()
     LOGGER("VenomX").info(
-        "Music Bot Started Successfully, Now Gib your girlfriend chumt to @Venom_bolti_public"
+        " __     _______ _   _  ___  __  __   __  __ _   _ ____ ___ ____ 
+          \ \   / / ____| \ | |/ _ \|  \/  | |  \/  | | | / ___|_ _/ ___|
+           \ \ / /|  _| |  \| | | | | |\/| | | |\/| | | | \___ \| | |    
+            \ V / | |___| |\  | |_| | |  | | | |  | | |_| |___) | | |___ 
+             \_/  |_____|_| \_|\___/|_|  |_| |_|  |_|\___/|____/___\____|
+                                                                         "
     )
     await idle()
     await app.stop()
