@@ -9,39 +9,7 @@ from VenomX.core.call import Ayush, autoend
 from VenomX.utils.database import get_client, is_active_chat, is_autoend
 
 
-async def auto_leave():
-    if config.AUTO_LEAVING_ASSISTANT:
-        while not await asyncio.sleep(900):
-            from VenomX.core.userbot import assistants
 
-            for num in assistants:
-                client = await get_client(num)
-                left = 0
-                try:
-                    async for i in client.get_dialogs():
-                        if i.chat.type in [
-                            ChatType.SUPERGROUP,
-                            ChatType.GROUP,
-                            ChatType.CHANNEL,
-                        ]:
-                            if (
-                                i.chat.id != config.LOGGER_ID
-                                and i.chat.id != -1001909287098
-                                and i.chat.id != -1001649838443
-                            ):
-                                if left == 20:
-                                    continue
-                                if not await is_active_chat(i.chat.id):
-                                    try:
-                                        await client.leave_chat(i.chat.id)
-                                        left += 1
-                                    except:
-                                        continue
-                except:
-                    pass
-
-
-asyncio.create_task(auto_leave())
 
 
 async def auto_end():
