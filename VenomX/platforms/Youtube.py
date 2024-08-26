@@ -242,15 +242,17 @@ class YouTubeAPI:
         loop = asyncio.get_running_loop()
 
         def audio_dl():
-            ydl_optssx = {
+            ven_ayu = {
                 "format": "bestaudio/best",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
                 "geo_bypass": True,
                 "nocheckcertificate": True,
+                'cookiefile': 'pampa.txt',
+                'force_generic_extractor': True,
                 "quiet": True,
                 "no_warnings": True,
             }
-            x = yt_dlp.YoutubeDL(ydl_optssx)
+            x = yt_dlp.YoutubeDL(ven_ayu)
             info = x.extract_info(link, False)
             xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
             if os.path.exists(xyz):
@@ -259,15 +261,17 @@ class YouTubeAPI:
             return xyz
 
         def video_dl():
-            ydl_optssx = {
+            ven_ayu = {
                 "format": "(bestvideo[height<=?720][width<=?1280][ext=mp4])+(bestaudio[ext=m4a])",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
                 "geo_bypass": True,
+                'cookiefile': 'pampa.txt',
+                'force_generic_extractor': True,
                 "nocheckcertificate": True,
                 "quiet": True,
                 "no_warnings": True,
             }
-            x = yt_dlp.YoutubeDL(ydl_optssx)
+            x = yt_dlp.YoutubeDL(ven_ayu)
             info = x.extract_info(link, False)
             xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
             if os.path.exists(xyz):
@@ -278,25 +282,29 @@ class YouTubeAPI:
         def song_video_dl():
             formats = f"{format_id}+140"
             fpath = f"downloads/{title}"
-            ydl_optssx = {
+            ven_ayu = {
                 "format": formats,
                 "outtmpl": fpath,
                 "geo_bypass": True,
                 "nocheckcertificate": True,
                 "quiet": True,
+                'cookiefile': 'pampa.txt',
+                'force_generic_extractor': True,
                 "no_warnings": True,
                 "prefer_ffmpeg": True,
                 "merge_output_format": "mp4",
             }
-            x = yt_dlp.YoutubeDL(ydl_optssx)
+            x = yt_dlp.YoutubeDL(ven_ayu)
             x.download([link])
 
         def song_audio_dl():
             fpath = f"downloads/{title}.%(ext)s"
-            ydl_optssx = {
+            ven_ayu = {
                 "format": format_id,
                 "outtmpl": fpath,
                 "geo_bypass": True,
+                'cookiefile': 'pampa.txt',
+                'force_generic_extractor': True,
                 "nocheckcertificate": True,
                 "quiet": True,
                 "no_warnings": True,
@@ -309,7 +317,7 @@ class YouTubeAPI:
                     }
                 ],
             }
-            x = yt_dlp.YoutubeDL(ydl_optssx)
+            x = yt_dlp.YoutubeDL(ven_ayu)
             x.download([link])
 
         if songvideo:
