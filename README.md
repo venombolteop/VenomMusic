@@ -1,4 +1,7 @@
-  <p align="center"><a href="https://t.me/venom_bolti_public"> <img src="https://img.shields.io/badge/Credit%20To%20Owner-darkred?style=for-the-badge" width="220" height="38.45"/></a></p>
+
+  
+  
+<p align="center"><a href="https://t.me/venom_bolti_public"> <img src="https://img.shields.io/badge/Credit%20To%20Owner-darkred?style=for-the-badge" width="220" height="38.45"/></a></p>
 
 
 <h2 align="center">
@@ -39,6 +42,7 @@
 `sudo pip3 install -U pip`
 - Install Node js by :
 `curl -fssL https://deb.nodesource.com/setup_19.x | sudo -E bash - && sudo apt-get install nodejs -y && npm i -g npm`
+- Add your cookies to [pampa.txt](https://github.com/venombolteop/VenomMusic/blob/main/pampa.txt)
 - Clone the repository by :
 `git clone https://github.com/venombolteop/VenomMusic&& cd VenomMusic`
 - Install requirements by :
