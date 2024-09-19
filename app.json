@@ -23,7 +23,7 @@
         "required": true
       },
       "API_KEY": {
-        "description": "",
+        "description": "Get this value from  https://api.imgbb.com/",
         "value": "",
         "required": true
       },
