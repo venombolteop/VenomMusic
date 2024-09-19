@@ -22,6 +22,11 @@
         "value": "",
         "required": true
       },
+      "API_KEY": {
+        "description": "",
+        "value": "",
+        "required": true
+      },
       "BOT_TOKEN": {
         "description": "A Bot's token from Botfather",
         "value": "",
