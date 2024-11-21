@@ -56,11 +56,11 @@ async def song_commad_private(client, message: Message, _):
             return await message.reply_text(_["song_5"])
         mystic = await message.reply_text(_["play_1"])
         (
-            title,
-            duration_min,
-            duration_sec,
-            thumbnail,
-            vidid,
+         title,
+         duration_min,
+         duration_sec,
+         thumbnail,
+         vidid,
         ) = await YouTube.details(url)
         if str(duration_min) == "None":
             return await mystic.edit_text(_["song_3"])
@@ -84,11 +84,11 @@ async def song_commad_private(client, message: Message, _):
     query = message.text.split(None, 1)[1]
     try:
         (
-            title,
-            duration_min,
-            duration_sec,
-            thumbnail,
-            vidid,
+         title,
+         duration_min,
+         duration_sec,
+         thumbnail,
+         vidid,
         ) = await YouTube.details(query)
     except:
         return await mystic.edit_text(_["play_3"])
@@ -214,7 +214,6 @@ async def song_helper_cb(client, CallbackQuery, _):
 
 # Downloading Songs Here
 
-
 @app.on_callback_query(
     filters.regex(pattern=r"song_download") & ~BANNED_USERS
 )
@@ -229,12 +228,24 @@ async def song_download_cb(client, CallbackQuery, _):
     stype, format_id, vidid = callback_request.split("|")
     mystic = await CallbackQuery.edit_message_text(_["song_8"])
     yturl = f"https://www.youtube.com/watch?v={vidid}"
-    with yt_dlp.YoutubeDL({"quiet": True}) as ytdl:
+    
+    # Specify the path to your cookies file
+    cookie_file_path = "pampa.txt"  # Update this to your actual cookies file path
+
+    # Add the cookie file to yt-dlp options
+    ydl_opts = {
+        "quiet": True,
+        "cookiefile": cookie_file_path,  # Include cookies here
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ytdl:
         x = ytdl.extract_info(yturl, download=False)
+    
     title = (x["title"]).title()
     title = re.sub("\W+", " ", title)
     thumb_image_path = await CallbackQuery.message.download()
     duration = x["duration"]
+    
     if stype == "video":
         thumb_image_path = await CallbackQuery.message.download()
         width = CallbackQuery.message.photo.width
@@ -245,10 +256,11 @@ async def song_download_cb(client, CallbackQuery, _):
                 mystic,
                 songvideo=True,
                 format_id=format_id,
-                title=title,
+                title=title,  # Pass the cookie file here if needed
             )
         except Exception as e:
             return await mystic.edit_text(_["song_9"].format(e))
+        
         med = InputMediaVideo(
             media=file_path,
             duration=duration,
@@ -258,6 +270,7 @@ async def song_download_cb(client, CallbackQuery, _):
             caption=title,
             supports_streaming=True,
         )
+        
         await mystic.edit_text(_["song_11"])
         await app.send_chat_action(
             chat_id=CallbackQuery.message.chat.id,
@@ -269,6 +282,7 @@ async def song_download_cb(client, CallbackQuery, _):
             print(e)
             return await mystic.edit_text(_["song_10"])
         os.remove(file_path)
+    
     elif stype == "audio":
         try:
             filename = await YouTube.download(
@@ -276,10 +290,11 @@ async def song_download_cb(client, CallbackQuery, _):
                 mystic,
                 songaudio=True,
                 format_id=format_id,
-                title=title,
+                title=title,  # Pass the cookie file here if needed
             )
         except Exception as e:
             return await mystic.edit_text(_["song_9"].format(e))
+        
         med = InputMediaAudio(
             media=filename,
             caption=title,
@@ -287,6 +302,7 @@ async def song_download_cb(client, CallbackQuery, _):
             title=title,
             performer=x["uploader"],
         )
+        
         await mystic.edit_text(_["song_11"])
         await app.send_chat_action(
             chat_id=CallbackQuery.message.chat.id,
@@ -298,3 +314,4 @@ async def song_download_cb(client, CallbackQuery, _):
             print(e)
             return await mystic.edit_text(_["song_10"])
         os.remove(filename)
+
