@@ -6,8 +6,7 @@ from pyrogram import filters
 
 load_dotenv()
 
-# Get this value from  https://api.imgbb.com/
-API_KEY = getenv("API_KEY", "") 
+ 
 
 # Get this value from my.telegram.org/apps
 API_ID = int(getenv("API_ID", ""))
