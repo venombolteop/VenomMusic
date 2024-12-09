@@ -22,11 +22,6 @@
         "value": "",
         "required": true
       },
-      "API_KEY": {
-        "description": "Get this value from  https://api.imgbb.com/",
-        "value": "",
-        "required": true
-      },
       "BOT_TOKEN": {
         "description": "A Bot's token from Botfather",
         "value": "",
