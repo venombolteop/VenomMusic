@@ -1,3 +1,5 @@
+
+# All rights reserved.
 import aiohttp
 
 BASE = "https://batbin.me/"
@@ -13,7 +15,7 @@ async def post(url: str, *args, **kwargs):
         return data
 
 
-async def AyushBin(text):
+async def Ayushbin(text):
     resp = await post(f"{BASE}api/v2/paste", data=text)
     if not resp["success"]:
         return
