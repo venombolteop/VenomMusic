@@ -1,27 +1,31 @@
+
+# All rights reserved.
+#
+
+
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardMarkup, Message
 
 import config
-from VenomX import YouTube, app
+from config import BANNED_USERS
+from strings import command
+from VenomX import Platform, app
 from VenomX.core.call import Ayush
 from VenomX.misc import db
 from VenomX.utils.database import get_loop
 from VenomX.utils.decorators import AdminRightsCheck
-from VenomX.utils.inline import close_markup, stream_markup
+from VenomX.utils.inline.play import stream_markup, telegram_markup
 from VenomX.utils.stream.autoclear import auto_clean
-from VenomX.utils.thumbnails import get_thumb
-from config import BANNED_USERS
+from VenomX.utils.thumbnails import gen_thumb
 
 
-@app.on_message(
-    filters.command(["skip", "cskip", "next", "cnext"]) & filters.group & ~BANNED_USERS
-)
+@app.on_message(command("SKIP_COMMAND") & filters.group & ~BANNED_USERS)
 @AdminRightsCheck
 async def skip(cli, message: Message, _, chat_id):
     if not len(message.command) < 2:
         loop = await get_loop(chat_id)
         if loop != 0:
-            return await message.reply_text(_["admin_8"])
+            return await message.reply_text(_["admin_12"])
         state = message.text.split(None, 1)[1].strip()
         if state.isnumeric():
             state = int(state)
@@ -35,31 +39,35 @@ async def skip(cli, message: Message, _, chat_id):
                             popped = None
                             try:
                                 popped = check.pop(0)
-                            except:
-                                return await message.reply_text(_["admin_12"])
+                                if popped.get("mystic"):
+                                    try:
+                                        await popped.get("mystic").delete()
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                return await message.reply_text(_["admin_16"])
                             if popped:
                                 await auto_clean(popped)
                             if not check:
                                 try:
                                     await message.reply_text(
-                                        text=_["admin_6"].format(
-                                            message.from_user.mention,
-                                            message.chat.title,
+                                        _["admin_10"].format(
+                                            message.from_user.first_name
                                         ),
-                                        reply_markup=close_markup(_),
+                                        disable_web_page_preview=True,
                                     )
                                     await Ayush.stop_stream(chat_id)
-                                except:
+                                except Exception:
                                     return
                                 break
                     else:
-                        return await message.reply_text(_["admin_11"].format(count))
+                        return await message.reply_text(_["admin_15"].format(count))
                 else:
-                    return await message.reply_text(_["admin_10"])
+                    return await message.reply_text(_["admin_14"])
             else:
                 return await message.reply_text(_["queue_2"])
         else:
-            return await message.reply_text(_["admin_9"])
+            return await message.reply_text(_["admin_13"])
     else:
         check = db.get(chat_id)
         popped = None
@@ -67,94 +75,80 @@ async def skip(cli, message: Message, _, chat_id):
             popped = check.pop(0)
             if popped:
                 await auto_clean(popped)
+                if popped.get("mystic"):
+                    try:
+                        await popped.get("mystic").delete()
+                    except Exception:
+                        pass
             if not check:
                 await message.reply_text(
-                    text=_["admin_6"].format(
-                        message.from_user.mention, message.chat.title
-                    ),
-                    reply_markup=close_markup(_),
+                    _["admin_10"].format(message.from_user.first_name),
+                    disable_web_page_preview=True,
                 )
                 try:
                     return await Ayush.stop_stream(chat_id)
-                except:
+                except Exception:
                     return
-        except:
+        except Exception:
             try:
                 await message.reply_text(
-                    text=_["admin_6"].format(
-                        message.from_user.mention, message.chat.title
-                    ),
-                    reply_markup=close_markup(_),
+                    _["admin_10"].format(message.from_user.first_name),
+                    disable_web_page_preview=True,
                 )
                 return await Ayush.stop_stream(chat_id)
-            except:
+            except Exception:
                 return
     queued = check[0]["file"]
     title = (check[0]["title"]).title()
     user = check[0]["by"]
+    user_id = message.from_user.id
     streamtype = check[0]["streamtype"]
     videoid = check[0]["vidid"]
+    duration_min = check[0]["dur"]
     status = True if str(streamtype) == "video" else None
-    db[chat_id][0]["played"] = 0
-    exis = (check[0]).get("old_dur")
-    if exis:
-        db[chat_id][0]["dur"] = exis
-        db[chat_id][0]["seconds"] = check[0]["old_second"]
-        db[chat_id][0]["speed_path"] = None
-        db[chat_id][0]["speed"] = 1.0
     if "live_" in queued:
-        n, link = await YouTube.video(videoid, True)
+        n, link = await Platform.youtube.video(videoid, True)
         if n == 0:
-            return await message.reply_text(_["admin_7"].format(title))
+            return await message.reply_text(_["admin_11"].format(title))
         try:
-            image = await YouTube.thumbnail(videoid, True)
-        except:
-            image = None
-        try:
-            await Ayush.skip_stream(chat_id, link, video=status, image=image)
-        except:
-            return await message.reply_text(_["call_6"])
-        button = stream_markup(_, chat_id)
-        img = await get_thumb(videoid)
+            await Ayush.skip_stream(chat_id, link, video=status)
+        except Exception:
+            return await message.reply_text(_["call_7"])
+        button = telegram_markup(_, chat_id)
+        img = await gen_thumb(videoid)
         run = await message.reply_photo(
             photo=img,
             caption=_["stream_1"].format(
-                f"https://t.me/{app.username}?start=info_{videoid}",
-                title[:23],
-                check[0]["dur"],
                 user,
+                f"https://t.me/{app.username}?start=info_{videoid}",
             ),
             reply_markup=InlineKeyboardMarkup(button),
         )
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
     elif "vid_" in queued:
-        mystic = await message.reply_text(_["call_7"], disable_web_page_preview=True)
+        mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
         try:
-            file_path, direct = await YouTube.download(
+            file_path, direct = await Platform.youtube.download(
                 videoid,
                 mystic,
                 videoid=True,
                 video=status,
             )
-        except:
-            return await mystic.edit_text(_["call_6"])
+        except Exception:
+            return await mystic.edit_text(_["call_7"])
         try:
-            image = await YouTube.thumbnail(videoid, True)
-        except:
-            image = None
-        try:
-            await Ayush.skip_stream(chat_id, file_path, video=status, image=image)
-        except:
-            return await mystic.edit_text(_["call_6"])
-        button = stream_markup(_, chat_id)
-        img = await get_thumb(videoid)
+            await Ayush.skip_stream(chat_id, file_path, video=status)
+        except Exception:
+            return await mystic.edit_text(_["call_7"])
+        button = stream_markup(_, videoid, chat_id)
+        img = await gen_thumb(videoid)
         run = await message.reply_photo(
             photo=img,
             caption=_["stream_1"].format(
+                title[:27],
                 f"https://t.me/{app.username}?start=info_{videoid}",
-                title[:23],
-                check[0]["dur"],
+                duration_min,
                 user,
             ),
             reply_markup=InlineKeyboardMarkup(button),
@@ -165,9 +159,9 @@ async def skip(cli, message: Message, _, chat_id):
     elif "index_" in queued:
         try:
             await Ayush.skip_stream(chat_id, videoid, video=status)
-        except:
-            return await message.reply_text(_["call_6"])
-        button = stream_markup(_, chat_id)
+        except Exception:
+            return await message.reply_text(_["call_7"])
+        button = telegram_markup(_, chat_id)
         run = await message.reply_photo(
             photo=config.STREAM_IMG_URL,
             caption=_["stream_2"].format(user),
@@ -176,54 +170,60 @@ async def skip(cli, message: Message, _, chat_id):
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
     else:
-        if videoid == "telegram":
-            image = None
-        elif videoid == "soundcloud":
-            image = None
-        else:
-            try:
-                image = await YouTube.thumbnail(videoid, True)
-            except:
-                image = None
         try:
-            await Ayush.skip_stream(chat_id, queued, video=status, image=image)
-        except:
-            return await message.reply_text(_["call_6"])
+            await Ayush.skip_stream(chat_id, queued, video=status)
+        except Exception:
+            return await message.reply_text(_["call_7"])
         if videoid == "telegram":
-            button = stream_markup(_, chat_id)
+            button = telegram_markup(_, chat_id)
             run = await message.reply_photo(
-                photo=config.TELEGRAM_AUDIO_URL
-                if str(streamtype) == "audio"
-                else config.TELEGRAM_VIDEO_URL,
+                photo=(
+                    config.TELEGRAM_AUDIO_URL
+                    if str(streamtype) == "audio"
+                    else config.TELEGRAM_VIDEO_URL
+                ),
                 caption=_["stream_1"].format(
-                    config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
+                    title, config.SUPPORT_GROUP, check[0]["dur"], user
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
         elif videoid == "soundcloud":
-            button = stream_markup(_, chat_id)
+            button = telegram_markup(_, chat_id)
             run = await message.reply_photo(
-                photo=config.SOUNCLOUD_IMG_URL
-                if str(streamtype) == "audio"
-                else config.TELEGRAM_VIDEO_URL,
+                photo=(
+                    config.SOUNCLOUD_IMG_URL
+                    if str(streamtype) == "audio"
+                    else config.TELEGRAM_VIDEO_URL
+                ),
                 caption=_["stream_1"].format(
-                    config.SUPPORT_CHAT, title[:23], check[0]["dur"], user
+                    title, config.SUPPORT_GROUP, check[0]["dur"], user
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
+        elif "saavn" in videoid:
+            button = telegram_markup(_, chat_id)
+            url = check[0]["url"]
+            details = await Platform.saavn.info(url)
+            run = await message.reply_photo(
+                photo=details["thumb"] or config.TELEGRAM_AUDIO_URL,
+                caption=_["stream_1"].format(title, url, check[0]["dur"], user),
+                reply_markup=InlineKeyboardMarkup(button),
+            )
+            db[chat_id][0]["mystic"] = run
+            db[chat_id][0]["markup"] = "tg"
         else:
-            button = stream_markup(_, chat_id)
-            img = await get_thumb(videoid)
+            button = stream_markup(_, videoid, chat_id)
+            img = await gen_thumb(videoid)
             run = await message.reply_photo(
                 photo=img,
                 caption=_["stream_1"].format(
+                    title[:27],
                     f"https://t.me/{app.username}?start=info_{videoid}",
-                    title[:23],
-                    check[0]["dur"],
+                    duration_min,
                     user,
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
