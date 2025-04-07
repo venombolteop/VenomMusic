@@ -1,43 +1,69 @@
-from pyrogram import filters
+
+# All rights reserved.
+#
+
 from pyrogram.types import Message
 
+from config import BANNED_USERS
+from strings import command
 from VenomX import app
 from VenomX.misc import SUDOERS
 from VenomX.utils.database import add_gban_user, remove_gban_user
 from VenomX.utils.decorators.language import language
-from VenomX.utils.extraction import extract_user
-from config import BANNED_USERS
 
 
-@app.on_message(filters.command(["block"]) & SUDOERS)
+@app.on_message(command("BLOCK_COMMAND") & SUDOERS)
 @language
 async def useradd(client, message: Message, _):
     if not message.reply_to_message:
         if len(message.command) != 2:
             return await message.reply_text(_["general_1"])
-    user = await extract_user(message)
-    if user.id in BANNED_USERS:
-        return await message.reply_text(_["block_1"].format(user.mention))
-    await add_gban_user(user.id)
-    BANNED_USERS.add(user.id)
-    await message.reply_text(_["block_2"].format(user.mention))
+        user = message.text.split(None, 1)[1]
+        if "@" in user:
+            user = user.replace("@", "")
+        user = await app.get_users(user)
+        if user.id in BANNED_USERS:
+            return await message.reply_text(_["block_1"].format(user.mention))
+        await add_gban_user(user.id)
+        BANNED_USERS.add(user.id)
+        await message.reply_text(_["block_2"].format(user.mention))
+        return
+    if message.reply_to_message.from_user.id in BANNED_USERS:
+        return await message.reply_text(
+            _["block_1"].format(message.reply_to_message.from_user.mention)
+        )
+    await add_gban_user(message.reply_to_message.from_user.id)
+    BANNED_USERS.add(message.reply_to_message.from_user.id)
+    await message.reply_text(
+        _["block_2"].format(message.reply_to_message.from_user.mention)
+    )
 
 
-@app.on_message(filters.command(["unblock"]) & SUDOERS)
+@app.on_message(command("UNBLOCK_COMMAND") & SUDOERS)
 @language
 async def userdel(client, message: Message, _):
     if not message.reply_to_message:
         if len(message.command) != 2:
             return await message.reply_text(_["general_1"])
-    user = await extract_user(message)
-    if user.id not in BANNED_USERS:
-        return await message.reply_text(_["block_3"].format(user.mention))
-    await remove_gban_user(user.id)
-    BANNED_USERS.remove(user.id)
-    await message.reply_text(_["block_4"].format(user.mention))
+        user = message.text.split(None, 1)[1]
+        if "@" in user:
+            user = user.replace("@", "")
+        user = await app.get_users(user)
+        if user.id not in BANNED_USERS:
+            return await message.reply_text(_["block_3"])
+        await remove_gban_user(user.id)
+        BANNED_USERS.remove(user.id)
+        await message.reply_text(_["block_4"])
+        return
+    user_id = message.reply_to_message.from_user.id
+    if user_id not in BANNED_USERS:
+        return await message.reply_text(_["block_3"])
+    await remove_gban_user(user_id)
+    BANNED_USERS.remove(user_id)
+    await message.reply_text(_["block_4"])
 
 
-@app.on_message(filters.command(["blocked", "blockedusers", "blusers"]) & SUDOERS)
+@app.on_message(command("BLOCKED_COMMAND") & SUDOERS)
 @language
 async def sudoers_list(client, message: Message, _):
     if not BANNED_USERS:
@@ -50,7 +76,7 @@ async def sudoers_list(client, message: Message, _):
             user = await app.get_users(users)
             user = user.first_name if not user.mention else user.mention
             count += 1
-        except:
+        except Exception:
             continue
         msg += f"{count}➤ {user}\n"
     if count == 0:
