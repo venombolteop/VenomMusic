@@ -1,45 +1,50 @@
+
+# All rights reserved.
+#
+
 import asyncio
 
 import speedtest
-from pyrogram import filters
-from pyrogram.types import Message
 
+from strings import command
 from VenomX import app
 from VenomX.misc import SUDOERS
-from VenomX.utils.decorators.language import language
 
 
-def testspeed(m, _):
+def testspeed(m):
     try:
         test = speedtest.Speedtest()
         test.get_best_server()
-        m = m.edit_text(_["server_12"])
+        m = m.edit("⇆ Running Download Speedtest ...")
         test.download()
-        m = m.edit_text(_["server_13"])
+        m = m.edit("⇆ Running Upload SpeedTest...")
         test.upload()
         test.results.share()
         result = test.results.dict()
-        m = m.edit_text(_["server_14"])
+        m = m.edit("↻ Sharing SpeedTest results")
     except Exception as e:
-        return m.edit_text(f"<code>{e}</code>")
+        return m.edit(e)
     return result
 
 
-@app.on_message(filters.command(["speedtest", "spt"]) & SUDOERS)
-@language
-async def speedtest_function(client, message: Message, _):
-    m = await message.reply_text(_["server_11"])
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, testspeed, m, _)
-    output = _["server_15"].format(
-        result["client"]["isp"],
-        result["client"]["country"],
-        result["server"]["name"],
-        result["server"]["country"],
-        result["server"]["cc"],
-        result["server"]["sponsor"],
-        result["server"]["latency"],
-        result["ping"],
+@app.on_message(command("SPEEDTEST_COMMAND") & SUDOERS)
+async def speedtest_function(client, message):
+    m = await message.reply_text("ʀᴜɴɴɪɴɢ sᴘᴇᴇᴅᴛᴇsᴛ")
+    loop = asyncio.get_event_loop_policy().get_event_loop()
+    result = await loop.run_in_executor(None, testspeed, m)
+    output = f"""**Speedtest Results**
+    
+<u>**Client:**</u>
+**ISP :** {result['client']['isp']}
+**Country :** {result['client']['country']}
+  
+<u>**Server:**</u>
+**Name :** {result['server']['name']}
+**Country:** {result['server']['country']}, {result['server']['cc']}
+**Sponsor:** {result['server']['sponsor']}
+**Latency:** {result['server']['latency']}  
+**Ping :** {result['ping']}"""
+    msg = await app.send_photo(
+        chat_id=message.chat.id, photo=result["share"], caption=output
     )
-    msg = await message.reply_photo(photo=result["share"], caption=output)
     await m.delete()
