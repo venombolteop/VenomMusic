@@ -1,60 +1,106 @@
+
+# All rights reserved.
+#
+
 from pyrogram import filters
 from pyrogram.types import Message
 
+from config import BANNED_USERS, MONGO_DB_URI, OWNER_ID
+from strings import command
 from VenomX import app
 from VenomX.misc import SUDOERS
 from VenomX.utils.database import add_sudo, remove_sudo
 from VenomX.utils.decorators.language import language
-from VenomX.utils.extraction import extract_user
-from VenomX.utils.inline import close_markup
-from config import BANNED_USERS, OWNER_ID
 
 
-@app.on_message(filters.command(["addsudo"]) & filters.user(OWNER_ID))
+@app.on_message(command("ADDSUDO_COMMAND") & filters.user(OWNER_ID))
 @language
 async def useradd(client, message: Message, _):
+    if MONGO_DB_URI is None:
+        return await message.reply_text(
+            "**Due to privacy issues, You can't manage sudoers when you are on Venom Database.\n\n Please fill Your MONGO_DB_URI in your vars to use this features**"
+        )
     if not message.reply_to_message:
         if len(message.command) != 2:
             return await message.reply_text(_["general_1"])
-    user = await extract_user(message)
-    if user.id in SUDOERS:
-        return await message.reply_text(_["sudo_1"].format(user.mention))
-    added = await add_sudo(user.id)
+        user = message.text.split(None, 1)[1]
+        if "@" in user:
+            user = user.replace("@", "")
+        user = await app.get_users(user)
+        if user.id in SUDOERS:
+            return await message.reply_text(_["sudo_1"].format(user.mention))
+        added = await add_sudo(user.id)
+        if added:
+            SUDOERS.add(user.id)
+            await message.reply_text(_["sudo_2"].format(user.mention))
+        else:
+            await message.reply_text("Something wrong happened")
+        return
+    if message.reply_to_message.from_user.id in SUDOERS:
+        return await message.reply_text(
+            _["sudo_1"].format(message.reply_to_message.from_user.mention)
+        )
+    added = await add_sudo(message.reply_to_message.from_user.id)
     if added:
-        SUDOERS.add(user.id)
-        await message.reply_text(_["sudo_2"].format(user.mention))
+        SUDOERS.add(message.reply_to_message.from_user.id)
+        await message.reply_text(
+            _["sudo_2"].format(message.reply_to_message.from_user.mention)
+        )
     else:
-        await message.reply_text(_["sudo_8"])
+        await message.reply_text("Something wrong happened")
+    return
 
 
-@app.on_message(filters.command(["delsudo", "rmsudo"]) & filters.user(OWNER_ID))
+@app.on_message(command("DELSUDO_COMMAND") & filters.user(OWNER_ID))
 @language
 async def userdel(client, message: Message, _):
+    if MONGO_DB_URI is None:
+        return await message.reply_text(
+            "**Due to privacy issues, You can't manage sudoers when you are on Venom Database.\n\n Please fill Your MONGO_DB_URI in your vars to use this features**"
+        )
     if not message.reply_to_message:
         if len(message.command) != 2:
             return await message.reply_text(_["general_1"])
-    user = await extract_user(message)
-    if user.id not in SUDOERS:
-        return await message.reply_text(_["sudo_3"].format(user.mention))
-    removed = await remove_sudo(user.id)
+        user = message.text.split(None, 1)[1]
+        if "@" in user:
+            user = user.replace("@", "")
+        user = await app.get_users(user)
+        if user.id not in SUDOERS:
+            return await message.reply_text(_["sudo_3"])
+        removed = await remove_sudo(user.id)
+        if removed:
+            SUDOERS.remove(user.id)
+            await message.reply_text(_["sudo_4"])
+            return
+        await message.reply_text(f"Something wrong happened")
+        return
+    user_id = message.reply_to_message.from_user.id
+    if user_id not in SUDOERS:
+        return await message.reply_text(_["sudo_3"])
+    removed = await remove_sudo(user_id)
     if removed:
-        SUDOERS.remove(user.id)
-        await message.reply_text(_["sudo_4"].format(user.mention))
-    else:
-        await message.reply_text(_["sudo_8"])
+        SUDOERS.remove(user_id)
+        await message.reply_text(_["sudo_4"])
+        return
+    await message.reply_text(f"Something wrong happened")
 
 
-@app.on_message(filters.command(["sudolist", "listsudo", "sudoers"]) & ~BANNED_USERS)
+@app.on_message(command("SUDOUSERS_COMMAND") & ~BANNED_USERS)
 @language
 async def sudoers_list(client, message: Message, _):
     text = _["sudo_5"]
-    user = await app.get_users(OWNER_ID)
-    user = user.first_name if not user.mention else user.mention
-    text += f"1➤ {user}\n"
     count = 0
+    for x in OWNER_ID:
+        try:
+            user = await app.get_users(x)
+            user = user.first_name if not user.mention else user.mention
+            count += 1
+        except Exception:
+            continue
+        text += f"{count}➤ {user} (`{x}`)\n"
     smex = 0
     for user_id in SUDOERS:
-        if user_id != OWNER_ID:
+        if user_id not in OWNER_ID:
             try:
                 user = await app.get_users(user_id)
                 user = user.first_name if not user.mention else user.mention
@@ -62,10 +108,10 @@ async def sudoers_list(client, message: Message, _):
                     smex += 1
                     text += _["sudo_6"]
                 count += 1
-                text += f"{count}➤ {user}\n"
-            except:
+                text += f"{count}➤ {user} (`{user_id}`)\n"
+            except Exception:
                 continue
     if not text:
         await message.reply_text(_["sudo_7"])
     else:
-        await message.reply_text(text, reply_markup=close_markup(_))
+        await message.reply_text(text)
