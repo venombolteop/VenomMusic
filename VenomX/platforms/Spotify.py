@@ -1,3 +1,7 @@
+
+# All rights reserved.
+#
+
 import re
 
 import spotipy
@@ -5,9 +9,10 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from youtubesearchpython.__future__ import VideosSearch
 
 import config
+from VenomX.utils.decorators import asyncify
 
 
-class SpotifyAPI:
+class Spotify:
     def __init__(self):
         self.regex = r"^(https:\/\/open.spotify.com\/)(.*)$"
         self.client_id = config.SPOTIFY_CLIENT_ID
@@ -51,7 +56,8 @@ class SpotifyAPI:
         }
         return track_details, vidid
 
-    async def playlist(self, url):
+    @asyncify
+    def playlist(self, url: str) -> tuple:
         playlist = self.spotify.playlist(url)
         playlist_id = playlist["id"]
         results = []
@@ -65,7 +71,8 @@ class SpotifyAPI:
             results.append(info)
         return results, playlist_id
 
-    async def album(self, url):
+    @asyncify
+    def album(self, url: str) -> tuple:
         album = self.spotify.album(url)
         album_id = album["id"]
         results = []
@@ -76,23 +83,19 @@ class SpotifyAPI:
                 if "Various Artists" not in fetched:
                     info += fetched
             results.append(info)
+        return results, album_id
 
-        return (
-            results,
-            album_id,
-        )
-
-    async def artist(self, url):
-        artistinfo = self.spotify.artist(url)
-        artist_id = artistinfo["id"]
+    @asyncify
+    def artist(self, url: str) -> tuple:
+        artist_info = self.spotify.artist(url)
+        artist_id = artist_info["id"]
         results = []
-        artisttoptracks = self.spotify.artist_top_tracks(url)
-        for item in artisttoptracks["tracks"]:
+        artist_top_tracks = self.spotify.artist_top_tracks(url)
+        for item in artist_top_tracks["tracks"]:
             info = item["name"]
             for artist in item["artists"]:
                 fetched = f' {artist["name"]}'
                 if "Various Artists" not in fetched:
                     info += fetched
             results.append(info)
-
         return results, artist_id
