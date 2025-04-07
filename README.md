@@ -1,4 +1,4 @@
-<p align="center"><a href="https://github.com/venombolteop/VenomMusic/blob/main/pampa.txt"> <img src="https://img.shields.io/badge/Add%20Your%20Cookies-blue?style=for-the-badge" width="220" height="38.45"/></a></p>
+<p align="center"><a href="https://github.com/venombolteop/VenomMusic/blob/main/cookies/cookies.txt"> <img src="https://img.shields.io/badge/Add%20Your%20Cookies-blue?style=for-the-badge" width="220" height="38.45"/></a></p>
   
   
 <p align="center"><a href="https://t.me/venom_bolti_public"> <img src="https://img.shields.io/badge/Credit%20To%20Owner-darkred?style=for-the-badge" width="220" height="38.45"/></a></p>
@@ -9,7 +9,7 @@
 </h2>
 
 <p align="center">
-  <img src="https://te.legra.ph/file/754e95311eccb48b7aafc.jpg">
+  <img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg">
 </p>
 
 <p align="center">
@@ -40,9 +40,7 @@
 ```sudo apt-get install python3-pip -y```
 - Install pip by :
 ```sudo pip3 install -U pip```
-- Install Node js by :
-```curl -fssL https://deb.nodesource.com/setup_19.x | sudo -E bash - && sudo apt-get install nodejs -y && npm i -g npm```
-- Add your cookies to [pampa.txt](https://github.com/venombolteop/VenomMusic/blob/main/pampa.txt)
+- Add your cookies to [cookies.txt](https://github.com/venombolteop/VenomMusic/blob/main/cookies/cookies.txt)
 - Clone the repository by :
 ```git clone https://github.com/venombolteop/VenomMusic&& cd VenomMusic```
 - Install requirements by :
