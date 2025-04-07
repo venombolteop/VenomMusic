@@ -1,10 +1,13 @@
-from pyrogram import filters
-from pyrogram.types import Message
-from unidecode import unidecode
 
+# All rights reserved.
+#
+from pyrogram.errors import ChannelInvalid
+from pyrogram.types import Message
+
+from strings import command
 from VenomX import app
-from VenomX.misc import SUDOERS
-from VenomX.utils.database import (
+from VenomX.misc import SUDOERS, db
+from VenomX.utils.database.memorydatabase import (
     get_active_chats,
     get_active_video_chats,
     remove_active_chat,
@@ -12,65 +15,68 @@ from VenomX.utils.database import (
 )
 
 
-@app.on_message(filters.command(["activevc", "activevoice"]) & SUDOERS)
+# Function for removing the Active voice and video chat also clear the db dictionary for the chat
+async def _clear_(chat_id):
+    db[chat_id] = []
+    await remove_active_video_chat(chat_id)
+    await remove_active_chat(chat_id)
+
+
+@app.on_message(command("ACTIVEVC_COMMAND") & SUDOERS)
 async def activevc(_, message: Message):
-    mystic = await message.reply_text("» ɢᴇᴛᴛɪɴɢ ᴀᴄᴛɪᴠᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛs ʟɪsᴛ...")
+    mystic = await message.reply_text("Getting Active Voicechats....\nPlease hold on")
     served_chats = await get_active_chats()
     text = ""
     j = 0
     for x in served_chats:
         try:
             title = (await app.get_chat(x)).title
-        except:
-            await remove_active_chat(x)
-            continue
-        try:
             if (await app.get_chat(x)).username:
                 user = (await app.get_chat(x)).username
-                text += f"<b>{j + 1}.</b> <a href=https://t.me/{user}>{unidecode(title).upper()}</a> [<code>{x}</code>]\n"
+                text += f"<b>{j + 1}.</b>  [{title}](https://t.me/{user})[`{x}`]\n"
             else:
-                text += (
-                    f"<b>{j + 1}.</b> {unidecode(title).upper()} [<code>{x}</code>]\n"
-                )
+                text += f"<b>{j + 1}. {title}</b> [`{x}`]\n"
             j += 1
-        except:
+        except ChannelInvalid:
+            await _clear_(x)
             continue
     if not text:
-        await mystic.edit_text(f"» ɴᴏ ᴀᴄᴛɪᴠᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛs ᴏɴ {app.mention}.")
+        await mystic.edit_text("No active Chats Found")
     else:
         await mystic.edit_text(
-            f"<b>» ʟɪsᴛ ᴏғ ᴄᴜʀʀᴇɴᴛʟʏ ᴀᴄᴛɪᴠᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛs :</b>\n\n{text}",
+            f"**Active Voice Chat's:-**\n\n{text}",
             disable_web_page_preview=True,
         )
 
 
-@app.on_message(filters.command(["activev", "activevideo"]) & SUDOERS)
+@app.on_message(command("ACTIVEVIDEO_COMMAND") & SUDOERS)
 async def activevi_(_, message: Message):
-    mystic = await message.reply_text("» ɢᴇᴛᴛɪɴɢ ᴀᴄᴛɪᴠᴇ ᴠɪᴅᴇᴏ ᴄʜᴀᴛs ʟɪsᴛ...")
+    mystic = await message.reply_text("Getting Active Voicechats....\nPlease hold on")
     served_chats = await get_active_video_chats()
     text = ""
     j = 0
     for x in served_chats:
         try:
             title = (await app.get_chat(x)).title
-        except:
-            await remove_active_video_chat(x)
-            continue
-        try:
             if (await app.get_chat(x)).username:
                 user = (await app.get_chat(x)).username
-                text += f"<b>{j + 1}.</b> <a href=https://t.me/{user}>{unidecode(title).upper()}</a> [<code>{x}</code>]\n"
+                text += f"<b>{j + 1}.</b>  [{title}](https://t.me/{user})[`{x}`]\n"
             else:
-                text += (
-                    f"<b>{j + 1}.</b> {unidecode(title).upper()} [<code>{x}</code>]\n"
-                )
+                text += f"<b>{j + 1}. {title}</b> [`{x}`]\n"
             j += 1
-        except:
+        except ChannelInvalid:
+            await _clear_(x)
             continue
     if not text:
-        await mystic.edit_text(f"» ɴᴏ ᴀᴄᴛɪᴠᴇ ᴠɪᴅᴇᴏ ᴄʜᴀᴛs ᴏɴ {app.mention}.")
+        await mystic.edit_text("No active Chats Found")
     else:
         await mystic.edit_text(
-            f"<b>» ʟɪsᴛ ᴏғ ᴄᴜʀʀᴇɴᴛʟʏ ᴀᴄᴛɪᴠᴇ ᴠɪᴅᴇᴏ ᴄʜᴀᴛs :</b>\n\n{text}",
+            f"**Active Video Chat's:-**\n\n{text}",
             disable_web_page_preview=True,
         )
+
+
+@app.on_message(command("AC_COMMAND") & SUDOERS)
+async def vc(client, message: Message):
+    ac_audio = str(len(await get_active_chats()))
+    await message.reply_text(f"Active Chats info: {ac_audio}")
