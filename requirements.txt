@@ -28,6 +28,4 @@ flask
 gunicorn
 yt-dlp
 py-yt-search>=0.2
-pyrolink
-eaf_base_api==1.6.2
-xnxx_api==1.4.3
+pyrogram
