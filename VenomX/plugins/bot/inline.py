@@ -1,3 +1,7 @@
+
+# All rights reserved.
+#
+
 from pyrogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -5,9 +9,9 @@ from pyrogram.types import (
 )
 from youtubesearchpython.__future__ import VideosSearch
 
+from config import BANNED_USERS
 from VenomX import app
 from VenomX.utils.inlinequery import answer
-from config import BANNED_USERS
 
 
 @app.on_inline_query(~BANNED_USERS)
@@ -17,7 +21,7 @@ async def inline_query_handler(client, query):
     if text.strip() == "":
         try:
             await client.answer_inline_query(query.id, results=answer, cache_time=10)
-        except:
+        except Exception:
             return
     else:
         a = VideosSearch(text, limit=20)
@@ -31,27 +35,29 @@ async def inline_query_handler(client, query):
             channel = result[x]["channel"]["name"]
             link = result[x]["link"]
             published = result[x]["publishedTime"]
-            description = f"{views} | {duration} ᴍɪɴᴜᴛᴇs | {channel}  | {published}"
+            description = f"{views} | {duration} Mins | {channel}  | {published}"
             buttons = InlineKeyboardMarkup(
                 [
                     [
                         InlineKeyboardButton(
-                            text="ʏᴏᴜᴛᴜʙᴇ 🎄",
+                            text="🎥 ᴡᴀᴛᴄʜ ᴏɴ ʏᴏᴜᴛᴜʙᴇ",
                             url=link,
                         )
                     ],
                 ]
             )
             searched_text = f"""
-❄ <b>ᴛɪᴛʟᴇ :</b> <a href={link}>{title}</a>
+❇️**ᴛɪᴛʟᴇ:** [{title}]({link})
 
-⏳ <b>ᴅᴜʀᴀᴛɪᴏɴ :</b> {duration} ᴍɪɴᴜᴛᴇs
-👀 <b>ᴠɪᴇᴡs :</b> <code>{views}</code>
-🎥 <b>ᴄʜᴀɴɴᴇʟ :</b> <a href={channellink}>{channel}</a>
-⏰ <b>ᴘᴜʙʟɪsʜᴇᴅ ᴏɴ :</b> {published}
+⏳**ᴅᴜʀᴀᴛɪᴏɴ:** {duration} Mins
+👀**ᴠɪᴇᴡs:** `{views}`
+⏰**ᴘᴜʙʟɪsʜᴇᴅ ᴛɪᴍᴇ:** {published}
+🎥**ᴄʜᴀɴɴᴇʟ ɴᴀᴍᴇ:** {channel}
+📎**ᴄʜᴀɴɴᴇʟ ʟɪɴᴋ:** [ᴠɪsɪᴛ ғʀᴏᴍ ʜᴇʀᴇ]({channellink})
 
+__ʀᴇᴘʟʏ ᴡɪᴛʜ /play ᴏɴ ᴛʜɪs sᴇᴀʀᴄʜᴇᴅ ᴍᴇssᴀɢᴇ ᴛᴏ sᴛʀᴇᴀᴍ ɪᴛ ᴏɴ ᴠᴏɪᴄᴇᴄʜᴀᴛ.__
 
-<u><b>➻ ɪɴʟɪɴᴇ sᴇᴀʀᴄʜ ᴍᴏᴅᴇ ʙʏ {app.name}</b></u>"""
+⚡️ ** ɪɴʟɪɴᴇ sᴇᴀʀᴄʜ ʙʏ {app.mention} **"""
             answers.append(
                 InlineQueryResultPhoto(
                     photo_url=thumbnail,
@@ -64,5 +70,5 @@ async def inline_query_handler(client, query):
             )
         try:
             return await client.answer_inline_query(query.id, results=answers)
-        except:
+        except Exception:
             return
