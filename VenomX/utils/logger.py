@@ -1,33 +1,37 @@
-from pyrogram.enums import ParseMode
 
+# All rights reserved.
+from config import LOG, LOGGER_ID
 from VenomX import app
 from VenomX.utils.database import is_on_off
-from config import LOGGER_ID
 
 
 async def play_logs(message, streamtype):
-    if await is_on_off(2):
+    if await is_on_off(LOG):
+        if message.chat.username:
+            chatusername = f"@{message.chat.username}"
+        else:
+            chatusername = "Private Group"
+
         logger_text = f"""
-<b>{app.mention} ᴘʟᴀʏ ʟᴏɢ</b>
+**{app.mention} Play Log**
 
-<b>ᴄʜᴀᴛ ɪᴅ :</b> <code>{message.chat.id}</code>
-<b>ᴄʜᴀᴛ ɴᴀᴍᴇ :</b> {message.chat.title}
-<b>ᴄʜᴀᴛ ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.chat.username}
+**Chat ID:** `{message.chat.id}`
+**Chat Name:** {message.chat.title}
+**Chat Username:** {chatusername}
 
-<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>
-<b>ɴᴀᴍᴇ :</b> {message.from_user.mention}
-<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}
+**User ID:** `{message.from_user.id}`
+**Name:** {message.from_user.mention}
+**Username:** @{message.from_user.username}
 
-<b>ǫᴜᴇʀʏ :</b> {message.text.split(None, 1)[1]}
-<b>sᴛʀᴇᴀᴍᴛʏᴘᴇ :</b> {streamtype}"""
+**Query:** {message.text.split(None, 1)[1]}
+**Stream Type:** {streamtype}"""
         if message.chat.id != LOGGER_ID:
             try:
                 await app.send_message(
                     chat_id=LOGGER_ID,
                     text=logger_text,
-                    parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
                 )
-            except:
+            except Exception:
                 pass
         return

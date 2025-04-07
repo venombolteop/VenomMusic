@@ -1,3 +1,8 @@
+
+# All rights reserved.
+#
+
+
 from VenomX import app
 from VenomX.utils.database import get_cmode
 
@@ -7,15 +12,16 @@ async def get_channeplayCB(_, command, CallbackQuery):
         chat_id = await get_cmode(CallbackQuery.message.chat.id)
         if chat_id is None:
             try:
-                return await CallbackQuery.answer(_["setting_7"], show_alert=True)
-            except:
+                return await CallbackQuery.answer(_["setting_12"], show_alert=True)
+            except Exception:
                 return
         try:
-            channel = (await app.get_chat(chat_id)).title
-        except:
+            chat = await app.get_chat(chat_id)
+            channel = chat.title
+        except Exception:
             try:
                 return await CallbackQuery.answer(_["cplay_4"], show_alert=True)
-            except:
+            except Exception:
                 return
     else:
         chat_id = CallbackQuery.message.chat.id
