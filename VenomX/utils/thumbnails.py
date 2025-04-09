@@ -2,10 +2,12 @@
 # All rights reserved.
 #
 
-from youtubesearchpython.__future__ import VideosSearch
+from py_yt import VideosSearch
 
 
-async def gen_thumb(videoid):
+async def gen_thumb(videoid, thumb=None):
+    if thumb:
+        return thumb
     try:
         query = f"https://www.youtube.com/watch?v={videoid}"
         results = VideosSearch(query, limit=1)
@@ -16,7 +18,9 @@ async def gen_thumb(videoid):
         return f"https://img.youtube.com/vi/{videoid}/maxresdefault.jpg"
 
 
-async def gen_qthumb(vidid):
+async def gen_qthumb(vidid, thumb=None):
+    if thumb:
+        return thumb
     try:
         query = f"https://www.youtube.com/watch?v={vidid}"
         results = VideosSearch(query, limit=1)
