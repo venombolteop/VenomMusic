@@ -4,10 +4,10 @@
 import asyncio
 import time
 
+from py_yt import VideosSearch
 from pyrogram import filters
 from pyrogram.enums import ChatType, ParseMode
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
-from youtubesearchpython.__future__ import VideosSearch
 
 import config
 from config import BANNED_USERS, START_IMG_URL
@@ -15,6 +15,7 @@ from config.config import OWNER_ID
 from strings import command, get_string
 from VenomX import Platform, app
 from VenomX.misc import SUDOERS, _boot_
+from VenomX.plugins.bot.help import paginate_modules
 from VenomX.plugins.play.playlist import del_plist_msg
 from VenomX.plugins.sudo.sudoers import sudoers_list
 from VenomX.utils.database import (
@@ -31,8 +32,6 @@ from VenomX.utils.decorators.language import LanguageStart
 from VenomX.utils.formatters import get_readable_time
 from VenomX.utils.functions import MARKDOWN, WELCOMEHELP
 from VenomX.utils.inline import private_panel, start_pannel
-
-from .help import paginate_modules
 
 loop = asyncio.get_running_loop()
 
@@ -132,7 +131,7 @@ async def start_comm(client, message: Message, _):
                 sender_mention = message.from_user.mention
                 sender_name = message.from_user.first_name
                 return await app.send_message(
-                    config.LOGGER_ID,
+                    config.LOG_GROUP_ID,
                     f"{message.from_user.mention} Has just started bot to check <code>Sudolist </code>\n\n**User Id:** {sender_id}\n**User Name:** {sender_name}",
                 )
             return
@@ -196,7 +195,7 @@ async def start_comm(client, message: Message, _):
                 sender_id = message.from_user.id
                 sender_name = message.from_user.first_name
                 return await app.send_message(
-                    config.LOGGER_ID,
+                    config.LOG_GROUP_ID,
                     f"{message.from_user.mention} Has just started bot ot check <code> Video information  </code>\n\n**User Id:** {sender_id}\n**User Name** {sender_name}",
                 )
     else:
@@ -227,7 +226,7 @@ async def start_comm(client, message: Message, _):
             sender_id = message.from_user.id
             sender_name = message.from_user.first_name
             return await app.send_message(
-                config.LOGGER_ID,
+                config.LOG_GROUP_ID,
                 f"{message.from_user.mention} Has started bot. \n\n**User id :** {sender_id}\n**User name:** {sender_name}",
             )
 
@@ -245,7 +244,7 @@ async def testbot(client, message: Message, _):
 @app.on_message(filters.new_chat_members, group=-1)
 async def welcome(client, message: Message):
     chat_id = message.chat.id
-    if config.PRIVATE_BOT_MODE == str(True):
+    if config.PRIVATE_BOT_MODE:
         if not await is_served_private_chat(message.chat.id):
             await message.reply_text(
                 "This Bot's private mode has been enabled only my owner can use this if want to use in your chat so say my Owner to authorize your chat."

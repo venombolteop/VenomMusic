@@ -2,12 +2,12 @@
 # All rights reserved.
 #
 
+from py_yt import VideosSearch
 from pyrogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InlineQueryResultPhoto,
 )
-from youtubesearchpython.__future__ import VideosSearch
 
 from config import BANNED_USERS
 from VenomX import app
