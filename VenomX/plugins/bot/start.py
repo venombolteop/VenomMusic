@@ -131,7 +131,7 @@ async def start_comm(client, message: Message, _):
                 sender_mention = message.from_user.mention
                 sender_name = message.from_user.first_name
                 return await app.send_message(
-                    config.LOG_GROUP_ID,
+                    config.LOGGER_ID,
                     f"{message.from_user.mention} Has just started bot to check <code>Sudolist </code>\n\n**User Id:** {sender_id}\n**User Name:** {sender_name}",
                 )
             return
@@ -195,7 +195,7 @@ async def start_comm(client, message: Message, _):
                 sender_id = message.from_user.id
                 sender_name = message.from_user.first_name
                 return await app.send_message(
-                    config.LOG_GROUP_ID,
+                    config.LOGGER_ID,
                     f"{message.from_user.mention} Has just started bot ot check <code> Video information  </code>\n\n**User Id:** {sender_id}\n**User Name** {sender_name}",
                 )
     else:
@@ -226,7 +226,7 @@ async def start_comm(client, message: Message, _):
             sender_id = message.from_user.id
             sender_name = message.from_user.first_name
             return await app.send_message(
-                config.LOG_GROUP_ID,
+                config.LOGGER_ID,
                 f"{message.from_user.mention} Has started bot. \n\n**User id :** {sender_id}\n**User name:** {sender_name}",
             )
 
