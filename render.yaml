@@ -1,3 +1,21 @@
-build:
-  docker:
-    worker: Dockerfile
+services:
+  - type: worker
+    name: venom-music-bot
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: MONGO_DB_URI
+        sync: false
+      - key: LOGGER_ID
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: STRING_SESSIONS
+        sync: false
