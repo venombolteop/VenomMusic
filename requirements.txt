@@ -28,4 +28,4 @@ flask
 gunicorn
 git+https://github.com/yt-dlp/yt-dlp.git@master
 py-yt-search>=0.2
-pyrogram
+pyrofork
