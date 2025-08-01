@@ -175,7 +175,7 @@ raw_sessions = getenv("STRING_SESSIONS", "")
 # Split the sessions only if raw_sessions is not empty
 STRING_SESSIONS = list(map(str.strip, raw_sessions.split(","))) if raw_sessions else []
 
-
+print("STRING_SESSIONS =", STRING_SESSIONS)
 
 ### DONT TOUCH or EDIT codes after this line
 BANNED_USERS = filters.user()
