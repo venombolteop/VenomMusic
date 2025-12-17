@@ -1,33 +1,42 @@
-
 # All rights reserved.
-#
-
 
 from typing import Union
-
 from config import autoclean, chatstats, userstats
 from config.config import time_to_seconds
 from VenomX.misc import db
 
 
 async def put_queue(
-    chat_id,
-    original_chat_id,
-    file,
-    title,
-    duration,
-    user,
-    vidid,
-    user_id,
-    stream,
+    chat_id: int,
+    original_chat_id: int,
+    file: str,
+    title: str,
+    duration: str,
+    user: str,
+    vidid: str,
+    user_id: int,
+    stream: str,
     url: str = None,
-    forceplay: Union[bool, str] = None,
+    forceplay: Union[bool, str] = False,
 ):
+    # Normalize title
     title = title.title()
+
+    # Convert duration safely
     try:
-        duration_in_seconds = time_to_seconds(duration) - 3
+        duration_in_seconds = max(time_to_seconds(duration) - 3, 0)
     except Exception:
         duration_in_seconds = 0
+
+    # Initialize queue if not exists
+    if chat_id not in db:
+        db[chat_id] = []
+
+    # Normalize vidid
+    if vidid in ("soundcloud", "saavn"):
+        vidid = "telegram"
+
+    # Song payload
     put = {
         "title": title,
         "dur": duration,
@@ -40,54 +49,38 @@ async def put_queue(
         "played": 0,
         "url": url,
     }
-    if forceplay:
-        if check := db.get(chat_id):
-            check.insert(0, put)
-        else:
-            db[chat_id] = []
-            db[chat_id].append(put)
+
+    # Queue logic
+    if forceplay and db[chat_id]:
+        # Insert after currently playing track
+        db[chat_id].insert(1, put)
     else:
         db[chat_id].append(put)
-    autoclean.append(file)
-    vidid = "telegram" if vidid == "soundcloud" or "saavn" in vidid else vidid
 
-    to_append = {"vidid": vidid, "title": title}
+    # Auto clean temp files
+    autoclean.append(file)
+
+    # Chat stats
     if chat_id not in chatstats:
         chatstats[chat_id] = []
-    chatstats[chat_id].append(to_append)
+
+    chatstats[chat_id].append(
+        {
+            "vidid": vidid,
+            "title": title,
+        }
+    )
+
+    # User stats (DO NOT touch queue here)
     if user_id not in userstats:
         userstats[user_id] = []
-    userstats[user_id].append(to_append)
-    return
 
+    userstats[user_id].append(
+        {
+            "chat_id": chat_id,
+            "title": title,
+        }
+    )
 
-async def put_queue_index(
-    chat_id,
-    original_chat_id,
-    file,
-    title,
-    duration,
-    user,
-    vidid,
-    stream,
-    forceplay: Union[bool, str] = None,
-):
-    put = {
-        "title": title,
-        "dur": duration,
-        "streamtype": stream,
-        "by": user,
-        "chat_id": original_chat_id,
-        "file": file,
-        "vidid": vidid,
-        "seconds": 0,
-        "played": 0,
-    }
-    if forceplay:
-        if check := db.get(chat_id):
-            check.insert(0, put)
-        else:
-            db[chat_id] = []
-            db[chat_id].append(put)
-    else:
-        db[chat_id].append(put)
+    # Return queue position
+    return len(db[chat_id])
