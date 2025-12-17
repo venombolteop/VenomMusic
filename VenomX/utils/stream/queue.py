@@ -84,3 +84,52 @@ async def put_queue(
 
     # Return queue position
     return len(db[chat_id])
+
+
+
+
+async def put_queue_index(
+    chat_id: int,
+    original_chat_id: int,
+    file: str,
+    title: str,
+    duration: str,
+    user: str,
+    vidid: str,
+    stream: str,
+    forceplay: Union[bool, str] = False,
+):
+    # Initialize queue if missing
+    if chat_id not in db:
+        db[chat_id] = []
+
+    # Normalize vidid
+    if vidid in ("soundcloud", "saavn"):
+        vidid = "telegram"
+
+    # Build queue item
+    put = {
+        "title": title.title(),
+        "dur": duration,
+        "streamtype": stream,
+        "by": user,
+        "chat_id": original_chat_id,
+        "file": file,
+        "vidid": vidid,
+        "seconds": 0,
+        "played": 0,
+    }
+
+    # Correct forceplay behavior
+    if forceplay and db[chat_id]:
+        # Insert AFTER currently playing track
+        db[chat_id].insert(1, put)
+    else:
+        db[chat_id].append(put)
+
+    # Return correct queue position (1-based)
+    return len(db[chat_id])
+
+
+
+
