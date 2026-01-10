@@ -26,6 +26,6 @@ urllib3
 uvloop
 flask
 gunicorn
-git+https://github.com/yt-dlp/yt-dlp.git@master
+yt-dlp
 py-yt-search>=0.2
 pyrofork
