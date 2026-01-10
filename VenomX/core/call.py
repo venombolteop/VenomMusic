@@ -616,7 +616,10 @@ class Call:
         """Starts all PyTgCalls instances for the existing userbot clients."""
         LOGGER(__name__).info(f"Starting PyTgCall Clients")
         await asyncio.gather(*[c.start() for c in self.calls])
+        await self.decorators() 
 
+
+    
     async def decorators(self):
         for call in self.calls:
 
