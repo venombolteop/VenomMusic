@@ -19,6 +19,11 @@ COPY . /app/
 
 WORKDIR /app/
 
+ENV DENO_INSTALL=/usr/local/deno
+RUN mkdir -p $DENO_INSTALL && \
+    curl -fsSL https://deno.land/install.sh | sh
+ENV PATH=$DENO_INSTALL/bin:$PATH
+
 
 # Copy dependency file first (Docker layer cache)
 
