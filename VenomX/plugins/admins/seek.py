@@ -20,7 +20,7 @@ from VenomX.utils import AdminRightsCheck, seconds_to_min
 async def seek_comm(cli, message: Message, _, chat_id):
     if len(message.command) == 1:
         return await message.reply_text(_["admin_28"])
-    query = message.text.split(None, 1)[1].strip()
+    query = message.command[1].strip()
     if not query.isnumeric():
         return await message.reply_text(_["admin_29"])
     playing = db.get(chat_id)

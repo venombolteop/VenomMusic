@@ -102,7 +102,7 @@ async def song_commad_private(client, message: Message, _):
 
     mystic = await message.reply_text(_["play_1"])
 
-    query = message.text.split(None, 1)[1]
+    query = message.command[1]
 
     try:
 
