@@ -156,7 +156,7 @@ def command(
                             without_prefix,
                             flags=re.IGNORECASE if not flt.case_sensitive else 0,
                         ):
-                            return prefix + cmd
+                            return cmd
             else:
                 # Match without prefix
                 if re.match(

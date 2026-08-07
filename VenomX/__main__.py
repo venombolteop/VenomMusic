@@ -54,7 +54,6 @@ async def init():
         )
         exit()
 
-    await Ayush.decorators()
     LOGGER("VenomX").info("VenomX Started Successfully")
     await idle()
     await app.stop()

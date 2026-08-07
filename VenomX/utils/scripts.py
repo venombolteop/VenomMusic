@@ -22,6 +22,7 @@ from pyrogram.types import Message
 
 META_COMMENTS = re.compile(r"^ *# *meta +(\S+) *: *(.*?)\s*$", re.MULTILINE)
 interact_with_to_delete = []
+requirements_list = []
 
 def time_formatter(milliseconds: int) -> str:
     """Time Formatter"""

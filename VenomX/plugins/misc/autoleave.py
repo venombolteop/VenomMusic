@@ -54,7 +54,7 @@ async def auto_end():
                         pass
 
                     try:
-                        language = await get_lang(message.chat.id)
+                        language = await get_lang(chat_id)
                         language = get_string(language)
                     except Exception:
                         language = get_string("en")
