@@ -25,9 +25,9 @@ class SoundCloud:
 
     @asyncify
     def download(self, url: str) -> dict | bool:
-        with YoutubeDL(self.opts):
+        with YoutubeDL(self.opts) as ydl:
             try:
-                info = d.extract_info(url)
+                info = ydl.extract_info(url)
             except Exception:
                 return False
             xyz = path.join("downloads", f"{info['id']}.{info['ext']}")
