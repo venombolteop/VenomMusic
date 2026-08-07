@@ -28,4 +28,4 @@ flask
 gunicorn
 yt-dlp
 py-yt-search>=0.2
-pyrofork
+pyroblack

@@ -3,7 +3,6 @@
 #
 import asyncio
 import os
-import random
 import re
 
 from async_lru import alru_cache
@@ -12,8 +11,6 @@ from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
 from yt_dlp import YoutubeDL
 
-import config
-from VenomX.utils.database import is_on_off
 from VenomX.utils.decorators import asyncify
 from VenomX.utils.formatters import seconds_to_min, time_to_seconds
 
@@ -22,15 +19,21 @@ NOTHING = {"cookies_dead": None}
 
 def cookies():
     folder_path = f"{os.getcwd()}/cookies"
+    if not os.path.isdir(folder_path):
+        return None
     txt_files = [file for file in os.listdir(folder_path) if file.endswith(".txt")]
     if not txt_files:
-        raise FileNotFoundError(
-            "No Cookies found in cookies directory make sure your cookies file written  .txt file"
-        )
-    cookie_txt_file = random.choice(txt_files)
-    cookie_txt_file = os.path.join(folder_path, cookie_txt_file)
-    return cookie_txt_file
-    # return f"""cookies/{str(cookie_txt_file).split("/")[-1]}"""
+        return None
+    for cookie_txt_file in txt_files:
+        cookie_txt_file = os.path.join(folder_path, cookie_txt_file)
+        try:
+            with open(cookie_txt_file) as f:
+                header = f.read(200)
+        except Exception:
+            continue
+        if "# Netscape HTTP Cookie File" in header or "# HTTP Cookie File" in header:
+            return cookie_txt_file
+    return None
 
 
 async def shell_cmd(cmd):
@@ -156,13 +159,49 @@ class YouTube:
             link = link.split("&")[0]
         cmd = [
             "yt-dlp",
-            f"--cookies",
-            cookies(),
             "-g",
             "-f",
             "best[height<=?720][width<=?1280]",
             f"{link}",
         ]
+        cookie_txt_file = cookies()
+        if cookie_txt_file:
+            cmd[1:1] = ["--cookies", cookie_txt_file]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if stdout:
+            return 1, stdout.decode().split("\n")[0]
+        else:
+            return 0, stderr.decode()
+
+    async def stream_url(
+        self,
+        link: str,
+        videoid: bool | str = None,
+        video: bool = False,
+    ):
+        if videoid:
+            link = self.base + link
+        if "&" in link:
+            link = link.split("&")[0]
+        if video:
+            fmt = "best[height<=?720][acodec!=none]"
+        else:
+            fmt = "bestaudio/best"
+        cmd = [
+            "yt-dlp",
+            "-g",
+            "-f",
+            fmt,
+            f"{link}",
+        ]
+        cookie_txt_file = cookies()
+        if cookie_txt_file:
+            cmd[1:1] = ["--cookies", cookie_txt_file]
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
@@ -229,7 +268,7 @@ class YouTube:
             "noplaylist": True,
             "quiet": True,
             "extract_flat": "in_playlist",
-            "cookiefile": f"{cookies()}",
+            "cookiefile": cookies(),
         }
         with YoutubeDL(options) as ydl:
             info_dict = ydl.extract_info(f"ytsearch: {q}", download=False)
@@ -257,7 +296,7 @@ class YouTube:
 
         ytdl_opts = {
             "quiet": True,
-            "cookiefile": f"{cookies()}",
+            "cookiefile": cookies(),
         }
 
         ydl = YoutubeDL(ytdl_opts)
@@ -333,7 +372,7 @@ class YouTube:
                 "nocheckcertificate": True,
                 "quiet": True,
                 "no_warnings": True,
-                "cookiefile": f"{cookies()}",
+                "cookiefile": cookies(),
                 "prefer_ffmpeg": True,
             }
 
@@ -356,7 +395,7 @@ class YouTube:
                 "quiet": True,
                 "no_warnings": True,
                 "prefer_ffmpeg": True,
-                "cookiefile": f"{cookies()}",
+                "cookiefile": cookies(),
             }
 
             with YoutubeDL(ydl_optssx) as x:
@@ -380,7 +419,7 @@ class YouTube:
                 "no_warnings": True,
                 "prefer_ffmpeg": True,
                 "merge_output_format": "mp4",
-                "cookiefile": f"{cookies()}",
+                "cookiefile": cookies(),
             }
 
             with YoutubeDL(ydl_optssx) as x:
@@ -407,7 +446,7 @@ class YouTube:
                         "preferredquality": "192",
                     }
                 ],
-                "cookiefile": f"{cookies()}",
+                "cookiefile": cookies(),
             }
 
             with YoutubeDL(ydl_optssx) as x:
@@ -423,33 +462,8 @@ class YouTube:
             return await song_audio_dl()
 
         elif video:
-            if await is_on_off(config.YTDOWNLOADER):
-                direct = True
-                downloaded_file = await video_dl()
-            else:
-                command = [
-                    "yt-dlp",
-                    f"--cookies",
-                    cookies(),
-                    "-g",
-                    "-f",
-                    "best",
-                    link,
-                ]
-
-                proc = await asyncio.create_subprocess_exec(
-                    *command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await proc.communicate()
-
-                if stdout:
-                    downloaded_file = stdout.decode().split("\n")[0]
-                    direct = None
-                else:
-                    downloaded_file = await video_dl()
-                    direct = True
+            direct = True
+            downloaded_file = await video_dl()
         else:
             direct = True
             downloaded_file = await audio_dl()

@@ -16,6 +16,7 @@ from VenomX.utils.database import (
     add_active_video_chat,
     is_active_chat,
     is_video_allowed,
+    get_instant_play,
 )
 from VenomX.utils.exceptions import AssistantErr
 from VenomX.utils.inline.play import stream_markup, telegram_markup
@@ -85,19 +86,32 @@ async def stream(
                 if not forceplay:
                     db[chat_id] = []
                 status = True if video else None
-                try:
-                    file_path, direct = await Platform.youtube.download(
-                        vidid, mystic, video=status, videoid=True
-                    )
-                except Exception:
-                    raise AssistantErr(_["play_16"])
+                instant = await get_instant_play(chat_id)
+                if instant:
+                    n, stream_link = await Platform.youtube.stream_url(vidid, videoid=True, video=status)
+                    if n == 0:
+                        try:
+                            stream_link, direct = await Platform.youtube.download(
+                                vidid, mystic, video=status, videoid=True
+                            )
+                        except Exception:
+                            raise AssistantErr(_["play_16"])
+                    else:
+                        direct = True
+                else:
+                    try:
+                        stream_link, direct = await Platform.youtube.download(
+                            vidid, mystic, video=status, videoid=True
+                        )
+                    except Exception:
+                        raise AssistantErr(_["play_16"])
                 await Ayush.join_call(
-                    chat_id, original_chat_id, file_path, video=status, image=thumbnail
+                    chat_id, original_chat_id, stream_link, video=status, image=thumbnail
                 )
                 await put_queue(
                     chat_id,
                     original_chat_id,
-                    file_path if direct else f"vid_{vidid}",
+                    f"vid_{vidid}",
                     title,
                     duration_min,
                     user_name,
@@ -146,17 +160,30 @@ async def stream(
         duration_min = result["duration_min"]
         thumbnail = result["thumb"]
         status = True if video else None
-        try:
-            file_path, direct = await Platform.youtube.download(
-                vidid, mystic, videoid=True, video=status
-            )
-        except Exception:
-            raise AssistantErr(_["play_16"])
+        instant = await get_instant_play(chat_id)
+        if instant:
+            n, stream_link = await Platform.youtube.stream_url(vidid, videoid=True, video=status)
+            if n == 0:
+                try:
+                    stream_link, direct = await Platform.youtube.download(
+                        vidid, mystic, videoid=True, video=status
+                    )
+                except Exception:
+                    raise AssistantErr(_["play_16"])
+            else:
+                direct = True
+        else:
+            try:
+                stream_link, direct = await Platform.youtube.download(
+                    vidid, mystic, videoid=True, video=status
+                )
+            except Exception:
+                raise AssistantErr(_["play_16"])
         if await is_active_chat(chat_id):
             await put_queue(
                 chat_id,
                 original_chat_id,
-                file_path if direct else f"vid_{vidid}",
+                f"vid_{vidid}",
                 title,
                 duration_min,
                 user_name,
@@ -178,12 +205,12 @@ async def stream(
             if not forceplay:
                 db[chat_id] = []
             await Ayush.join_call(
-                chat_id, original_chat_id, file_path, video=status, image=thumbnail
+                chat_id, original_chat_id, stream_link, video=status, image=thumbnail
             )
             await put_queue(
                 chat_id,
                 original_chat_id,
-                file_path if direct else f"vid_{vidid}",
+                f"vid_{vidid}",
                 title,
                 duration_min,
                 user_name,

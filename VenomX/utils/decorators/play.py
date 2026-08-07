@@ -4,16 +4,12 @@
 
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from pyrogram.errors import ChannelPrivate
-
 from config import PLAYLIST_IMG_URL, PRIVATE_BOT_MODE
 from config import adminlist
 from strings import get_string
 from VenomX import Platform, app
-from VenomX.core.call import Ayush
 from VenomX.misc import SUDOERS
 from VenomX.utils.database import (
-    get_assistant,
     get_cmode,
     get_lang,
     get_playmode,
@@ -126,21 +122,6 @@ def PlayWrapper(command):
             fplay = True
         else:
             fplay = None
-        if await is_active_chat(chat_id):
-            userbot = await get_assistant(message.chat.id)
-            # Getting all members id that in voicechat
-            try:
-                call_participants_id = [
-                    member.chat.id
-                    async for member in userbot.get_chat_members(chat_id)
-                    if member.chat
-                ]
-                # Checking if assistant id not in list so clear queues and remove active voice chat and process
-
-                if not call_participants_id or userbot.id not in call_participants_id:
-                    await Ayush.stop_stream(chat_id)
-            except ChannelPrivate:
-                pass 
 
         return await command(
             client,

@@ -24,6 +24,7 @@ from VenomX.utils.database import (
     add_active_chat,
     add_active_video_chat,
     get_audio_bitrate,
+    get_instant_play,
     get_lang,
     get_loop,
     get_video_bitrate,
@@ -414,21 +415,41 @@ class Call:
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
             elif "vid_" in queued:
-                mystic = await app.send_message(original_chat_id, _["call_8"])
-                try:
-                    file_path, direct = await Platform.youtube.download(
-                        videoid,
-                        mystic,
-                        videoid=True,
-                        video=True if str(streamtype) == "video" else False,
+                video = True if str(streamtype) == "video" else False
+                instant = await get_instant_play(chat_id)
+                if instant:
+                    mystic = await app.send_message(original_chat_id, _["call_8"])
+                    n, stream_link = await Platform.youtube.stream_url(
+                        videoid, videoid=True, video=video
                     )
-                except Exception:
-                    return await mystic.edit_text(
-                        _["call_7"], disable_web_page_preview=True
-                    )
+                    if n == 0:
+                        try:
+                            stream_link, direct = await Platform.youtube.download(
+                                videoid,
+                                mystic,
+                                videoid=True,
+                                video=video,
+                            )
+                        except Exception:
+                            return await mystic.edit_text(
+                                _["call_7"], disable_web_page_preview=True
+                            )
+                else:
+                    mystic = await app.send_message(original_chat_id, _["call_8"])
+                    try:
+                        stream_link, direct = await Platform.youtube.download(
+                            videoid,
+                            mystic,
+                            videoid=True,
+                            video=video,
+                        )
+                    except Exception:
+                        return await mystic.edit_text(
+                            _["call_7"], disable_web_page_preview=True
+                        )
                 if video:
                     stream = MediaStream(
-                        file_path,
+                        stream_link,
                         audio_parameters=audio_stream_quality,
                         video_parameters=video_stream_quality,
                     )
@@ -440,26 +461,27 @@ class Call:
                     if image and config.PRIVATE_BOT_MODE == str(True):
                         stream = MediaStream(
                             image,
-                            audio_path=file_path,
+                            audio_path=stream_link,
                             audio_parameters=audio_stream_quality,
                             video_parameters=video_stream_quality,
                         )
                     else:
                         stream = MediaStream(
-                            file_path,
+                            stream_link,
                             audio_parameters=audio_stream_quality,
                             video_flags=MediaStream.Flags.IGNORE,
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
-                    return await app.send_message(
+                    return app.send_message(
                         original_chat_id,
                         text=_["call_7"],
                     )
                 img = await gen_thumb(videoid)
                 button = stream_markup(_, videoid, chat_id)
-                await mystic.delete()
+                if instant or 'mystic' in locals():
+                    await mystic.delete()
                 run = await app.send_photo(
                     original_chat_id,
                     photo=img,

@@ -21,11 +21,13 @@ onoffdb = mongodb.onoffper
 autoenddb = mongodb.autoend
 notesdb = mongodb.notes
 filtersdb = mongodb.filters
+instantplaydb = mongodb.instantplay
 
 # Shifting to memory [ mongo sucks often]
 loop = {}
 playtype = {}
 playmode = {}
+instantplay = {}
 channelconnect = {}
 langm = {}
 pause = {}
@@ -280,6 +282,24 @@ async def get_playmode(chat_id: int) -> str:
 async def set_playmode(chat_id: int, mode: str):
     playmode[chat_id] = mode
     await playmodedb.update_one(
+        {"chat_id": chat_id}, {"$set": {"mode": mode}}, upsert=True
+    )
+
+
+async def get_instant_play(chat_id: int) -> bool:
+    mode = instantplay.get(chat_id)
+    if mode is None:
+        mode = await instantplaydb.find_one({"chat_id": chat_id})
+        if not mode:
+            return config.INSTANT_PLAY == str(True)
+        instantplay[chat_id] = mode["mode"]
+        return mode["mode"]
+    return mode
+
+
+async def set_instant_play(chat_id: int, mode: bool):
+    instantplay[chat_id] = mode
+    await instantplaydb.update_one(
         {"chat_id": chat_id}, {"$set": {"mode": mode}}, upsert=True
     )
 

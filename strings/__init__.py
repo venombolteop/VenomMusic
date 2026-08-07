@@ -187,15 +187,21 @@ def command(
         for cmd, with_prefix in all_commands:
             matched_cmd = match_command(cmd, text, with_prefix)
             if matched_cmd:
+                without_command = text
+                if with_prefix and flt.prefixes:
+                    for prefix in flt.prefixes:
+                        if without_command.startswith(prefix):
+                            without_command = without_command[len(prefix) :]
+                            break
                 without_command = re.sub(
-                    rf"{matched_cmd}(?:@?{username})?\s?",
+                    rf"^{re.escape(matched_cmd)}(?:@?{re.escape(username)})?\s?",
                     "",
-                    text,
+                    without_command,
                     count=1,
                     flags=re.IGNORECASE if not flt.case_sensitive else 0,
                 )
                 message.command = [matched_cmd] + [
-                    re.sub(r"\\([\"'])", r"\1", m.group(2) or m.group(3) or "")
+                    re.sub(r"\\([\"'])", r"\1", m.group(1) or m.group(2) or m.group(3) or "")
                     for m in re.finditer(
                         r'([^\s"\']+)|"([^"]*)"|\'([^\']*)\'', without_command
                     )

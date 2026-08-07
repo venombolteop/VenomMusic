@@ -49,6 +49,7 @@ LOOP_COMMAND : ["cdongu", "dongu"]
 SEEK_COMMAND : ["seek", "cseek"]
 SEEK_BACK_COMMAND : ["ilerisar", "cilerisar", "gerisar"]
 REBOOT_COMMAND : ["yenidenbaslat"]
+INSTANT_PLAY_COMMAND : ["streammode", "anlikoynat"]
 
 # Sudo Kullanıcıları Şikayetleri
 

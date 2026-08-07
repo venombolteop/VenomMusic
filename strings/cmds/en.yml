@@ -49,6 +49,7 @@ LOOP_COMMAND : ["loop", "cloop"]
 SEEK_COMMAND : ["seek", "cseek"]
 SEEK_BACK_COMMAND : ["seekback", "cseekback"]
 REBOOT_COMMAND : ["reboot"]
+INSTANT_PLAY_COMMAND : ["instantplay", "streammode"]
 
 # Sudo Users Commaands
 

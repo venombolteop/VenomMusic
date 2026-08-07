@@ -9,6 +9,7 @@ from strings import command
 from VenomX import Platform, app
 from VenomX.core.call import Ayush
 from VenomX.misc import db
+from VenomX.utils.database import get_instant_play
 from VenomX.utils import AdminRightsCheck, seconds_to_min
 
 
@@ -48,9 +49,21 @@ async def seek_comm(cli, message: Message, _, chat_id):
         to_seek = duration_played + duration_to_skip + 1
     mystic = await message.reply_text(_["admin_32"])
     if "vid_" in file_path:
-        n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
-        if n == 0:
-            return await message.reply_text(_["admin_30"])
+        streamtype = playing[0]["streamtype"]
+        video = True if str(streamtype) == "video" else False
+        instant = await get_instant_play(chat_id)
+        if instant:
+            n, file_path = await Platform.youtube.stream_url(
+                playing[0]["vidid"], videoid=True, video=video
+            )
+            if n == 0:
+                n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
+                if n == 0:
+                    return await message.reply_text(_["admin_30"])
+        else:
+            n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
+            if n == 0:
+                return await message.reply_text(_["admin_30"])
     try:
         await Ayush.seek_stream(
             chat_id,

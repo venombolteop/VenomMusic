@@ -124,6 +124,10 @@ SUPPORT_GROUP = getenv(
 PRIVATE_BOT_MODE = getenv("PRIVATE_BOT_MODE", "False")
 
 
+# Instant Play / Streaming Mode (default ON: streams directly without downloading)
+INSTANT_PLAY = getenv("INSTANT_PLAY", "True")
+
+
 # Time sleep duration For Youtube Downloader
 YOUTUBE_DOWNLOAD_EDIT_SLEEP = int(getenv("YOUTUBE_EDIT_SLEEP", "3"))
 

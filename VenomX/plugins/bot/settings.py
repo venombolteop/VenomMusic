@@ -23,6 +23,7 @@ from VenomX.utils.database import (
     get_aud_bit_name,
     get_authuser,
     get_authuser_names,
+    get_instant_play,
     get_playmode,
     get_playtype,
     get_vid_bit_name,
@@ -32,6 +33,7 @@ from VenomX.utils.database import (
     remove_nonadmin_chat,
     save_audio_bitrate,
     save_video_bitrate,
+    set_instant_play,
     set_playmode,
     set_playtype,
 )
@@ -41,6 +43,7 @@ from VenomX.utils.inline.settings import (
     audio_quality_markup,
     auth_users_markup,
     cleanmode_settings_markup,
+    instantplay_markup,
     playmode_users_markup,
     setting_markup,
     video_quality_markup,
@@ -141,7 +144,7 @@ async def gen_buttons_vid(_, aud):
 
 @app.on_callback_query(
     filters.regex(
-        pattern=r"^(SEARCHANSWER|PLAYMODEANSWER|PLAYTYPEANSWER|AUTHANSWER|CMANSWER|COMMANDANSWER|CM|AQ|VQ|PM|AU)$"
+        pattern=r"^(SEARCHANSWER|PLAYMODEANSWER|PLAYTYPEANSWER|AUTHANSWER|CMANSWER|COMMANDANSWER|CM|AQ|VQ|PM|AU|IP|INSTANTPLAYANSWER)$"
     )
     & ~BANNED_USERS
 )
@@ -179,6 +182,21 @@ async def without_Admin_rights(client, CallbackQuery, _):
     if command == "COMMANDANSWER":
         try:
             return await CallbackQuery.answer(_["setting_14"], show_alert=True)
+        except Exception:
+            return
+    if command == "IP":
+        try:
+            await CallbackQuery.answer(_["set_cb_4"], show_alert=True)
+        except Exception:
+            pass
+        instant = await get_instant_play(CallbackQuery.message.chat.id)
+        buttons = instantplay_markup(_, instant)
+        return await CallbackQuery.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    if command == "INSTANTPLAYANSWER":
+        try:
+            return await CallbackQuery.answer(_["setting_4"], show_alert=True)
         except Exception:
             return
     if command == "CM":
@@ -417,6 +435,31 @@ async def playmode_ans(client, CallbackQuery, _):
         else:
             Group = None
         buttons = playmode_users_markup(_, Direct, Group, Playtype)
+    try:
+        return await CallbackQuery.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    except MessageNotModified:
+        return
+
+
+# Instant Play Settings
+@app.on_callback_query(
+    filters.regex(pattern=r"^(INSTANTPLAYCHANGE)$") & ~BANNED_USERS
+)
+@ActualAdminCB
+async def instantplay_ans(client, CallbackQuery, _):
+    try:
+        await CallbackQuery.answer(_["set_cb_6"], show_alert=True)
+    except Exception:
+        pass
+    instant = await get_instant_play(CallbackQuery.message.chat.id)
+    if instant:
+        await set_instant_play(CallbackQuery.message.chat.id, False)
+    else:
+        await set_instant_play(CallbackQuery.message.chat.id, True)
+    instant = await get_instant_play(CallbackQuery.message.chat.id)
+    buttons = instantplay_markup(_, instant)
     try:
         return await CallbackQuery.edit_message_reply_markup(
             reply_markup=InlineKeyboardMarkup(buttons)

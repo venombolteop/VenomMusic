@@ -1,4 +1,3 @@
-
 # All rights reserved.
 #
 from typing import Union
@@ -19,6 +18,9 @@ def setting_markup(_):
         [
             InlineKeyboardButton(text=_["ST_B_5"], callback_data="PM"),
             InlineKeyboardButton(text=_["ST_B_7"], callback_data="CM"),
+        ],
+        [
+            InlineKeyboardButton(text=_["ST_B_32"], callback_data="IP"),
         ],
         [
             InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
@@ -235,6 +237,26 @@ def playmode_users_markup(
             InlineKeyboardButton(
                 text=_["ST_B_20"] if Playtype == True else _["ST_B_21"],
                 callback_data="PLAYTYPECHANGE",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=_["BACK_BUTTON"],
+                callback_data="settingsback_helper",
+            ),
+            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+        ],
+    ]
+    return buttons
+
+
+def instantplay_markup(_, status: Union[bool, str] = None):
+    buttons = [
+        [
+            InlineKeyboardButton(text=_["ST_B_33"], callback_data="INSTANTPLAYANSWER"),
+            InlineKeyboardButton(
+                text=_["ST_B_18"] if status == True else _["ST_B_19"],
+                callback_data="INSTANTPLAYCHANGE",
             ),
         ],
         [

@@ -197,6 +197,10 @@ saavn_1: "😞 Sorry! Currently, the bot is unable to play the Saavn Podcast URL
 playmode_1: "🎮 Select the mode in which you want to play the queries inside your group [{0}]."
 playmode_2: "✅ Settings changed and saved successfully by {0}."
 
+# Instant Play
+instantplay_1: "⚡ **Instant Play Settings**\n\n**Chat:** {0}\n**Status:** {1}\n\nWhen enabled, YouTube tracks stream instantly without downloading.\nWhen disabled, tracks are downloaded first (slower)."
+instantplay_2: "✅ Instant Play settings updated by {0}."
+
 # Stream 
 str_1: "🔗 Please provide m3u8 links or index links."
 str_2: "✅ Valid stream verified\n\nPlease wait processing link..."
@@ -335,6 +339,8 @@ ST_B_28 : "🏷 Channel"
 ST_B_29 : "🫂 Play Type"
 ST_B_30 : "🗑 Command Clean"
 ST_B_31 : "🧑‍🚀 Suggestion Mode"
+ST_B_32 : "⚡ Instant Play"
+ST_B_33 : "⚡ Instant Play"
 
 # Song Buttons
 SG_B_1 : "↗️ Open In Private"

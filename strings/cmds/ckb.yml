@@ -49,6 +49,7 @@ LOOP_COMMAND : ["دووبارەکردنەوە"]
 SEEK_COMMAND : ["گەڕان"]
 SEEK_BACK_COMMAND : ["گەڕانەوە"]
 REBOOT_COMMAND : ["ڕێستارت"]
+INSTANT_PLAY_COMMAND : ["streammode", "پێوەڕێستی_مباشتر"]
 
 # Sudo Users Commaands
 
