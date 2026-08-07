@@ -48,6 +48,7 @@ LOOP_COMMAND : ["تكرار"]
 SEEK_COMMAND : ["تقديم"]
 SEEK_BACK_COMMAND : ["ارجع_الى_الخلف", "بحث_الى_الخلف"]
 REBOOT_COMMAND : ["اعاده تشغيل"]
+INSTANT_PLAY_COMMAND : ["تشغيل_مباشر", "streammode"]
 
 # Sudo Users Commands
 ADDSUDO_COMMAND : ["رفع مطور"]

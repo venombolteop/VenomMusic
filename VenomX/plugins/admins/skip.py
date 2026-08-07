@@ -12,7 +12,7 @@ from strings import command
 from VenomX import Platform, app
 from VenomX.core.call import Ayush
 from VenomX.misc import db
-from VenomX.utils.database import get_loop
+from VenomX.utils.database import get_instant_play, get_loop
 from VenomX.utils.decorators import AdminRightsCheck
 from VenomX.utils.inline.play import stream_markup, telegram_markup
 from VenomX.utils.stream.autoclear import auto_clean
@@ -127,20 +127,41 @@ async def skip(cli, message: Message, _, chat_id):
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
     elif "vid_" in queued:
-        mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
-        try:
-            file_path, direct = await Platform.youtube.download(
-                videoid,
-                mystic,
-                videoid=True,
-                video=status,
+        instant = await get_instant_play(chat_id)
+        if instant:
+            n, stream_link = await Platform.youtube.stream_url(
+                videoid, videoid=True, video=status
             )
-        except Exception:
-            return await mystic.edit_text(_["call_7"])
+            if n == 0:
+                mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
+                try:
+                    stream_link, direct = await Platform.youtube.download(
+                        videoid,
+                        mystic,
+                        videoid=True,
+                        video=status,
+                    )
+                except Exception:
+                    return await mystic.edit_text(_["call_7"])
+            else:
+                mystic = None
+        else:
+            mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
+            try:
+                stream_link, direct = await Platform.youtube.download(
+                    videoid,
+                    mystic,
+                    videoid=True,
+                    video=status,
+                )
+            except Exception:
+                return await mystic.edit_text(_["call_7"])
         try:
-            await Ayush.skip_stream(chat_id, file_path, video=status)
+            await Ayush.skip_stream(chat_id, stream_link, video=status)
         except Exception:
-            return await mystic.edit_text(_["call_7"])
+            if mystic:
+                return await mystic.edit_text(_["call_7"])
+            return await message.reply_text(_["call_7"])
         button = stream_markup(_, videoid, chat_id)
         img = await gen_thumb(videoid)
         run = await message.reply_photo(
@@ -155,7 +176,8 @@ async def skip(cli, message: Message, _, chat_id):
         )
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "stream"
-        await mystic.delete()
+        if mystic:
+            await mystic.delete()
     elif "index_" in queued:
         try:
             await Ayush.skip_stream(chat_id, videoid, video=status)

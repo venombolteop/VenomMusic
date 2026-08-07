@@ -23,6 +23,7 @@ from VenomX.misc import SUDOERS, db
 from VenomX.utils import seconds_to_min, time_to_seconds
 from VenomX.utils.channelplay import get_channeplayCB
 from VenomX.utils.database import (
+    get_instant_play,
     is_active_chat,
     is_music_playing,
     is_muted,
@@ -277,22 +278,45 @@ async def admin_callback(client, CallbackQuery, _):
             db[chat_id][0]["markup"] = "tg"
             await CallbackQuery.edit_message_text(txt)
         elif "vid_" in queued:
-            mystic = await CallbackQuery.message.reply_text(
-                _["call_8"], disable_web_page_preview=True
-            )
-            try:
-                file_path, direct = await Platform.youtube.download(
-                    videoid,
-                    mystic,
-                    videoid=True,
-                    video=status,
+            instant = await get_instant_play(chat_id)
+            if instant:
+                n, stream_link = await Platform.youtube.stream_url(
+                    videoid, videoid=True, video=status
                 )
-            except Exception:
-                return await mystic.edit_text(_["call_7"])
+                if n == 0:
+                    mystic = await CallbackQuery.message.reply_text(
+                        _["call_8"], disable_web_page_preview=True
+                    )
+                    try:
+                        stream_link, direct = await Platform.youtube.download(
+                            videoid,
+                            mystic,
+                            videoid=True,
+                            video=status,
+                        )
+                    except Exception:
+                        return await mystic.edit_text(_["call_7"])
+                else:
+                    mystic = None
+            else:
+                mystic = await CallbackQuery.message.reply_text(
+                    _["call_8"], disable_web_page_preview=True
+                )
+                try:
+                    stream_link, direct = await Platform.youtube.download(
+                        videoid,
+                        mystic,
+                        videoid=True,
+                        video=status,
+                    )
+                except Exception:
+                    return await mystic.edit_text(_["call_7"])
             try:
-                await Ayush.skip_stream(chat_id, file_path, video=status)
+                await Ayush.skip_stream(chat_id, stream_link, video=status)
             except Exception:
-                return await mystic.edit_text(_["call_7"])
+                if mystic:
+                    return await mystic.edit_text(_["call_7"])
+                return await CallbackQuery.message.reply_text(_["call_7"])
             button = stream_markup(_, videoid, chat_id)
             img = await gen_thumb(videoid)
             run = await CallbackQuery.message.reply_photo(
@@ -308,7 +332,8 @@ async def admin_callback(client, CallbackQuery, _):
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
             await CallbackQuery.edit_message_text(txt)
-            await mystic.delete()
+            if mystic:
+                await mystic.delete()
         elif "index_" in queued:
             try:
                 await Ayush.skip_stream(chat_id, videoid, video=status)
