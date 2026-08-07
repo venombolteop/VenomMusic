@@ -397,7 +397,7 @@ async def play_commnd(
                 reply_markup=InlineKeyboardMarkup(buttons),
             )
         slider = True
-        query = message.text.split(None, 1)[1]
+        query = " ".join(message.command[1:])
         if "-v" in query:
             query = query.replace("-v", "")
         try:
