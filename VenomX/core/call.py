@@ -7,7 +7,7 @@ from typing import Union
 from ntgcalls import TelegramServerError
 from pyrogram.types import InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, filters
-from pytgcalls.exceptions import AlreadyJoinedError
+from pytgcalls.exceptions import AlreadyJoinedError, NoActiveGroupCall
 from pytgcalls.types import (
     ChatUpdate,
     GroupCallConfig,
@@ -173,14 +173,32 @@ class Call:
 
     async def stream_call(self, link):
         assistant = await group_assistant(self, config.LOGGER_ID)
-        call_config = GroupCallConfig(auto_start=False)
-        await assistant.play(
-            config.LOGGER_ID,
-            MediaStream(link),
-            config=call_config,
-        )
-        await asyncio.sleep(0.5)
-        await assistant.leave_call(config.LOGGER_ID)
+        join_as = getattr(assistant, "_cache_local_peer", None)
+        if join_as is None:
+            try:
+                join_as = await assistant._app.resolve_peer(
+                    await assistant._app.get_id()
+                )
+            except Exception as exc:
+                LOGGER(__name__).warning(
+                    f"Could not resolve assistant peer for stream check: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+        call_config = GroupCallConfig(auto_start=False, join_as=join_as)
+        try:
+            await assistant.play(
+                config.LOGGER_ID,
+                MediaStream(link),
+                config=call_config,
+            )
+            await asyncio.sleep(0.5)
+            await assistant.leave_call(config.LOGGER_ID)
+        except NoActiveGroupCall:
+            raise
+        except Exception as exc:
+            LOGGER(__name__).warning(
+                f"Stream sanity check failed: {type(exc).__name__}: {exc}"
+            )
 
     async def join_chat(self, chat_id, attempts=1):
         max_attempts = len(assistants) - 1

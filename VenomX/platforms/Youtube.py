@@ -4,6 +4,10 @@
 import asyncio
 import os
 import re
+import shlex
+import shutil
+
+import httpx
 
 from async_lru import alru_cache
 from py_yt import VideosSearch
@@ -15,6 +19,23 @@ from VenomX.utils.decorators import asyncify
 from VenomX.utils.formatters import seconds_to_min, time_to_seconds
 
 NOTHING = {"cookies_dead": None}
+
+
+def yt_dlp_binary():
+    """Locate the yt-dlp binary even if it's outside the process PATH."""
+    path = shutil.which("yt-dlp")
+    if path:
+        return path
+    for candidate in (
+        os.path.expanduser("~/.local/bin/yt-dlp"),
+        os.path.expanduser("~/bin/yt-dlp"),
+        "/usr/local/bin/yt-dlp",
+        "/usr/bin/yt-dlp",
+        "/usr/sbin/yt-dlp",
+    ):
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return "yt-dlp"
 
 
 def cookies():
@@ -158,7 +179,7 @@ class YouTube:
         if "&" in link:
             link = link.split("&")[0]
         cmd = [
-            "yt-dlp",
+            yt_dlp_binary(),
             "-g",
             "-f",
             "best[height<=?720][width<=?1280]",
@@ -178,6 +199,22 @@ class YouTube:
         else:
             return 0, stderr.decode()
 
+    async def _streamable(self, url: str) -> bool:
+        """True if the direct URL can be pulled by a plain HTTP client.
+
+        The audio stream is later played through ffmpeg without any of
+        yt-dlp's headers/cookies, so verify here that YouTube actually
+        serves the URL to a plain fetch. If not (HTTP 403 due to the
+        newer direct-stream protection), callers fall back to downloading
+        the file instead.
+        """
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=6) as client:
+                resp = await client.get(url, headers={"Range": "bytes=0-1023"})
+            return resp.status_code in (200, 206)
+        except Exception:
+            return False
+
     async def stream_url(
         self,
         link: str,
@@ -193,7 +230,7 @@ class YouTube:
         else:
             fmt = "bestaudio/best"
         cmd = [
-            "yt-dlp",
+            yt_dlp_binary(),
             "-g",
             "-f",
             fmt,
@@ -209,7 +246,12 @@ class YouTube:
         )
         stdout, stderr = await proc.communicate()
         if stdout:
-            return 1, stdout.decode().split("\n")[0]
+            url = stdout.decode().split("\n")[0]
+            if await self._streamable(url):
+                return 1, url
+            return 0, stderr.decode() or (
+                "Direct stream is not available right now, downloading instead."
+            )
         else:
             return 0, stderr.decode()
 
@@ -221,7 +263,7 @@ class YouTube:
             link = link.split("&")[0]
 
         cmd = (
-            f"yt-dlp -i --compat-options no-youtube-unavailable-videos "
+            f"{shlex.quote(yt_dlp_binary())} -i --compat-options no-youtube-unavailable-videos "
             f'--get-id --flat-playlist --playlist-end {limit} --skip-download "{link}" '
             f"2>/dev/null"
         )
