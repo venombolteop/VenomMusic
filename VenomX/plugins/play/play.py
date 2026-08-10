@@ -452,7 +452,9 @@ async def play_commnd(
                 err = _["general_3"].format(ex_type)
             return await mystic.edit_text(err)
         await mystic.delete()
-        return await play_logs(message, streamtype=streamtype)
+        return await play_logs(
+            message, streamtype=streamtype, thumbnail=details.get("thumb")
+        )
     else:
         if plist_type:
             ran_hash = "".join(
@@ -473,7 +475,11 @@ async def play_commnd(
                 caption=cap,
                 reply_markup=InlineKeyboardMarkup(buttons),
             )
-            return await play_logs(message, streamtype=f"Playlist : {plist_type}")
+            return await play_logs(
+                message,
+                streamtype=f"Playlist : {plist_type}",
+                thumbnail=img,
+            )
         else:
             if slider:
                 buttons = slider_markup(
@@ -494,7 +500,11 @@ async def play_commnd(
                     ),
                     reply_markup=InlineKeyboardMarkup(buttons),
                 )
-                return await play_logs(message, streamtype=f"Searched on Youtube")
+                return await play_logs(
+                    message,
+                    streamtype=f"Searched on Youtube",
+                    thumbnail=details.get("thumb"),
+                )
             else:
                 buttons = track_markup(
                     _,
@@ -509,4 +519,8 @@ async def play_commnd(
                     caption=cap,
                     reply_markup=InlineKeyboardMarkup(buttons),
                 )
-                return await play_logs(message, streamtype=f"URL Searched Inline")
+                return await play_logs(
+                    message,
+                    streamtype=f"URL Searched Inline",
+                    thumbnail=img,
+                )

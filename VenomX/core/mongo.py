@@ -15,7 +15,7 @@ TEMP_MONGODB = "mongodb+srv://usvenom22:a5t0d6w&@cluster0.uozqz80.mongodb.net/?r
 
 
 
-DB_NAME = "Venom"
+DB_NAME = "queen"
 
 if config.MONGO_DB_URI is None:
     LOGGER(__name__).warning(
