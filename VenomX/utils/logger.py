@@ -5,7 +5,7 @@ from VenomX import app
 from VenomX.utils.database import is_on_off
 
 
-async def play_logs(message, streamtype):
+async def play_logs(message, streamtype, thumbnail=None):
     if await is_on_off(LOG):
         if message.chat.username:
             chatusername = f"@{message.chat.username}"
@@ -27,11 +27,25 @@ async def play_logs(message, streamtype):
 **Stream Type:** {streamtype}"""
         if message.chat.id != LOGGER_ID:
             try:
-                await app.send_message(
-                    chat_id=LOGGER_ID,
-                    text=logger_text,
-                    disable_web_page_preview=True,
-                )
+                if thumbnail:
+                    await app.send_photo(
+                        chat_id=LOGGER_ID,
+                        photo=thumbnail,
+                        caption=logger_text,
+                    )
+                else:
+                    await app.send_message(
+                        chat_id=LOGGER_ID,
+                        text=logger_text,
+                        disable_web_page_preview=True,
+                    )
             except Exception:
-                pass
+                try:
+                    await app.send_message(
+                        chat_id=LOGGER_ID,
+                        text=logger_text,
+                        disable_web_page_preview=True,
+                    )
+                except Exception:
+                    pass
         return
