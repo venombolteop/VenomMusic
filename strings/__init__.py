@@ -16,6 +16,7 @@ from VenomX.misc import SUDOERS
 
 
 from VenomX.utils.database import get_lang, is_maintenance
+from VenomX.utils.premium import normalize_text
 
 languages = {}
 commands = {}
@@ -26,6 +27,17 @@ languages_present = {}
 def load_yaml_file(file_path: str) -> dict:
     with open(file_path, "r", encoding="utf8") as file:
         return yaml.safe_load(file)
+
+
+def normalize_strings(data):
+    """Replace every emoji in the strings with premium-db-available ones."""
+    if isinstance(data, dict):
+        return {k: normalize_strings(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [normalize_strings(v) for v in data]
+    if isinstance(data, str):
+        return normalize_text(data)
+    return data
 
 
 def get_command(lang: str = "en") -> Union[str, List[str]]:
@@ -89,6 +101,18 @@ for filename in os.listdir(r"./strings/langs/"):
                 "There is an issue with the language file. Please report it to VenomChatz at @Venom_Chatz on Telegram"
             )
             sys.exit()
+
+# Replace every emoji with a premium-database-available equivalent
+for _lang_code in languages:
+    _lang_name = languages[_lang_code].get("name")
+    languages[_lang_code] = normalize_strings(languages[_lang_code])
+    if _lang_name is not None:
+        # language display names use tag-sequence flags - keep them intact
+        languages[_lang_code]["name"] = _lang_name
+for _helper_code in helpers:
+    helpers[_helper_code] = normalize_strings(helpers[_helper_code])
+for _command_code in commands:
+    commands[_command_code] = normalize_strings(commands[_command_code])
 
 if not commands:
     print(

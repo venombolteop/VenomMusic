@@ -12,6 +12,9 @@ from VenomX import HELPABLE, LOGGER, app, userbot
 from VenomX.core.call import Ayush
 from VenomX.plugins import ALL_MODULES
 from VenomX.utils.database import get_banned_users, get_gbanned
+from VenomX.utils.premium import install_text_entities_patch, validate_db
+
+install_text_entities_patch()
 
 
 async def init():
@@ -34,6 +37,11 @@ async def init():
     except Exception:
         pass
     await app.start()
+    LOGGER("VenomX").info("Validating premium emoji database...")
+    try:
+        await validate_db(app)
+    except Exception:
+        LOGGER("VenomX").warning("Could not validate premium emoji database.")
     for all_module in ALL_MODULES:
         imported_module = importlib.import_module(all_module)
 

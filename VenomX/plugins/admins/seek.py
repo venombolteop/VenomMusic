@@ -1,6 +1,8 @@
 
 # All rights reserved.
 #
+import glob
+
 from pyrogram import filters
 from pyrogram.types import Message
 
@@ -51,19 +53,24 @@ async def seek_comm(cli, message: Message, _, chat_id):
     if "vid_" in file_path:
         streamtype = playing[0]["streamtype"]
         video = True if str(streamtype) == "video" else False
-        instant = await get_instant_play(chat_id)
-        if instant:
-            n, file_path = await Platform.youtube.stream_url(
-                playing[0]["vidid"], videoid=True, video=video
-            )
-            if n == 0:
-                n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
+        vidid = playing[0]["vidid"]
+        downloaded = glob.glob(f"downloads/{vidid}.*")
+        if downloaded:
+            file_path = downloaded[0]
+        else:
+            instant = await get_instant_play(chat_id)
+            if instant:
+                n, file_path = await Platform.youtube.stream_url(
+                    vidid, videoid=True, video=video
+                )
+                if n == 0:
+                    n, file_path = await Platform.youtube.video(vidid, True)
+                    if n == 0:
+                        return await message.reply_text(_["admin_30"])
+            else:
+                n, file_path = await Platform.youtube.video(vidid, True)
                 if n == 0:
                     return await message.reply_text(_["admin_30"])
-        else:
-            n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
-            if n == 0:
-                return await message.reply_text(_["admin_30"])
     try:
         await Ayush.seek_stream(
             chat_id,
