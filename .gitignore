@@ -12,5 +12,4 @@ __pycache__/
 
 
 # Runtime secrets / logs
-cookies/cookies.txt
 bot.log
