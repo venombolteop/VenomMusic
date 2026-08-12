@@ -261,7 +261,7 @@ Special thanks to **[Team Yukki](https://github.com/TeamYukki)** for the origina
 
 <div align="center">
 
-**Venom Music** — *Built with 🖤 by venom bolteop*
+**Venom Music** — *Built with 🖤 by ll_dark_poison_ll*
 
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Built%20With-Python-3776AB?style=flat-square&logo=python&logoColor=white"></a>
 <a href="https://pyrogram.org/"><img src="https://img.shields.io/badge/Powered%20By-PyroBlack-2CA5E0?style=flat-square&logo=telegram&logoColor=white"></a>
@@ -269,6 +269,5 @@ Special thanks to **[Team Yukki](https://github.com/TeamYukki)** for the origina
 
 <br>
 <a href="https://github.com/venombolteop/VenomMusic/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blueviolet?style=flat-square" alt="License"></a>
-⭐ Don't forget to star the repo if you like it!
-
+<a href="https://github.com/venombolteop/VenomMusic/stargazers"><img src="https://img.shields.io/badge/⭐%20Star%20the%20Repo-7dff00?style=flat-square&logo=github&logoColor=black" alt="Star"></a>
 </div>
