@@ -3,6 +3,7 @@
 #
 
 from pyrogram import filters
+from pyrogram.errors import ChatWriteForbidden
 from pyrogram.types import Message
 from pytgcalls.exceptions import NoActiveGroupCall
 
@@ -30,9 +31,12 @@ async def stream_command(
     fplay,
 ):
     if url:
-        mystic = await message.reply_text(
-            _["play_2"].format(channel) if channel else _["play_1"]
-        )
+        try:
+            mystic = await message.reply_text(
+                _["play_2"].format(channel) if channel else _["play_1"]
+            )
+        except ChatWriteForbidden:
+            return
         try:
             await Ayush.stream_call(url)
         except NoActiveGroupCall:
