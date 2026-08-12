@@ -10,3 +10,7 @@ __pycache__/
 *.session-journal
 
 
+
+# Runtime secrets / logs
+cookies/cookies.txt
+bot.log
