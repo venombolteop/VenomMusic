@@ -7,14 +7,19 @@ from typing import Union
 from ntgcalls import TelegramServerError
 from pyrogram.types import InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, filters
-from pytgcalls.exceptions import AlreadyJoinedError, NoActiveGroupCall
+try:
+    from pytgcalls.exceptions import AlreadyJoinedError, NoActiveGroupCall
+except ImportError:
+    from pytgcalls.exceptions import NoActiveGroupCall
+
+    AlreadyJoinedError = NoActiveGroupCall
 from pytgcalls.types import (
     ChatUpdate,
     GroupCallConfig,
     MediaStream,
     Update,
 )
-from pytgcalls.types import StreamAudioEnded
+from pytgcalls.types import StreamEnded
 
 import config
 from strings import get_string
@@ -669,7 +674,7 @@ class Call:
 
             @call.on_update(filters.stream_end)
             async def stream_end_handler(client, update: Update):
-                if not isinstance(update, StreamAudioEnded):
+                if update.stream_type != StreamEnded.Type.AUDIO:
                     return
                 await self.change_stream(client, update.chat_id)
 
