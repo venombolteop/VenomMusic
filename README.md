@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🐍 VENOM ✘ MUSIC
+# VENOM ✘ MUSIC
 
 ### The Deadliest Telegram Music Bot You'll Ever Meet
 
@@ -22,7 +22,7 @@
 
 <a href="https://t.me/venom_chatting"><img src="https://img.shields.io/badge/Support%20Group-0ea5e9?style=for-the-badge&logo=telegram&logoColor=white"></a>
 <a href="https://t.me/TomatoFist"><img src="https://img.shields.io/badge/Updates%20Channel-22c55e?style=for-the-badge&logo=telegram&logoColor=white"></a>
-<a href="https://t.me/venom_bolti_public"><img src="https://img.shields.io/badge/Developer-b91c1c?style=for-the-badge&logo=telegram&logoColor=white"></a>
+<a href="https://t.me/ll_dark_poison_ll"><img src="https://img.shields.io/badge/Developer-b91c1c?style=for-the-badge&logo=telegram&logoColor=white"></a>
 
 </div>
 
@@ -253,7 +253,7 @@ The bot uses **MongoDB** to store chats, users, playlists, assistant assignments
 
 - 👥 **Support Group:** [Join here](https://t.me/venom_chatting)
 - 📢 **Updates Channel:** [Follow here](https://t.me/TomatoFist)
-- 👨‍💻 **Developer:** [Contact](https://t.me/venom_bolti_public)
+- 👨‍💻 **Developer:** [Contact](https://t.me/ll_dark_poison_ll)
 
 Special thanks to **[Team Yukki](https://github.com/TeamYukki)** for the original **[Yukki Music Bot](https://github.com/TeamYukki/YukkiMusicBot)** that this project is built upon.
 
@@ -269,6 +269,6 @@ Special thanks to **[Team Yukki](https://github.com/TeamYukki)** for the origina
 
 <br>
 <a href="https://github.com/venombolteop/VenomMusic/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blueviolet?style=flat-square" alt="License"></a>
-⭐ Don't forget to **star** the repo if you like it!
+⭐ Don't forget to star the repo if you like it!
 
 </div>
