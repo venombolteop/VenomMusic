@@ -104,22 +104,22 @@ class Call:
         try:
             await _clear_(chat_id)
             await assistant.leave_call(chat_id)
-        except Exception:
-            pass
+        except Exception as e:
+            LOGGER(__name__).error(f"Failed to stop stream for chat {chat_id}: {e}")
 
     async def force_stop_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         try:
             check = db.get(chat_id)
             check.pop(0)
-        except Exception:
-            pass
+        except Exception as e:
+            LOGGER(__name__).error(f"Error popping queue for chat {chat_id}: {e}")
         await remove_active_video_chat(chat_id)
         await remove_active_chat(chat_id)
         try:
-            await assistant.leave_call(chat_id)
-        except Exception:
-            pass
+            await assistant.leave_call(chat_id, close=False)
+        except Exception as e:
+            LOGGER(__name__).error(f"Failed to force leave call for chat {chat_id}: {e}")
 
     async def skip_stream(
         self,
@@ -362,13 +362,19 @@ class Call:
                         pass
             if not check:
                 await _clear_(chat_id)
-                return await client.leave_call(chat_id)
-        except Exception:
+                try:
+                    await client.leave_call(chat_id, close=False)
+                except Exception as e:
+                    LOGGER(__name__).error(f"Failed to leave call for chat {chat_id}: {e}")
+                return
+        except Exception as e:
+            LOGGER(__name__).error(f"Error in change_stream for chat {chat_id}: {e}")
             try:
                 await _clear_(chat_id)
-                return await client.leave_call(chat_id)
-            except Exception:
-                return
+                await client.leave_call(chat_id, close=False)
+            except Exception as e2:
+                LOGGER(__name__).error(f"Failed to leave call after error for chat {chat_id}: {e2}")
+            return
         else:
             queued = check[0]["file"]
             language = await get_lang(chat_id)
@@ -672,10 +678,8 @@ class Call:
             async def stream_services_handler(client, update):
                 await self.stop_stream(update.chat_id)
 
-            @call.on_update(filters.stream_end)
+            @call.on_update(filters.stream_end())
             async def stream_end_handler(client, update: Update):
-                if update.stream_type != StreamEnded.Type.AUDIO:
-                    return
                 await self.change_stream(client, update.chat_id)
 
 
