@@ -3,6 +3,7 @@
 #
 
 import os
+import time as _time
 from random import randint
 from typing import Union
 
@@ -25,6 +26,8 @@ from VenomX.utils.pastebin import Ayushbin
 from VenomX.utils.stream.queue import put_queue, put_queue_index
 from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
 
+_STREAM_LOG = "Stream"
+
 
 async def stream(
     _,
@@ -39,6 +42,14 @@ async def stream(
     spotify: Union[bool, str] = None,
     forceplay: Union[bool, str] = None,
 ):
+    import logging
+    slog = logging.getLogger("VenomX.utils.stream.stream")
+    st0 = _time.monotonic()
+    slog.info(
+        "[%s] stream() entry streamtype=%s chat=%s video=%s forceplay=%s result=%s",
+        _STREAM_LOG, streamtype, chat_id, video, forceplay,
+        str(result)[:80] if result else "None",
+    )
     if not result:
         return
     if video:
@@ -87,8 +98,17 @@ async def stream(
                     db[chat_id] = []
                 status = True if video else None
                 instant = await get_instant_play(chat_id)
+                slog.info(
+                    "[%s] playlist first-track: vidid=%s instant=%s",
+                    _STREAM_LOG, vidid, instant,
+                )
                 if instant:
-                    n, stream_link = await Platform.youtube.stream_url(vidid, videoid=True, video=status)
+                    try:
+                        n, stream_link = await Platform.youtube.stream_url(vidid, videoid=True, video=status)
+                        slog.info("[%s] playlist stream_url() returned n=%s", _STREAM_LOG, n)
+                    except Exception as e:
+                        slog.error("[%s] playlist stream_url() EXCEPTION: %s", _STREAM_LOG, e)
+                        n = 0
                     if n == 0:
                         try:
                             stream_link, direct = await Platform.youtube.download(
@@ -108,6 +128,7 @@ async def stream(
                 await Ayush.join_call(
                     chat_id, original_chat_id, stream_link, video=status, image=thumbnail
                 )
+                slog.info("[%s] join_call done for vidid=%s", _STREAM_LOG, vidid)
                 await put_queue(
                     chat_id,
                     original_chat_id,
@@ -161,23 +182,38 @@ async def stream(
         thumbnail = result["thumb"]
         status = True if video else None
         instant = await get_instant_play(chat_id)
+        slog.info(
+            "[%s] youtube branch: vidid=%s title=%s instant=%s",
+            _STREAM_LOG, vidid, title[:40], instant,
+        )
         if instant:
-            n, stream_link = await Platform.youtube.stream_url(vidid, videoid=True, video=status)
+            try:
+                n, stream_link = await Platform.youtube.stream_url(vidid, videoid=True, video=status)
+                slog.info("[%s] stream_url() returned n=%s", _STREAM_LOG, n)
+            except Exception as e:
+                slog.error("[%s] stream_url() EXCEPTION: %s", _STREAM_LOG, e)
+                n = 0
             if n == 0:
                 try:
+                    slog.info("[%s] stream_url failed, trying download()...", _STREAM_LOG)
                     stream_link, direct = await Platform.youtube.download(
                         vidid, mystic, videoid=True, video=status
                     )
-                except Exception:
+                    slog.info("[%s] download() returned direct=%s", _STREAM_LOG, direct)
+                except Exception as e:
+                    slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
                     raise AssistantErr(_["play_16"])
             else:
                 direct = True
         else:
             try:
+                slog.info("[%s] non-instant: calling download()...", _STREAM_LOG)
                 stream_link, direct = await Platform.youtube.download(
                     vidid, mystic, videoid=True, video=status
                 )
-            except Exception:
+                slog.info("[%s] download() returned direct=%s", _STREAM_LOG, direct)
+            except Exception as e:
+                slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
                 raise AssistantErr(_["play_16"])
         if await is_active_chat(chat_id):
             await put_queue(
@@ -234,6 +270,7 @@ async def stream(
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
+        slog.info("[%s] youtube branch completed in %.1fs for vidid=%s", _STREAM_LOG, _time.monotonic() - st0, vidid)
 
     elif "saavn" in streamtype:
         if streamtype == "saavn_track":
@@ -499,7 +536,9 @@ async def stream(
         else:
             if not forceplay:
                 db[chat_id] = []
+            slog.info("[%s] live branch: calling video() for link=%s", _STREAM_LOG, link[:80])
             n, file_path = await Platform.youtube.video(link)
+            slog.info("[%s] video() returned n=%s", _STREAM_LOG, n)
             if n == 0:
                 raise AssistantErr(_["str_3"])
             await Ayush.join_call(
