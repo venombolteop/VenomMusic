@@ -845,9 +845,7 @@ class YouTube:
 
             elapsed = time.monotonic() - t0
             _log("info", "download() COMPLETED in %.1fs result=%s", elapsed, str(result)[:100])
-            if video or songvideo or songaudio:
-                return result
-            return result, direct
+            return result, True
         except asyncio.TimeoutError:
             elapsed = time.monotonic() - t0
             _log("error", "download() TIMEOUT after %.1fs", elapsed)
