@@ -61,11 +61,22 @@ from VenomX.utils.database import (
 
 links = {}
 
-# ffmpeg parameters for smoother remote URL streaming (reconnect + buffer)
+# ffmpeg parameters for smoother playback: bigger buffers + thread queue + async resample
 _REMOTE_FFMPEG_PARAMS = (
     "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 "
     "-reconnect_delay_max 5 "
-    "-analyzeduration 500000 -probesize 32768"
+    "-analyzeduration 500000 -probesize 32768 "
+    "-thread_queue_size 1024 "
+    "-fflags +genpts+discardcorrupt "
+    "-flags low_delay"
+)
+
+# For local files: buffer tuning to prevent pipe starvation
+_LOCAL_FFMPEG_PARAMS = (
+    "-thread_queue_size 1024 "
+    "-analyzeduration 500000 -probesize 32768 "
+    "-fflags +genpts+discardcorrupt "
+    "-flags low_delay"
 )
 
 
@@ -299,12 +310,13 @@ class Call:
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
         is_remote = isinstance(link, str) and link.startswith("http")
+        ffmpeg_params = _REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS
         if video:
             stream = MediaStream(
                 link,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
-                ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
+                ffmpeg_parameters=ffmpeg_params,
             )
         elif image and config.PRIVATE_BOT_MODE == str(True):
             stream = MediaStream(
@@ -312,14 +324,14 @@ class Call:
                 audio_path=link,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
-                ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
+                ffmpeg_parameters=ffmpeg_params,
             )
         else:
             stream = MediaStream(
                 link,
                 audio_parameters=audio_stream_quality,
                 video_flags=MediaStream.Flags.IGNORE,
-                ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
+                ffmpeg_parameters=ffmpeg_params,
             )
 
         try:
@@ -408,11 +420,14 @@ class Call:
                         original_chat_id,
                         text=_["call_7"],
                     )
+                is_remote = isinstance(link, str) and link.startswith("http")
+                ffmpeg_params = _REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS
                 if video:
                     stream = MediaStream(
                         link,
                         audio_parameters=audio_stream_quality,
                         video_parameters=video_stream_quality,
+                        ffmpeg_parameters=ffmpeg_params,
                     )
                 else:
                     try:
@@ -425,12 +440,14 @@ class Call:
                             audio_path=link,
                             audio_parameters=audio_stream_quality,
                             video_parameters=video_stream_quality,
+                            ffmpeg_parameters=ffmpeg_params,
                         )
                     else:
                         stream = MediaStream(
                             link,
                             audio_parameters=audio_stream_quality,
                             video_flags=MediaStream.Flags.IGNORE,
+                            ffmpeg_parameters=ffmpeg_params,
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
@@ -488,12 +505,13 @@ class Call:
                             _["call_7"], disable_web_page_preview=True
                         )
                 is_remote = isinstance(stream_link, str) and stream_link.startswith("http")
+                ffmpeg_params = _REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS
                 if video:
                     stream = MediaStream(
                         stream_link,
                         audio_parameters=audio_stream_quality,
                         video_parameters=video_stream_quality,
-                        ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
+                        ffmpeg_parameters=ffmpeg_params,
                     )
                 else:
                     try:
@@ -506,14 +524,14 @@ class Call:
                             audio_path=stream_link,
                             audio_parameters=audio_stream_quality,
                             video_parameters=video_stream_quality,
-                            ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
+                            ffmpeg_parameters=ffmpeg_params,
                         )
                     else:
                         stream = MediaStream(
                             stream_link,
                             audio_parameters=audio_stream_quality,
                             video_flags=MediaStream.Flags.IGNORE,
-                            ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
+                            ffmpeg_parameters=ffmpeg_params,
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
@@ -540,17 +558,21 @@ class Call:
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
             elif "index_" in queued:
+                is_remote = isinstance(videoid, str) and videoid.startswith("http")
+                ffmpeg_params = _REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS
                 stream = (
                     MediaStream(
                         videoid,
                         audio_parameters=audio_stream_quality,
                         video_parameters=video_stream_quality,
+                        ffmpeg_parameters=ffmpeg_params,
                     )
                     if str(streamtype) == "video"
                     else MediaStream(
                         videoid,
                         audio_parameters=audio_stream_quality,
                         video_flags=MediaStream.Flags.IGNORE,
+                        ffmpeg_parameters=ffmpeg_params,
                     )
                 )
                 try:
@@ -585,11 +607,14 @@ class Call:
                         image = await Platform.youtube.thumbnail(videoid, True)
                     except Exception:
                         image = None
+                is_remote = isinstance(queued, str) and queued.startswith("http")
+                ffmpeg_params = _REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS
                 if video:
                     stream = MediaStream(
                         queued,
                         audio_parameters=audio_stream_quality,
                         video_parameters=video_stream_quality,
+                        ffmpeg_parameters=ffmpeg_params,
                     )
                 else:
                     if image and config.PRIVATE_BOT_MODE == str(True):
@@ -598,12 +623,14 @@ class Call:
                             audio_path=queued,
                             audio_parameters=audio_stream_quality,
                             video_parameters=video_stream_quality,
+                            ffmpeg_parameters=ffmpeg_params,
                         )
                     else:
                         stream = MediaStream(
                             queued,
                             audio_parameters=audio_stream_quality,
                             video_flags=MediaStream.Flags.IGNORE,
+                            ffmpeg_parameters=ffmpeg_params,
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
