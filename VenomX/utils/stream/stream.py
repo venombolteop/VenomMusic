@@ -25,6 +25,7 @@ from VenomX.utils.inline.playlist import close_markup
 from VenomX.utils.pastebin import Ayushbin
 from VenomX.utils.stream.queue import put_queue, put_queue_index
 from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
+from VenomX.utils.notify import notify_owner
 
 _STREAM_LOG = "Stream"
 
@@ -114,7 +115,11 @@ async def stream(
                             stream_link, direct = await Platform.youtube.download(
                                 vidid, mystic, video=status, videoid=True
                             )
-                        except Exception:
+                        except Exception as e:
+                            try:
+                                await notify_owner("Stream.playlist.download(instant)", e, f"vidid={vidid} chat={chat_id}")
+                            except Exception:
+                                pass
                             raise AssistantErr(_["play_16"])
                     else:
                         direct = True
@@ -123,7 +128,11 @@ async def stream(
                         stream_link, direct = await Platform.youtube.download(
                             vidid, mystic, video=status, videoid=True
                         )
-                    except Exception:
+                    except Exception as e:
+                        try:
+                            await notify_owner("Stream.playlist.download(non-instant)", e, f"vidid={vidid} chat={chat_id}")
+                        except Exception:
+                            pass
                         raise AssistantErr(_["play_16"])
                 await Ayush.join_call(
                     chat_id, original_chat_id, stream_link, video=status, image=thumbnail
@@ -202,6 +211,10 @@ async def stream(
                     slog.info("[%s] download() returned direct=%s", _STREAM_LOG, direct)
                 except Exception as e:
                     slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
+                    try:
+                        await notify_owner("Stream.youtube.download(instant)", e, f"vidid={vidid} chat={chat_id}")
+                    except Exception:
+                        pass
                     raise AssistantErr(_["play_16"])
             else:
                 direct = True
@@ -214,6 +227,10 @@ async def stream(
                 slog.info("[%s] download() returned direct=%s", _STREAM_LOG, direct)
             except Exception as e:
                 slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
+                try:
+                    await notify_owner("Stream.youtube.download(non-instant)", e, f"vidid={vidid} chat={chat_id}")
+                except Exception:
+                    pass
                 raise AssistantErr(_["play_16"])
         if await is_active_chat(chat_id):
             await put_queue(

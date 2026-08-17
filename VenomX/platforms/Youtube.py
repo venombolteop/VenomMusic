@@ -18,6 +18,7 @@ from yt_dlp import YoutubeDL
 
 from VenomX.utils.decorators import asyncify
 from VenomX.utils.formatters import seconds_to_min, time_to_seconds
+from VenomX.utils.notify import notify_owner
 
 _LOG_TAG = "Youtube"
 _YT_SEARCH_TIMEOUT = 10
@@ -101,6 +102,13 @@ async def shell_cmd(cmd):
         _log("error", "shell_cmd TIMEOUT after %.1fs: %s", elapsed, cmd[:100])
         try:
             proc.kill()
+        except Exception:
+            pass
+        try:
+            import asyncio as _aio
+            _aio.get_event_loop().create_task(
+                notify_owner("Youtube.shell_cmd", Exception(f"shell subprocess timed out after {elapsed:.0f}s"), f"cmd={cmd[:120]}")
+            )
         except Exception:
             pass
         return ""
@@ -332,6 +340,13 @@ class YouTube:
                 proc.kill()
             except Exception:
                 pass
+            try:
+                import asyncio as _aio
+                _aio.get_event_loop().create_task(
+                    notify_owner("Youtube.video", Exception(f"yt-dlp subprocess timed out after {elapsed:.0f}s"), f"link={link[:80]}")
+                )
+            except Exception:
+                pass
             return 0, "timeout"
         except Exception as e:
             _log("error", "video() EXCEPTION: %s", e)
@@ -404,6 +419,13 @@ class YouTube:
             _log("error", "stream_url() TIMEOUT after %.1fs for: %s", elapsed, link[:80])
             try:
                 proc.kill()
+            except Exception:
+                pass
+            try:
+                import asyncio as _aio
+                _aio.get_event_loop().create_task(
+                    notify_owner("Youtube.stream_url", Exception(f"yt-dlp subprocess timed out after {elapsed:.0f}s"), f"link={link[:80]} video={video}")
+                )
             except Exception:
                 pass
             return 0, "timeout"
@@ -483,14 +505,30 @@ class YouTube:
                 "track() VideosSearch TIMEOUT after %.1fs, falling back to _track()",
                 time.monotonic() - t0,
             )
-            return await self._track(link)
+            try:
+                return await self._track(link)
+            except Exception as e2:
+                _log("error", "track() _track() ALSO FAILED: %s", e2)
+                try:
+                    await notify_owner("Youtube.track", e2, f"query={link[:80]} (VideosSearch timed out, _track also failed)")
+                except Exception:
+                    pass
+                raise
         except Exception as e:
             _log(
                 "warning",
                 "track() VideosSearch FAILED: %s, falling back to _track()",
                 e,
             )
-            return await self._track(link)
+            try:
+                return await self._track(link)
+            except Exception as e2:
+                _log("error", "track() _track() ALSO FAILED: %s", e2)
+                try:
+                    await notify_owner("Youtube.track", e2, f"query={link[:80]} (VideosSearch error: {e}, _track also failed)")
+                except Exception:
+                    pass
+                raise
 
     @asyncify
     def _track(self, q):
@@ -533,6 +571,13 @@ class YouTube:
         except Exception as e:
             elapsed = time.monotonic() - t0
             _log("error", "_track() FAILED after %.1fs for: %s err=%s", elapsed, q[:80], e)
+            try:
+                import asyncio as _aio
+                _aio.get_event_loop().create_task(
+                    notify_owner("Youtube._track(yt-dlp)", e, f"query={q[:80]} elapsed={elapsed:.1f}s")
+                )
+            except Exception:
+                pass
             raise
 
     @alru_cache(maxsize=256)
@@ -781,8 +826,22 @@ class YouTube:
         except asyncio.TimeoutError:
             elapsed = time.monotonic() - t0
             _log("error", "download() TIMEOUT after %.1fs", elapsed)
+            try:
+                import asyncio as _aio
+                _aio.get_event_loop().create_task(
+                    notify_owner("Youtube.download", Exception(f"yt-dlp download timed out after {elapsed:.0f}s"), f"link={link[:80]} video={video} songaudio={songaudio} songvideo={songvideo}")
+                )
+            except Exception:
+                pass
             raise Exception(f"download timed out after {elapsed:.0f}s")
         except Exception as e:
             elapsed = time.monotonic() - t0
             _log("error", "download() FAILED after %.1fs err=%s", elapsed, e)
+            try:
+                import asyncio as _aio
+                _aio.get_event_loop().create_task(
+                    notify_owner("Youtube.download", e, f"link={link[:80]} elapsed={elapsed:.1f}s video={video}")
+                )
+            except Exception:
+                pass
             raise

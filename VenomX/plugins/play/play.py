@@ -27,6 +27,7 @@ from VenomX.utils.inline.play import (
 from VenomX.utils.inline.playlist import botplaylist_markup
 from VenomX.utils.logger import play_logs
 from VenomX.utils.stream.stream import stream
+from VenomX.utils.notify import notify_owner
 
 _PLAY_LOG = "Play"
 
@@ -434,6 +435,14 @@ async def play_commnd(
                 _time.monotonic() - track_t0,
                 e,
             )
+            try:
+                await notify_owner(
+                    "Play.track",
+                    e,
+                    f"query={query[:80]} user={user_id} chat={message.chat.id}",
+                )
+            except Exception:
+                pass
             return await mystic.edit_text(_["play_3"])
         streamtype = "youtube"
     if str(playmode) == "Direct" and not plist_type:
@@ -490,6 +499,14 @@ async def play_commnd(
                 e,
                 ex_type,
             )
+            try:
+                await notify_owner(
+                    "Play.stream",
+                    e,
+                    f"vidid={details.get('vidid', '?')} user={user_id} chat={message.chat.id} type={ex_type}",
+                )
+            except Exception:
+                pass
             if ex_type == "AssistantErr":
                 err = e
             else:
