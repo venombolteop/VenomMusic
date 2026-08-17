@@ -4,6 +4,7 @@
 
 import random
 import string
+import time as _time
 
 from pyrogram import filters
 from pyrogram.errors import ChatWriteForbidden
@@ -27,6 +28,8 @@ from VenomX.utils.inline.playlist import botplaylist_markup
 from VenomX.utils.logger import play_logs
 from VenomX.utils.stream.stream import stream
 
+_PLAY_LOG = "Play"
+
 
 @app.on_message(
     command(
@@ -48,11 +51,20 @@ async def play_commnd(
     url,
     fplay,
 ):
+    t0 = _time.monotonic()
+    query_text = message.text or ""
+    LOGGER(_PLAY_LOG).info(
+        "[PLAY] command received from user=%s chat=%s text=%s",
+        message.from_user.id if message.from_user else "?",
+        message.chat.id,
+        query_text[:120],
+    )
     try:
         mystic = await message.reply_text(
             _["play_2"].format(channel) if channel else _["play_1"]
         )
     except ChatWriteForbidden:
+        LOGGER(_PLAY_LOG).warning("[PLAY] ChatWriteForbidden for chat=%s", message.chat.id)
         return
     plist_id = None
     slider = None
@@ -404,9 +416,24 @@ async def play_commnd(
         query = " ".join(message.command[1:])
         if "-v" in query:
             query = query.replace("-v", "")
+        LOGGER(_PLAY_LOG).info(
+            "[PLAY] YouTube search query='%s' (track call starting)", query[:80]
+        )
+        track_t0 = _time.monotonic()
         try:
             details, track_id = await Platform.youtube.track(query)
-        except Exception:
+            LOGGER(_PLAY_LOG).info(
+                "[PLAY] track() returned in %.1fs title=%s vidid=%s",
+                _time.monotonic() - track_t0,
+                details.get("title", "?")[:40],
+                track_id,
+            )
+        except Exception as e:
+            LOGGER(_PLAY_LOG).error(
+                "[PLAY] track() FAILED after %.1fs err=%s",
+                _time.monotonic() - track_t0,
+                e,
+            )
             return await mystic.edit_text(_["play_3"])
         streamtype = "youtube"
     if str(playmode) == "Direct" and not plist_type:
@@ -433,6 +460,11 @@ async def play_commnd(
                 reply_markup=InlineKeyboardMarkup(buttons),
             )
         try:
+            LOGGER(_PLAY_LOG).info(
+                "[PLAY] stream() call starting (Direct mode) vidid=%s",
+                details.get("vidid", "?"),
+            )
+            stream_t0 = _time.monotonic()
             await stream(
                 _,
                 mystic,
@@ -446,8 +478,18 @@ async def play_commnd(
                 spotify=spotify,
                 forceplay=fplay,
             )
+            LOGGER(_PLAY_LOG).info(
+                "[PLAY] stream() completed in %.1fs",
+                _time.monotonic() - stream_t0,
+            )
         except Exception as e:
             ex_type = type(e).__name__
+            LOGGER(_PLAY_LOG).error(
+                "[PLAY] stream() FAILED in %.1fs err=%s (%s)",
+                _time.monotonic() - stream_t0,
+                e,
+                ex_type,
+            )
             if ex_type == "AssistantErr":
                 err = e
             else:
