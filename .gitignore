@@ -8,8 +8,8 @@ cache/
 downloads/
 __pycache__/
 *.session-journal
-
-
+cookies/cookies.txt
+tempdb/
 
 # Runtime secrets / logs
 bot.log
