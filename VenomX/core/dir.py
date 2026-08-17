@@ -4,6 +4,7 @@
 import logging
 import os
 import sys
+import time
 from os import listdir, mkdir
 
 from config import TEMP_DB_FOLDER
@@ -40,7 +41,32 @@ def dirr():
     if TEMP_DB_FOLDER not in listdir():
         mkdir(TEMP_DB_FOLDER)
 
+    # Clean stale downloads older than 1 hour on startup
+    _clean_downloads(downloads_folder)
+
     logging.info("Directories Updated.")
+
+
+def _clean_downloads(folder):
+    """Remove download files older than 1 hour to prevent disk fill."""
+    try:
+        now = time.time()
+        cutoff = now - 3600  # 1 hour
+        removed = 0
+        for f in os.listdir(folder):
+            fp = os.path.join(folder, f)
+            if os.path.isfile(fp):
+                try:
+                    mtime = os.path.getmtime(fp)
+                    if mtime < cutoff:
+                        os.remove(fp)
+                        removed += 1
+                except Exception:
+                    pass
+        if removed:
+            logging.info(f"Cleaned {removed} stale download(s) from {folder}")
+    except Exception as e:
+        logging.warning(f"Download cleanup failed: {e}")
 
 
 if __name__ == "__main__":

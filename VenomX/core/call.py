@@ -61,6 +61,13 @@ from VenomX.utils.database import (
 
 links = {}
 
+# ffmpeg parameters for smoother remote URL streaming (reconnect + buffer)
+_REMOTE_FFMPEG_PARAMS = (
+    "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 "
+    "-reconnect_delay_max 5 "
+    "-analyzeduration 500000 -probesize 32768"
+)
+
 
 async def _clear_(chat_id):
     popped = db.pop(chat_id, None)
@@ -291,11 +298,13 @@ class Call:
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
+        is_remote = isinstance(link, str) and link.startswith("http")
         if video:
             stream = MediaStream(
                 link,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
+                ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
             )
         elif image and config.PRIVATE_BOT_MODE == str(True):
             stream = MediaStream(
@@ -303,12 +312,14 @@ class Call:
                 audio_path=link,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
+                ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
             )
         else:
             stream = MediaStream(
                 link,
                 audio_parameters=audio_stream_quality,
                 video_flags=MediaStream.Flags.IGNORE,
+                ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
             )
 
         try:
@@ -476,11 +487,13 @@ class Call:
                         return await mystic.edit_text(
                             _["call_7"], disable_web_page_preview=True
                         )
+                is_remote = isinstance(stream_link, str) and stream_link.startswith("http")
                 if video:
                     stream = MediaStream(
                         stream_link,
                         audio_parameters=audio_stream_quality,
                         video_parameters=video_stream_quality,
+                        ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
                     )
                 else:
                     try:
@@ -493,12 +506,14 @@ class Call:
                             audio_path=stream_link,
                             audio_parameters=audio_stream_quality,
                             video_parameters=video_stream_quality,
+                            ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
                         )
                     else:
                         stream = MediaStream(
                             stream_link,
                             audio_parameters=audio_stream_quality,
                             video_flags=MediaStream.Flags.IGNORE,
+                            ffmpeg_parameters=_REMOTE_FFMPEG_PARAMS if is_remote else None,
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
