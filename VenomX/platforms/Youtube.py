@@ -308,7 +308,7 @@ class YouTube:
             yt_dlp_binary(),
             "-g",
             "-f",
-            "best[height<=?720][width<=?1280]",
+            "bestvideo[height<=?720][ext=mp4]+bestaudio[ext=m4a]/best[height<=?720]",
             f"{link}",
         ]
         cookie_txt_file = cookies()
@@ -376,9 +376,9 @@ class YouTube:
         if "&" in link:
             link = link.split("&")[0]
         if video:
-            fmt = "best[height<=?720][acodec!=none]"
+            fmt = "bestvideo[height<=?720][acodec!=none]/best[height<=?720]"
         else:
-            fmt = "bestaudio/best"
+            fmt = "bestaudio[ext=m4a]/bestaudio"
         cmd = [
             yt_dlp_binary(),
             "-g",
@@ -535,7 +535,7 @@ class YouTube:
         _log("info", "_track() ytsearch: %s", q[:80])
         t0 = time.monotonic()
         options = {
-            "format": "best",
+            "format": "bestaudio[ext=m4a]/bestaudio",
             "noplaylist": True,
             "quiet": True,
             "extract_flat": "in_playlist",
@@ -690,7 +690,7 @@ class YouTube:
             dl_t0 = time.monotonic()
             _log("info", "audio_dl() starting for: %s", link[:80])
             ydl_optssx = {
-                "format": "bestaudio/best",
+                "format": "bestaudio[ext=m4a]/bestaudio",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
                 "geo_bypass": True,
                 "noplaylist": True,
@@ -727,7 +727,7 @@ class YouTube:
             dl_t0 = time.monotonic()
             _log("info", "video_dl() starting for: %s", link[:80])
             ydl_optssx = {
-                "format": "(bestvideo[height<=?720][width<=?1280][ext=mp4])+(bestaudio[ext=m4a])",
+                "format": "(bestvideo[height<=?720][ext=mp4])+(bestaudio[ext=m4a]/bestaudio)",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
                 "geo_bypass": True,
                 "noplaylist": True,
@@ -765,7 +765,7 @@ class YouTube:
         @asyncify
         def song_video_dl():
             dl_t0 = time.monotonic()
-            formats = f"{format_id}+140"
+            formats = f"{format_id}+bestaudio[ext=m4a]/bestaudio"
             _log("info", "song_video_dl() starting format=%s for: %s", formats, link[:80])
             ydl_optssx = {
                 "format": formats,
