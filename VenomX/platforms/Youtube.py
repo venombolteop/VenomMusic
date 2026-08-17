@@ -727,7 +727,7 @@ class YouTube:
             dl_t0 = time.monotonic()
             _log("info", "video_dl() starting for: %s", link[:80])
             ydl_optssx = {
-                "format": "(bestvideo[height<=?720][ext=mp4])+(bestaudio[ext=m4a]/bestaudio)",
+                "format": "best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
                 "geo_bypass": True,
                 "noplaylist": True,
@@ -737,6 +737,7 @@ class YouTube:
                 "prefer_ffmpeg": True,
                 "cookiefile": cookies(),
                 "no_overwrites": True,
+                "merge_output_format": "mp4",
             }
 
             with YoutubeDL(ydl_optssx) as x:
