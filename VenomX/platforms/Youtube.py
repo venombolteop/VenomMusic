@@ -699,6 +699,7 @@ class YouTube:
                 "no_warnings": True,
                 "cookiefile": cookies(),
                 "prefer_ffmpeg": True,
+                "no_overwrites": True,
             }
 
             with YoutubeDL(ydl_optssx) as x:
@@ -706,10 +707,19 @@ class YouTube:
                 _log("info", "audio_dl() extract_info done in %.1fs", time.monotonic() - dl_t0)
                 xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
                 if os.path.exists(xyz):
-                    _log("info", "audio_dl() file already exists: %s", xyz)
-                    return xyz
+                    fsize = os.path.getsize(xyz)
+                    if fsize < 10240:
+                        _log("warning", "audio_dl() stale/incomplete file (%d bytes), re-downloading: %s", fsize, xyz)
+                        try:
+                            os.remove(xyz)
+                        except Exception:
+                            pass
+                    else:
+                        _log("info", "audio_dl() file exists (%d bytes): %s", fsize, xyz)
+                        return xyz
                 x.download([link])
-                _log("info", "audio_dl() download done in %.1fs -> %s", time.monotonic() - dl_t0, xyz)
+                final_size = os.path.getsize(xyz) if os.path.exists(xyz) else 0
+                _log("info", "audio_dl() download done in %.1fs size=%d -> %s", time.monotonic() - dl_t0, final_size, xyz)
                 return xyz
 
         @asyncify
@@ -726,6 +736,7 @@ class YouTube:
                 "no_warnings": True,
                 "prefer_ffmpeg": True,
                 "cookiefile": cookies(),
+                "no_overwrites": True,
             }
 
             with YoutubeDL(ydl_optssx) as x:
@@ -733,8 +744,20 @@ class YouTube:
                 _log("info", "video_dl() extract_info done in %.1fs", time.monotonic() - dl_t0)
                 xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
                 if os.path.exists(xyz):
-                    _log("info", "video_dl() file already exists: %s", xyz)
-                    return xyz
+                    fsize = os.path.getsize(xyz)
+                    if fsize < 10240:
+                        _log("warning", "video_dl() stale/incomplete file (%d bytes), re-downloading: %s", fsize, xyz)
+                        try:
+                            os.remove(xyz)
+                        except Exception:
+                            pass
+                    else:
+                        _log("info", "video_dl() file exists (%d bytes): %s", fsize, xyz)
+                        return xyz
+                x.download([link])
+                final_size = os.path.getsize(xyz) if os.path.exists(xyz) else 0
+                _log("info", "video_dl() download done in %.1fs size=%d -> %s", time.monotonic() - dl_t0, final_size, xyz)
+                return xyz
                 x.download([link])
                 _log("info", "video_dl() download done in %.1fs -> %s", time.monotonic() - dl_t0, xyz)
                 return xyz
@@ -755,6 +778,7 @@ class YouTube:
                 "prefer_ffmpeg": True,
                 "merge_output_format": "mp4",
                 "cookiefile": cookies(),
+                "no_overwrites": True,
             }
 
             with YoutubeDL(ydl_optssx) as x:
@@ -785,6 +809,7 @@ class YouTube:
                     }
                 ],
                 "cookiefile": cookies(),
+                "no_overwrites": True,
             }
 
             with YoutubeDL(ydl_optssx) as x:
