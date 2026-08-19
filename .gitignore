@@ -4,7 +4,7 @@ VenomXlogs.txt
 .DS_Store
 *.session
 raw_files/
-*.json
+
 cache/
 downloads/
 __pycache__/
