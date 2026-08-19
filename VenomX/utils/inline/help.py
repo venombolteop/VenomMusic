@@ -1,19 +1,25 @@
 
 # All rights reserved.
 #
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup
 
 from config import SUPPORT_GROUP
 from VenomX import app
+from VenomX.utils.premium import (
+    back_btn,
+    close_btn,
+    link_btn,
+)
 
 
 def support_group_markup(_):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["S_B_3"],
+                link_btn(
+                    _["S_B_3"],
                     url=SUPPORT_GROUP,
+                    emoji="📱",
                 ),
             ]
         ]
@@ -25,10 +31,10 @@ def help_back_markup(_):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["BACK_BUTTON"], callback_data=f"settings_back_helper"
+                back_btn(
+                    _["BACK_BUTTON"], "settings_back_helper"
                 ),
-                InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"close"),
+                close_btn(_["CLOSE_BUTTON"]),
             ]
         ]
     )
@@ -38,8 +44,8 @@ def help_back_markup(_):
 def private_help_panel(_):
     buttons = [
         [
-            InlineKeyboardButton(
-                text=_["S_B_1"], url=f"https://t.me/{app.username}?start=help"
+            link_btn(
+                _["S_B_1"], url=f"https://t.me/{app.username}?start=help", emoji="⭐"
             )
         ],
     ]

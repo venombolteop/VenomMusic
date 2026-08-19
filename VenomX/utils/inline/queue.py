@@ -4,7 +4,15 @@
 #
 from typing import Union
 
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup
+
+from VenomX.utils.premium import (
+    back_btn,
+    close_btn,
+    music_btn,
+    _btn,
+)
+from pyrogram.enums import ButtonStyle
 
 
 def queue_markup(
@@ -17,31 +25,31 @@ def queue_markup(
 ):
     not_dur = [
         [
-            InlineKeyboardButton(
-                text=_["QU_B_1"],
-                callback_data=f"GetQueued {CPLAY}|{videoid}",
+            music_btn(
+                _["QU_B_1"],
+                f"GetQueued {CPLAY}|{videoid}",
             ),
-            InlineKeyboardButton(
-                text=_["CLOSEMENU_BUTTON"],
-                callback_data="close",
+            close_btn(
+                _["CLOSEMENU_BUTTON"],
             ),
         ]
     ]
     dur = [
         [
-            InlineKeyboardButton(
+            _btn(
                 text=_["QU_B_2"].format(played, dur),
                 callback_data="GetTimer",
+                style=ButtonStyle.PRIMARY,
+                emoji="🌟",
             )
         ],
         [
-            InlineKeyboardButton(
-                text=_["QU_B_1"],
-                callback_data=f"GetQueued {CPLAY}|{videoid}",
+            music_btn(
+                _["QU_B_1"],
+                f"GetQueued {CPLAY}|{videoid}",
             ),
-            InlineKeyboardButton(
-                text=_["CLOSEMENU_BUTTON"],
-                callback_data="close",
+            close_btn(
+                _["CLOSEMENU_BUTTON"],
             ),
         ],
     ]
@@ -53,13 +61,12 @@ def queue_back_markup(_, CPLAY):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["BACK_BUTTON"],
-                    callback_data=f"queue_back_timer {CPLAY}",
+                back_btn(
+                    _["BACK_BUTTON"],
+                    f"queue_back_timer {CPLAY}",
                 ),
-                InlineKeyboardButton(
-                    text=_["CLOSE_BUTTON"],
-                    callback_data="close",
+                close_btn(
+                    _["CLOSE_BUTTON"],
                 ),
             ]
         ]

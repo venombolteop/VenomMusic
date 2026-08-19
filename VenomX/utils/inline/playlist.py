@@ -1,21 +1,28 @@
 
 # All rights reserved.
 #
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from VenomX.utils.premium import (
+    back_btn,
+    close_btn,
+    fire_btn,
+    music_btn,
+    settings_btn,
+    star_btn,
+    video_btn,
+    _btn,
+)
+from pyrogram.enums import ButtonStyle
 
 
 def botplaylist_markup(_):
     buttons = [
         [
-            InlineKeyboardButton(
-                text=_["PL_B_1"],
-                callback_data="get_playlist_playmode",
-            ),
-            InlineKeyboardButton(text=_["PL_B_8"], callback_data="get_top_playlists"),
+            music_btn(_["PL_B_1"], "get_playlist_playmode"),
+            star_btn(_["PL_B_8"], "get_top_playlists"),
         ],
         [
-            InlineKeyboardButton(text=_["PL_B_4"], callback_data="PM"),
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+            settings_btn(_["PL_B_4"], "PM"),
+            close_btn(_["CLOSE_BUTTON"]),
         ],
     ]
     return buttons
@@ -23,12 +30,12 @@ def botplaylist_markup(_):
 
 def top_play_markup(_):
     buttons = [
-        [InlineKeyboardButton(text=_["PL_B_9"], callback_data="SERVERTOP global")],
-        [InlineKeyboardButton(text=_["PL_B_10"], callback_data="SERVERTOP chat")],
-        [InlineKeyboardButton(text=_["PL_B_11"], callback_data="SERVERTOP user")],
+        [fire_btn(_["PL_B_9"], "SERVERTOP global")],
+        [fire_btn(_["PL_B_10"], "SERVERTOP chat")],
+        [fire_btn(_["PL_B_11"], "SERVERTOP user")],
         [
-            InlineKeyboardButton(text=_["BACK_BUTTON"], callback_data="get_playmarkup"),
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+            back_btn(_["BACK_BUTTON"], "get_playmarkup"),
+            close_btn(_["CLOSE_BUTTON"]),
         ],
     ]
     return buttons
@@ -37,12 +44,12 @@ def top_play_markup(_):
 def get_playlist_markup(_):
     buttons = [
         [
-            InlineKeyboardButton(text=_["P_B_1"], callback_data="play_playlist a"),
-            InlineKeyboardButton(text=_["P_B_2"], callback_data="play_playlist v"),
+            music_btn(_["P_B_1"], "play_playlist a"),
+            video_btn(_["P_B_2"], "play_playlist v"),
         ],
         [
-            InlineKeyboardButton(text=_["BACK_BUTTON"], callback_data="home_play"),
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+            back_btn(_["BACK_BUTTON"], "home_play"),
+            close_btn(_["CLOSE_BUTTON"]),
         ],
     ]
     return buttons
@@ -50,12 +57,12 @@ def get_playlist_markup(_):
 
 def top_play_markup(_):
     buttons = [
-        [InlineKeyboardButton(text=_["PL_B_9"], callback_data="SERVERTOP Global")],
-        [InlineKeyboardButton(text=_["PL_B_10"], callback_data="SERVERTOP Group")],
-        [InlineKeyboardButton(text=_["PL_B_11"], callback_data="SERVERTOP Personal")],
+        [fire_btn(_["PL_B_9"], "SERVERTOP Global")],
+        [fire_btn(_["PL_B_10"], "SERVERTOP Group")],
+        [fire_btn(_["PL_B_11"], "SERVERTOP Personal")],
         [
-            InlineKeyboardButton(text=_["BACK_BUTTON"], callback_data="get_playmarkup"),
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+            back_btn(_["BACK_BUTTON"], "get_playmarkup"),
+            close_btn(_["CLOSE_BUTTON"]),
         ],
     ]
     return buttons
@@ -64,33 +71,35 @@ def top_play_markup(_):
 def failed_top_markup(_):
     buttons = [
         [
-            InlineKeyboardButton(
-                text=_["BACK_BUTTON"],
-                callback_data="get_top_playlists",
+            back_btn(
+                _["BACK_BUTTON"],
+                "get_top_playlists",
             ),
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+            close_btn(_["CLOSE_BUTTON"]),
         ],
     ]
     return buttons
 
 
 def warning_markup(_):
+    from pyrogram.types import InlineKeyboardMarkup
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
+                _btn(
                     text=_["PL_B_7"],
                     callback_data="delete_whole_playlist",
+                    style=ButtonStyle.DANGER,
+                    emoji="🟠",
                 ),
             ],
             [
-                InlineKeyboardButton(
-                    text=_["BACK_BUTTON"],
-                    callback_data="del_back_playlist",
+                back_btn(
+                    _["BACK_BUTTON"],
+                    "del_back_playlist",
                 ),
-                InlineKeyboardButton(
-                    text=_["CLOSE_BUTTON"],
-                    callback_data="close",
+                close_btn(
+                    _["CLOSE_BUTTON"],
                 ),
             ],
         ]
@@ -99,12 +108,12 @@ def warning_markup(_):
 
 
 def close_markup(_):
+    from pyrogram.types import InlineKeyboardMarkup
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
+                close_btn(
                     text=_["CLOSE_BUTTON"],
-                    callback_data="close",
                 ),
             ]
         ]

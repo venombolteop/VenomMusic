@@ -1,23 +1,27 @@
 
 # All rights reserved.
 #
-from pyrogram.types import InlineKeyboardButton
+from VenomX.utils.premium import (
+    close_btn,
+    music_btn,
+    video_btn,
+)
 
 
 def song_markup(_, vidid):
     buttons = [
         [
-            InlineKeyboardButton(
-                text=_["SG_B_2"],
-                callback_data=f"song_helper audio|{vidid}",
+            music_btn(
+                _["SG_B_2"],
+                f"song_helper audio|{vidid}",
             ),
-            InlineKeyboardButton(
-                text=_["SG_B_3"],
-                callback_data=f"song_helper video|{vidid}",
+            video_btn(
+                _["SG_B_3"],
+                f"song_helper video|{vidid}",
             ),
         ],
         [
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+            close_btn(_["CLOSE_BUTTON"]),
         ],
     ]
     return buttons

@@ -4,13 +4,14 @@
 
 from pykeyboard import InlineKeyboard
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, Message
+from pyrogram.types import Message
 
 from config import BANNED_USERS
 from strings import get_string, languages_present, command
 from VenomX import app
 from VenomX.utils.database import get_lang, set_lang
 from VenomX.utils.decorators import ActualAdminCB, language, languageCB
+from VenomX.utils.premium import back_btn, close_btn, music_btn
 
 # Languages Available
 
@@ -20,8 +21,8 @@ def lanuages_keyboard(_):
     keyboard.add(
         *[
             (
-                InlineKeyboardButton(
-                    text=languages_present[i],
+                music_btn(
+                    languages_present[i],
                     callback_data=f"languages:{i}",
                 )
             )
@@ -29,11 +30,11 @@ def lanuages_keyboard(_):
         ]
     )
     keyboard.row(
-        InlineKeyboardButton(
-            text=_["BACK_BUTTON"],
+        back_btn(
+            _["BACK_BUTTON"],
             callback_data=f"settingsback_helper",
         ),
-        InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"close"),
+        close_btn(_["CLOSE_BUTTON"], callback_data=f"close"),
     )
     return keyboard
 

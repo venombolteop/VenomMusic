@@ -7,7 +7,7 @@ import time
 from py_yt import VideosSearch
 from pyrogram import filters
 from pyrogram.enums import ChatType, ParseMode
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import InlineKeyboardMarkup, Message
 
 import config
 from config import BANNED_USERS, START_IMG_URL
@@ -32,6 +32,7 @@ from VenomX.utils.decorators.language import LanguageStart
 from VenomX.utils.formatters import get_readable_time
 from VenomX.utils.functions import MARKDOWN, WELCOMEHELP
 from VenomX.utils.inline import private_panel, start_pannel
+from VenomX.utils.premium import close_btn, link_btn
 
 loop = asyncio.get_running_loop()
 
@@ -177,8 +178,8 @@ async def start_comm(client, message: Message, _):
             key = InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton(text="🎥 Watch ", url=f"{link}"),
-                        InlineKeyboardButton(text="🔄 Close", callback_data="close"),
+                        link_btn("🎥 Watch ", url=f"{link}", emoji="🎥"),
+                        close_btn("🔄 Close", callback_data="close"),
                     ],
                 ]
             )

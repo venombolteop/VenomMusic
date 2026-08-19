@@ -3,7 +3,7 @@
 #
 
 from pyrogram.enums import ChatMemberStatus, ChatType
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup
 
 from config import adminlist
 from strings import get_string
@@ -20,6 +20,7 @@ from VenomX.utils.database import (
 )
 
 from ..formatters import int_to_alpha
+from VenomX.utils.premium import warn_btn
 
 
 def AdminRightsCheck(mystic):
@@ -41,7 +42,7 @@ def AdminRightsCheck(mystic):
             upl = InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton(
+                        warn_btn(
                             text="How to Fix this? ",
                             callback_data="AnonymousAdmin",
                         ),
@@ -97,7 +98,7 @@ def AdminActual(mystic):
             upl = InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton(
+                        warn_btn(
                             text="How to Fix this?",
                             callback_data="AnonymousAdmin",
                         ),

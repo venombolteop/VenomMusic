@@ -9,7 +9,6 @@ import yt_dlp
 from pykeyboard import InlineKeyboard
 from pyrogram import enums, filters
 from pyrogram.types import (
-    InlineKeyboardButton,
     InlineKeyboardMarkup,
     InputMediaAudio,
     InputMediaVideo,
@@ -27,6 +26,7 @@ from VenomX.platforms.Youtube import cookies
 from VenomX.utils.decorators.language import language, languageCB
 from VenomX.utils.formatters import convert_bytes
 from VenomX.utils.inline.song import song_markup
+from VenomX.utils.premium import back_btn, close_btn, link_btn, music_btn, video_btn
 
 
 @app.on_message(command("SONG_COMMAND") & filters.group & ~BANNED_USERS)
@@ -36,8 +36,8 @@ async def song_commad_group(client, message: Message, _):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["SG_B_1"],
+                link_btn(
+                    _["SG_B_1"],
                     url=f"https://t.me/{app.username}?start=song",
                 ),
             ]
@@ -213,18 +213,18 @@ async def song_helper_cb(client, CallbackQuery, _):
                 fom = x["format_id"]
 
                 keyboard.row(
-                    InlineKeyboardButton(
-                        text=f"{form} Quality Audio = {sz}",
+                    music_btn(
+                        f"{form} Quality Audio = {sz}",
                         callback_data=f"song_download {stype}|{fom}|{vidid}",
                     ),
                 )
 
         keyboard.row(
-            InlineKeyboardButton(
-                text=_["BACK_BUTTON"],
+            back_btn(
+                _["BACK_BUTTON"],
                 callback_data=f"song_back {stype}|{vidid}",
             ),
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"close"),
+            close_btn(_["CLOSE_BUTTON"], callback_data=f"close"),
         )
 
         return await CallbackQuery.edit_message_reply_markup(reply_markup=keyboard)
@@ -266,18 +266,18 @@ async def song_helper_cb(client, CallbackQuery, _):
             to = f"{ap} = {sz}"
 
             keyboard.row(
-                InlineKeyboardButton(
-                    text=to,
+                video_btn(
+                    to,
                     callback_data=f"song_download {stype}|{x['format_id']}|{vidid}",
                 )
             )
 
         keyboard.row(
-            InlineKeyboardButton(
-                text=_["BACK_BUTTON"],
+            back_btn(
+                _["BACK_BUTTON"],
                 callback_data=f"song_back {stype}|{vidid}",
             ),
-            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"close"),
+            close_btn(_["CLOSE_BUTTON"], callback_data=f"close"),
         )
 
         return await CallbackQuery.edit_message_reply_markup(reply_markup=keyboard)

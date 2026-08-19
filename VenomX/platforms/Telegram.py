@@ -8,13 +8,14 @@ import time
 from datetime import datetime, timedelta
 
 import aiohttp
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Voice
+from pyrogram.types import InlineKeyboardMarkup, Voice
 
 import config
 from config import lyrical
 from VenomX import app
 
 from ..utils.formatters import convert_bytes, get_readable_time, seconds_to_min
+from ..utils.premium import stop_btn
 
 downloader = {}
 
@@ -132,7 +133,7 @@ class Telegram:
                 upl = InlineKeyboardMarkup(
                     [
                         [
-                            InlineKeyboardButton(
+                            stop_btn(
                                 text="🚦 Cancel downloading",
                                 callback_data="stop_downloading",
                             ),
