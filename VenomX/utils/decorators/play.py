@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup
 
 from config import PLAYLIST_IMG_URL, PRIVATE_BOT_MODE
 from config import adminlist
@@ -20,6 +20,7 @@ from VenomX.utils.database import (
     is_served_private_chat,
 )
 from VenomX.utils.inline import botplaylist_markup
+from VenomX.utils.premium import warn_btn
 
 links = {}
 
@@ -32,7 +33,7 @@ def PlayWrapper(command):
             upl = InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton(
+                        warn_btn(
                             text="How to Fix ?",
                             callback_data="AnonymousAdmin",
                         ),

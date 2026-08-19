@@ -6,7 +6,6 @@ from pyrogram.enums import ChatType
 from pyrogram.errors import MessageNotModified
 from pyrogram.types import (
     CallbackQuery,
-    InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
 )
@@ -49,6 +48,7 @@ from VenomX.utils.inline.settings import (
     video_quality_markup,
 )
 from VenomX.utils.inline.start import private_panel
+from VenomX.utils.premium import back_btn, close_btn
 
 
 @app.on_message(command("SETTINGS_COMMAND") & filters.group & ~BANNED_USERS)
@@ -504,10 +504,10 @@ async def authusers_mar(client, CallbackQuery, _):
             upl = InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton(
+                        back_btn(
                             text=_["BACK_BUTTON"], callback_data=f"AU"
                         ),
-                        InlineKeyboardButton(
+                        close_btn(
                             text=_["CLOSE_BUTTON"],
                             callback_data=f"close",
                         ),

@@ -1,22 +1,30 @@
 
 # All rights reserved.
 #
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup
 
 from VenomX import app
+from VenomX.utils.premium import (
+    back_btn,
+    close_btn,
+    fire_btn,
+    link_btn,
+    music_btn,
+    _btn,
+)
+from pyrogram.enums import ButtonStyle
 
 
 def back_stats_markup(_):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["BACK_BUTTON"],
-                    callback_data="TOPMARKUPGET",
+                back_btn(
+                    _["BACK_BUTTON"],
+                    "TOPMARKUPGET",
                 ),
-                InlineKeyboardButton(
-                    text=_["CLOSE_BUTTON"],
-                    callback_data="close",
+                close_btn(
+                    _["CLOSE_BUTTON"],
                 ),
             ],
         ]
@@ -28,13 +36,12 @@ def overallback_stats_markup(_):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["BACK_BUTTON"],
-                    callback_data="GlobalStats",
+                back_btn(
+                    _["BACK_BUTTON"],
+                    "GlobalStats",
                 ),
-                InlineKeyboardButton(
-                    text=_["CLOSE_BUTTON"],
-                    callback_data="close",
+                close_btn(
+                    _["CLOSE_BUTTON"],
                 ),
             ],
         ]
@@ -44,37 +51,35 @@ def overallback_stats_markup(_):
 
 def get_stats_markup(_, status):
     not_sudo = [
-        InlineKeyboardButton(
-            text=_["CLOSEMENU_BUTTON"],
-            callback_data="close",
+        close_btn(
+            _["CLOSEMENU_BUTTON"],
         )
     ]
     sudo = [
-        InlineKeyboardButton(
-            text=_["SA_B_8"],
-            callback_data="bot_stats_sudo g",
+        fire_btn(
+            _["SA_B_8"],
+            "bot_stats_sudo g",
         ),
-        InlineKeyboardButton(
-            text=_["CLOSEMENU_BUTTON"],
-            callback_data="close",
+        close_btn(
+            _["CLOSEMENU_BUTTON"],
         ),
     ]
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["SA_B_7"],
-                    callback_data="TOPMARKUPGET",
+                fire_btn(
+                    _["SA_B_7"],
+                    "TOPMARKUPGET",
                 )
             ],
             [
-                InlineKeyboardButton(
-                    text=_["SA_B_6"],
+                link_btn(
+                    _["SA_B_6"],
                     url=f"https://t.me/{app.username}?start=stats",
                 ),
-                InlineKeyboardButton(
-                    text=_["SA_B_5"],
-                    callback_data="TopOverall g",
+                fire_btn(
+                    _["SA_B_5"],
+                    "TopOverall g",
                 ),
             ],
             sudo if status else not_sudo,
@@ -85,28 +90,27 @@ def get_stats_markup(_, status):
 
 def stats_buttons(_, status):
     not_sudo = [
-        InlineKeyboardButton(
-            text=_["SA_B_5"],
-            callback_data="TopOverall s",
+        fire_btn(
+            _["SA_B_5"],
+            "TopOverall s",
         )
     ]
     sudo = [
-        InlineKeyboardButton(
-            text=_["SA_B_8"],
-            callback_data="bot_stats_sudo s",
+        fire_btn(
+            _["SA_B_8"],
+            "bot_stats_sudo s",
         ),
-        InlineKeyboardButton(
-            text=_["SA_B_5"],
-            callback_data="TopOverall s",
+        fire_btn(
+            _["SA_B_5"],
+            "TopOverall s",
         ),
     ]
     upl = InlineKeyboardMarkup(
         [
             sudo if status else not_sudo,
             [
-                InlineKeyboardButton(
-                    text=_["CLOSE_BUTTON"],
-                    callback_data="close",
+                close_btn(
+                    _["CLOSE_BUTTON"],
                 ),
             ],
         ]
@@ -118,13 +122,12 @@ def back_stats_buttons(_):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["BACK_BUTTON"],
-                    callback_data="GETSTATS",
+                back_btn(
+                    _["BACK_BUTTON"],
+                    "GETSTATS",
                 ),
-                InlineKeyboardButton(
-                    text=_["CLOSE_BUTTON"],
-                    callback_data="close",
+                close_btn(
+                    _["CLOSE_BUTTON"],
                 ),
             ],
         ]
@@ -136,33 +139,32 @@ def top_ten_stats_markup(_):
     upl = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton(
-                    text=_["SA_B_2"],
-                    callback_data="GetStatsNow Tracks",
+                fire_btn(
+                    _["SA_B_2"],
+                    "GetStatsNow Tracks",
                 ),
-                InlineKeyboardButton(
-                    text=_["SA_B_1"],
-                    callback_data="GetStatsNow Chats",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text=_["SA_B_3"],
-                    callback_data="GetStatsNow Users",
-                ),
-                InlineKeyboardButton(
-                    text=_["SA_B_4"],
-                    callback_data="GetStatsNow Here",
+                fire_btn(
+                    _["SA_B_1"],
+                    "GetStatsNow Chats",
                 ),
             ],
             [
-                InlineKeyboardButton(
-                    text=_["BACK_BUTTON"],
-                    callback_data="GlobalStats",
+                fire_btn(
+                    _["SA_B_3"],
+                    "GetStatsNow Users",
                 ),
-                InlineKeyboardButton(
-                    text=_["CLOSE_BUTTON"],
-                    callback_data="close",
+                fire_btn(
+                    _["SA_B_4"],
+                    "GetStatsNow Here",
+                ),
+            ],
+            [
+                back_btn(
+                    _["BACK_BUTTON"],
+                    "GlobalStats",
+                ),
+                close_btn(
+                    _["CLOSE_BUTTON"],
                 ),
             ],
         ]

@@ -1,9 +1,10 @@
 from pyrogram import filters
 from pyrogram.enums import ParseMode
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import InlineKeyboardMarkup, Message
 
 import config
 from VenomX import app
+from VenomX.utils.premium import link_btn
 
 TEXT = f"""
 🔒 **Privacy Policy for {app.mention} !**
@@ -17,7 +18,7 @@ If you have any questions or concerns, feel free to reach out to our [Support Te
 @app.on_message(filters.command("privacy"))
 async def privacy(client, message: Message):
     keyboard = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("View Privacy Policy", url=config.PRIVACY_LINK)]]
+        [[link_btn("View Privacy Policy", url=config.PRIVACY_LINK, emoji="🔒")]]
     )
     await message.reply_text(
         TEXT,

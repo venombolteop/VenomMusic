@@ -4,7 +4,6 @@
 
 from py_yt import VideosSearch
 from pyrogram.types import (
-    InlineKeyboardButton,
     InlineKeyboardMarkup,
     InlineQueryResultPhoto,
 )
@@ -12,6 +11,7 @@ from pyrogram.types import (
 from config import BANNED_USERS
 from VenomX import app
 from VenomX.utils.inlinequery import answer
+from VenomX.utils.premium import link_btn
 
 
 @app.on_inline_query(~BANNED_USERS)
@@ -39,9 +39,10 @@ async def inline_query_handler(client, query):
             buttons = InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton(
-                            text="🎥 ᴡᴀᴛᴄʜ ᴏɴ ʏᴏᴜᴛᴜʙᴇ",
+                        link_btn(
+                            "🎥 ᴡᴀᴛᴄʜ ᴏɴ ʏᴏᴜᴛᴜʙᴇ",
                             url=link,
+                            emoji="🎥",
                         )
                     ],
                 ]
