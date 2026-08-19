@@ -9,7 +9,6 @@ from VenomX.utils.premium import (
     back_btn,
     close_btn,
     link_btn,
-    phone_btn,
     settings_btn,
     _btn,
 )
@@ -74,7 +73,7 @@ def private_panel(_, BOT_USERNAME, OWNER: Union[bool, int] = None):
     if GITHUB_REPO and OWNER:
         buttons.append(
             [
-                phone_btn(text=_["S_B_7"], user_id=OWNER),
+                link_btn(_["S_B_7"], url=f"tg://user?id={OWNER}", emoji="📱"),
                 link_btn(_["S_B_6"], url=f"{GITHUB_REPO}", emoji="💻"),
             ]
         )
@@ -90,7 +89,7 @@ def private_panel(_, BOT_USERNAME, OWNER: Union[bool, int] = None):
         if OWNER:
             buttons.append(
                 [
-                    phone_btn(text=_["S_B_7"], user_id=OWNER),
+                    link_btn(_["S_B_7"], url=f"tg://user?id={OWNER}", emoji="📱"),
                 ]
             )
     buttons.append([settings_btn(_["ST_B_6"], "LG")])
