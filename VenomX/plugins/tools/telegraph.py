@@ -1,8 +1,9 @@
 import os
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardMarkup
 from VenomX import app
 import requests
+from VenomX.utils.premium import link_btn
 
 
 def upload_file(file_path):
@@ -57,9 +58,10 @@ async def get_link_group(client, message):
                     reply_markup=InlineKeyboardMarkup(
                         [
                             [
-                                InlineKeyboardButton(
+                                link_btn(
                                     "𝖢ʀᴇᴀᴛᴇ ʙʏ Vᴇɴᴏᴍ 𝖳ᴀᴘ ᴛᴏ 𝖲ᴇᴇ",
                                     url=upload_path,
+                                    emoji="🌐",
                                 )
                             ]
                         ]

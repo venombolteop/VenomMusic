@@ -10,10 +10,11 @@ from io import StringIO
 from time import time
 
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import InlineKeyboardMarkup, Message
 
 from VenomX import app
 from VenomX.misc import SUDOERS
+from VenomX.utils.premium import close_btn, nav_btn
 
 ## -------- end of required imports to run this script
 
@@ -91,7 +92,7 @@ async def executor(client: app, message: Message):
         keyboard = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(
+                    nav_btn(
                         text="⏳",
                         callback_data=f"runtime {t2-t1} Seconds",
                     )
@@ -111,11 +112,11 @@ async def executor(client: app, message: Message):
         keyboard = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(
+                    nav_btn(
                         text="⏳",
                         callback_data=f"runtime {round(t2-t1, 3)} Seconds",
                     ),
-                    InlineKeyboardButton(
+                    close_btn(
                         text="🗑",
                         callback_data=f"forceclose abc|{message.from_user.id}",
                     ),

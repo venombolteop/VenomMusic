@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import InlineKeyboardMarkup, Message
 
 from config import BANNED_USERS, adminlist
 from strings import get_string, command
@@ -20,6 +20,7 @@ from VenomX.utils.database import (
     is_nonadmin_chat,
     set_loop,
 )
+from VenomX.utils.premium import warn_btn
 
 
 @app.on_message(command("STOP_COMMAND") & filters.group & ~BANNED_USERS)
@@ -52,7 +53,7 @@ async def stop_music(cli, message: Message):
         upl = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(
+                    warn_btn(
                         text="How to Fix this? ",
                         callback_data="AnonymousAdmin",
                     ),

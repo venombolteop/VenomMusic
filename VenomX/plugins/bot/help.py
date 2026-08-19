@@ -16,6 +16,7 @@ from VenomX import HELPABLE, app
 from VenomX.utils.database import get_lang, is_commanddelete_on
 from VenomX.utils.decorators.language import LanguageStart
 from VenomX.utils.inline.help import private_help_panel
+from VenomX.utils.premium import back_btn, close_btn, nav_btn, star_btn
 
 COLUMN_SIZE = 4  # Number of button height
 NUM_COLUMNS = 3  # Number of button width
@@ -130,15 +131,15 @@ async def paginate_modules(page_n, chat_id: int, close: bool = False):
     helpers_dict = helpers.get(language, helpers.get("en", {}))
 
     helper_buttons = [
-        EqInlineKeyboardButton(
-            text=helper_key,
+        star_btn(
+            helper_key,
             callback_data=f"help_helper({helper_key},{page_n},{int(close)})",
         )
         for helper_key in helpers_dict
     ]
 
     module_buttons = [
-        EqInlineKeyboardButton(
+        star_btn(
             x.__MODULE__,
             callback_data="help_module({},{},{})".format(
                 x.__MODULE__.lower(), page_n, int(close)
@@ -156,18 +157,18 @@ async def paginate_modules(page_n, chat_id: int, close: bool = False):
     modulo_page = page_n % max_num_pages
 
     navigation_buttons = [
-        EqInlineKeyboardButton(
+        nav_btn(
             "❮",
             callback_data="help_prev({},{})".format(
                 modulo_page - 1 if modulo_page > 0 else max_num_pages - 1,
                 int(close),
             ),
         ),
-        EqInlineKeyboardButton(
+        close_btn(
             "close" if close else "Back",
             callback_data="close" if close else "settingsback_helper",
         ),
-        EqInlineKeyboardButton(
+        nav_btn(
             "❯",
             callback_data="help_next({},{})".format(modulo_page + 1, int(close)),
         ),
@@ -180,7 +181,7 @@ async def paginate_modules(page_n, chat_id: int, close: bool = False):
     else:
         pairs.append(
             [
-                EqInlineKeyboardButton(
+                close_btn(
                     "close" if close else "Back",
                     callback_data="close" if close else "settingsback_helper",
                 )
@@ -265,11 +266,11 @@ async def help_button(client, query):
         key = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(
-                        text="↪️ Back",
+                    back_btn(
+                        "↪️ Back",
                         callback_data=f"help_prev({prev_page_num},{int(close)})",
                     ),
-                    InlineKeyboardButton(text="🔄 Close", callback_data="close"),
+                    close_btn("🔄 Close", callback_data="close"),
                 ],
             ]
         )
@@ -307,10 +308,10 @@ async def help_button(client, query):
         key = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(
-                        text="↪️ Back", callback_data=f"help_prev({page_n},{int(close)})"
+                    back_btn(
+                        "↪️ Back", callback_data=f"help_prev({page_n},{int(close)})"
                     ),
-                    InlineKeyboardButton(text="🔄 Close", callback_data="close"),
+                    close_btn("🔄 Close", callback_data="close"),
                 ]
             ]
         )

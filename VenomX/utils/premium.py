@@ -11,7 +11,9 @@
 import json
 import os
 
+from pyrogram.enums import ButtonStyle
 from pyrogram.raw import types as raw_types
+from pyrogram.types import InlineKeyboardButton
 
 EMOJI_DB_PATH = os.environ.get(
     "PREMIUM_EMOJI_DB",
@@ -313,3 +315,122 @@ async def validate_db(client, batch_size=100):
             i for i in (entry.get("ids") or []) if str(i) in valid_ids
         ]
     _emoji_db = new_db
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Premium button factories — NO DEFAULT/GRAY anywhere
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _btn(text, callback_data=None, url=None, style=ButtonStyle.PRIMARY, emoji=None):
+    """Core button builder — never uses DEFAULT style."""
+    kw = dict(text=text, style=style)
+    if emoji:
+        eid = pick_id(emoji)
+        if eid:
+            kw["icon_custom_emoji_id"] = eid
+    if url:
+        kw["url"] = url
+    elif callback_data:
+        kw["callback_data"] = callback_data
+    return InlineKeyboardButton(**kw)
+
+
+def play_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="▶")
+
+
+def pause_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏸")
+
+
+def skip_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏩")
+
+
+def stop_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="🔴")
+
+
+def close_btn(text, callback_data="close"):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="❌")
+
+
+def back_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔄")
+
+
+def nav_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔵")
+
+
+def on_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="✅")
+
+
+def off_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="❌")
+
+
+def music_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🌟")
+
+
+def video_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🎞")
+
+
+def star_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⭐")
+
+
+def settings_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⭐")
+
+
+def loop_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔁")
+
+
+def shuffle_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔀")
+
+
+def mute_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔴")
+
+
+def unmute_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="🔵")
+
+
+def seek_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏩")
+
+
+def replay_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔁")
+
+
+def fire_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🟣")
+
+
+def spark_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="✨")
+
+
+def warn_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="🟠")
+
+
+def phone_btn(text, callback_data=None, url=None):
+    return _btn(text, callback_data=callback_data, url=url, style=ButtonStyle.PRIMARY, emoji="📱")
+
+
+def link_btn(text, url, emoji=None):
+    return _btn(text, url=url, style=ButtonStyle.PRIMARY, emoji=emoji)
+
+
+def custom_btn(text, callback_data=None, url=None, style=ButtonStyle.PRIMARY, emoji=None):
+    """Generic button with explicit style + optional emoji."""
+    return _btn(text, callback_data=callback_data, url=url, style=style, emoji=emoji)
