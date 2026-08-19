@@ -11,7 +11,6 @@ from VenomX.utils.premium import (
     link_btn,
     phone_btn,
     settings_btn,
-    spark_btn,
     _btn,
 )
 from pyrogram.enums import ButtonStyle
@@ -69,10 +68,7 @@ def private_panel(_, BOT_USERNAME, OWNER: Union[bool, int] = None):
             )
     buttons.append(
         [
-            spark_btn(
-                _["S_B_5"],
-                url=f"https://t.me/{BOT_USERNAME}?startgroup=true",
-            )
+            link_btn(_["S_B_5"], url=f"https://t.me/{BOT_USERNAME}?startgroup=true", emoji="✨")
         ]
     )
     if GITHUB_REPO and OWNER:
