@@ -14,7 +14,10 @@ import os
 from pyrogram.raw import types as raw_types
 
 EMOJI_DB_PATH = os.environ.get(
-    "PREMIUM_EMOJI_DB", "/home/ubuntu/wel/smart_emoji_db.json"
+    "PREMIUM_EMOJI_DB",
+    os.path.join(os.path.dirname(__file__), "smart_emoji_db.json")
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "smart_emoji_db.json"))
+    else "/home/ubuntu/wel/smart_emoji_db.json"
 )
 
 _emoji_db = None
