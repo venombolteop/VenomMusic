@@ -238,8 +238,42 @@ docker run -d --name venommusic --env-file .env venommusic
 | `GITHUB_REPO` | ❌ | Repo link shown in bot |
 | `SUPPORT_CHANNEL` / `SUPPORT_GROUP` | ❌ | Support links shown in bot |
 | `HEROKU_API_KEY` / `HEROKU_APP_NAME` | ❌ | Enable Heroku sudo commands |
+| `PROXY_URL` | ❌ | HTTP proxy for YouTube/yt-dlp (e.g. `http://127.0.0.1:40000`) |
 
 > 📄 Full reference: [`sample.env`](https://github.com/venombolteop/VenomMusic/blob/main/sample.env)
+
+---
+
+## 🌐 Proxy Setup (Optional)
+
+VenomMusic supports an HTTP proxy for YouTube requests. This helps bypass region restrictions and rate limits on yt-dlp.
+
+### How it works
+- Set `PROXY_URL` in your `.env` file
+- The bot automatically routes all YouTube/yt-dlp requests through the proxy
+- aria2c downloads also use the proxy when configured
+- If `PROXY_URL` is empty, the bot works without a proxy (no changes needed)
+
+### Quick setup
+
+1. Add to your `.env`:
+   ```
+   PROXY_URL=http://127.0.0.1:40000
+   ```
+
+2. Restart the bot:
+   ```bash
+   systemctl restart venommusic
+   ```
+
+### Using a SOCKS5 proxy
+
+If your proxy is SOCKS5, use the `socks5://` scheme:
+```
+PROXY_URL=socks5://127.0.0.1:1080
+```
+
+> ⚠️ The proxy address is **not** hardcoded — it's configurable via environment variables. No need to edit any source code.
 
 ---
 

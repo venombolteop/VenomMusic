@@ -17,6 +17,7 @@ from pyrogram.types import (
 
 from config import (
     BANNED_USERS,
+    PROXY_URL,
     SONG_DOWNLOAD_DURATION,
     SONG_DOWNLOAD_DURATION_LIMIT,
 )
@@ -308,12 +309,15 @@ async def song_download_cb(client, CallbackQuery, _):
 
     yturl = f"https://www.youtube.com/watch?v={vidid}"
 
-    with yt_dlp.YoutubeDL({
+    _ytdl_opts = {
         "quiet": True,
         "extractor_args": {"youtube": {"client": ["web_creator"]}},
-        "proxy": "http://127.0.0.1:40000",
         "remote_components": ["ejs:github"],
-    }) as ytdl:
+    }
+    if PROXY_URL:
+        _ytdl_opts["proxy"] = PROXY_URL
+
+    with yt_dlp.YoutubeDL(_ytdl_opts) as ytdl:
 
         x = ytdl.extract_info(yturl, download=False)
 

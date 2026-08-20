@@ -75,8 +75,30 @@ def cookies():
 
 
 # --- Proxy and yt-dlp settings from wel ---
-PROXY = "http://127.0.0.1:40000"
+from config import PROXY_URL
+PROXY = PROXY_URL if PROXY_URL else None
 RUNTIME_PRIORITY = ["node", "bun", "deno"]
+
+
+def _proxy_args():
+    """Return proxy CLI args list, or empty list if no proxy configured."""
+    if not PROXY:
+        return []
+    return ["--proxy", PROXY]
+
+
+def _proxy_dict():
+    """Return proxy dict option, or empty dict if no proxy configured."""
+    if not PROXY:
+        return {}
+    return {"proxy": PROXY}
+
+
+def _aria2_proxy_args():
+    """Return aria2c proxy args list, or empty list if no proxy configured."""
+    if not PROXY:
+        return []
+    return [f"--all-proxy={PROXY}"]
 
 
 def get_available_runtimes():
@@ -335,8 +357,7 @@ class YouTube:
             link = link.split("&")[0]
         cmd = [
             yt_dlp_binary(),
-            "--proxy",
-            PROXY,
+            *_proxy_args(),
             "-g",
             "-f",
             "bestvideo[height<=?720][ext=mp4]+bestaudio[ext=m4a]/best[height<=?720]",
@@ -410,8 +431,7 @@ class YouTube:
             fmt = "bestaudio[ext=m4a]/bestaudio"
         cmd = [
             yt_dlp_binary(),
-            "--proxy",
-            PROXY,
+            *_proxy_args(),
             "-g",
             "-f",
             fmt,
@@ -471,8 +491,9 @@ class YouTube:
         if "&" in link:
             link = link.split("&")[0]
 
+        proxy_part = f"--proxy {shlex.quote(PROXY)} " if PROXY else ""
         cmd = (
-            f"{shlex.quote(yt_dlp_binary())} --proxy {PROXY} "
+            f"{shlex.quote(yt_dlp_binary())} {proxy_part}"
             f"-i --compat-options no-youtube-unavailable-videos "
             f"--extractor-args 'youtube:client=web_creator' "
             f'--get-id --flat-playlist --playlist-end {limit} --skip-download "{link}" '
@@ -571,7 +592,7 @@ class YouTube:
             "quiet": True,
             "extract_flat": "in_playlist",
             "extractor_args": {"youtube": {"client": ["web_creator"]}},
-            "proxy": PROXY,
+            **_proxy_dict(),
             "remote_components": ["ejs:github"],
         }
         try:
@@ -626,7 +647,7 @@ class YouTube:
         ytdl_opts = {
             "quiet": True,
             "extractor_args": {"youtube": {"client": ["web_creator"]}},
-            "proxy": PROXY,
+            **_proxy_dict(),
             "remote_components": ["ejs:github"],
             "extractor_retries": 5,
             "fragment_retries": 5,
@@ -731,7 +752,7 @@ class YouTube:
                 "format": "bestaudio[ext=m4a]/bestaudio",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
                 "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                "proxy": PROXY,
+                **_proxy_dict(),
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
@@ -749,7 +770,7 @@ class YouTube:
                 "external_downloader": "aria2c",
                 "external_downloader_args": [
                     "-x", "16", "-s", "16", "-k", "1M",
-                    f"--all-proxy={PROXY}",
+                    *_aria2_proxy_args(),
                 ],
             }
 
@@ -780,7 +801,7 @@ class YouTube:
                 "format": "best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
                 "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                "proxy": PROXY,
+                **_proxy_dict(),
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
@@ -799,7 +820,7 @@ class YouTube:
                 "external_downloader": "aria2c",
                 "external_downloader_args": [
                     "-x", "16", "-s", "16", "-k", "1M",
-                    f"--all-proxy={PROXY}",
+                    *_aria2_proxy_args(),
                 ],
             }
 
@@ -831,7 +852,7 @@ class YouTube:
                 "format": formats,
                 "outtmpl": os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
                 "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                "proxy": PROXY,
+                **_proxy_dict(),
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
@@ -850,7 +871,7 @@ class YouTube:
                 "external_downloader": "aria2c",
                 "external_downloader_args": [
                     "-x", "16", "-s", "16", "-k", "1M",
-                    f"--all-proxy={PROXY}",
+                    *_aria2_proxy_args(),
                 ],
             }
 
@@ -868,7 +889,7 @@ class YouTube:
                 "format": format_id,
                 "outtmpl": os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
                 "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                "proxy": PROXY,
+                **_proxy_dict(),
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
@@ -893,7 +914,7 @@ class YouTube:
                 "external_downloader": "aria2c",
                 "external_downloader_args": [
                     "-x", "16", "-s", "16", "-k", "1M",
-                    f"--all-proxy={PROXY}",
+                    *_aria2_proxy_args(),
                 ],
             }
 

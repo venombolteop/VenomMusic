@@ -37,6 +37,9 @@ DURATION_LIMIT_MIN = int(
 )  # Remember to give value in Minutes
 
 
+# Proxy URL for YouTube/yt-dlp requests (leave empty to disable)
+PROXY_URL = getenv("PROXY_URL", "")
+
 
 # Duration Limit for downloading Songs in MP3 or MP4 format from bot
 SONG_DOWNLOAD_DURATION = int(
