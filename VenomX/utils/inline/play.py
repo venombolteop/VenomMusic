@@ -12,6 +12,7 @@ from VenomX.utils.premium import (
     close_btn,
     loop_btn,
     music_btn,
+    mute_btn,
     nav_btn,
     pause_btn,
     play_btn,
@@ -19,6 +20,7 @@ from VenomX.utils.premium import (
     shuffle_btn,
     skip_btn,
     stop_btn,
+    unmute_btn,
     video_btn,
     _btn,
 )

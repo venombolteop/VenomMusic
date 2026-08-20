@@ -101,6 +101,45 @@ def _aria2_proxy_args():
     return [f"--all-proxy={PROXY}"]
 
 
+_YT_HTTP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def _base_ydl_opts(**extra):
+    """Common yt-dlp options matching wel's reliable download path."""
+    opts = {
+        "extractor_args": {"youtube": {"client": ["web_creator"]}},
+        **_proxy_dict(),
+        "geo_bypass": True,
+        "noplaylist": True,
+        "nocheckcertificate": True,
+        "quiet": True,
+        "no_warnings": True,
+        "prefer_ffmpeg": True,
+        "no_overwrites": True,
+        "remote_components": ["ejs:github"],
+        "extractor_retries": 5,
+        "fragment_retries": 5,
+        "retries": 5,
+        "concurrent_fragment_downloads": 5,
+        "buffersize": "1024K",
+        "http_chunk_size": "10M",
+        "http_headers": _YT_HTTP_HEADERS,
+        "external_downloader": "aria2c",
+        "external_downloader_args": [
+            "-x", "16", "-s", "16", "-k", "1M",
+            *_aria2_proxy_args(),
+        ],
+        "postprocessor_args": {
+            "ffmpeg": ["-threads", "4", "-preset", "veryfast"],
+        },
+    }
+    opts.update(extra)
+    return opts
+
+
 def get_available_runtimes():
     return [rt for rt in RUNTIME_PRIORITY if shutil.which(rt)]
 
@@ -748,31 +787,10 @@ class YouTube:
         def audio_dl():
             dl_t0 = time.monotonic()
             _log("info", "audio_dl() starting for: %s", link[:80])
-            ydl_optssx = {
-                "format": "bestaudio[ext=m4a]/bestaudio",
-                "outtmpl": "downloads/%(id)s.%(ext)s",
-                "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                **_proxy_dict(),
-                "geo_bypass": True,
-                "noplaylist": True,
-                "nocheckcertificate": True,
-                "quiet": True,
-                "no_warnings": True,
-                "prefer_ffmpeg": True,
-                "no_overwrites": True,
-                "remote_components": ["ejs:github"],
-                "extractor_retries": 5,
-                "fragment_retries": 5,
-                "retries": 5,
-                "concurrent_fragment_downloads": 5,
-                "buffersize": "1024K",
-                "http_chunk_size": "10M",
-                "external_downloader": "aria2c",
-                "external_downloader_args": [
-                    "-x", "16", "-s", "16", "-k", "1M",
-                    *_aria2_proxy_args(),
-                ],
-            }
+            ydl_optssx = _base_ydl_opts(
+                format="bestaudio/best",
+                outtmpl="downloads/%(id)s.%(ext)s",
+            )
 
             info = extract_info_with_fallback(link, ydl_optssx)
             xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
@@ -797,32 +815,11 @@ class YouTube:
         def video_dl():
             dl_t0 = time.monotonic()
             _log("info", "video_dl() starting for: %s", link[:80])
-            ydl_optssx = {
-                "format": "best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best",
-                "outtmpl": "downloads/%(id)s.%(ext)s",
-                "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                **_proxy_dict(),
-                "geo_bypass": True,
-                "noplaylist": True,
-                "nocheckcertificate": True,
-                "quiet": True,
-                "no_warnings": True,
-                "prefer_ffmpeg": True,
-                "no_overwrites": True,
-                "merge_output_format": "mp4",
-                "remote_components": ["ejs:github"],
-                "extractor_retries": 5,
-                "fragment_retries": 5,
-                "retries": 5,
-                "concurrent_fragment_downloads": 5,
-                "buffersize": "1024K",
-                "http_chunk_size": "10M",
-                "external_downloader": "aria2c",
-                "external_downloader_args": [
-                    "-x", "16", "-s", "16", "-k", "1M",
-                    *_aria2_proxy_args(),
-                ],
-            }
+            ydl_optssx = _base_ydl_opts(
+                format="best[height<=480]/bestvideo[height<=480]+bestaudio/best",
+                outtmpl="downloads/%(id)s.%(ext)s",
+                merge_output_format="mp4",
+            )
 
             info = extract_info_with_fallback(link, ydl_optssx)
             xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
@@ -846,34 +843,13 @@ class YouTube:
         @asyncify
         def song_video_dl():
             dl_t0 = time.monotonic()
-            formats = f"{format_id}+bestaudio[ext=m4a]/bestaudio"
+            formats = f"{format_id}+bestaudio/best"
             _log("info", "song_video_dl() starting format=%s for: %s", formats, link[:80])
-            ydl_optssx = {
-                "format": formats,
-                "outtmpl": os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
-                "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                **_proxy_dict(),
-                "geo_bypass": True,
-                "noplaylist": True,
-                "nocheckcertificate": True,
-                "quiet": True,
-                "no_warnings": True,
-                "prefer_ffmpeg": True,
-                "merge_output_format": "mp4",
-                "no_overwrites": True,
-                "remote_components": ["ejs:github"],
-                "extractor_retries": 5,
-                "fragment_retries": 5,
-                "retries": 5,
-                "concurrent_fragment_downloads": 5,
-                "buffersize": "1024K",
-                "http_chunk_size": "10M",
-                "external_downloader": "aria2c",
-                "external_downloader_args": [
-                    "-x", "16", "-s", "16", "-k", "1M",
-                    *_aria2_proxy_args(),
-                ],
-            }
+            ydl_optssx = _base_ydl_opts(
+                format=formats,
+                outtmpl=os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
+                merge_output_format="mp4",
+            )
 
             info = extract_info_with_fallback(link, ydl_optssx)
             with YoutubeDL(ydl_optssx) as x:
@@ -885,38 +861,18 @@ class YouTube:
         def song_audio_dl():
             dl_t0 = time.monotonic()
             _log("info", "song_audio_dl() starting format=%s for: %s", format_id, link[:80])
-            ydl_optssx = {
-                "format": format_id,
-                "outtmpl": os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
-                "extractor_args": {"youtube": {"client": ["web_creator"]}},
-                **_proxy_dict(),
-                "geo_bypass": True,
-                "noplaylist": True,
-                "nocheckcertificate": True,
-                "quiet": True,
-                "no_warnings": True,
-                "prefer_ffmpeg": True,
-                "postprocessors": [
+            ydl_optssx = _base_ydl_opts(
+                format=format_id or "bestaudio/best",
+                outtmpl=os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
+                postprocessors=[
                     {
                         "key": "FFmpegExtractAudio",
                         "preferredcodec": "mp3",
                         "preferredquality": "192",
                     }
                 ],
-                "no_overwrites": True,
-                "remote_components": ["ejs:github"],
-                "extractor_retries": 5,
-                "fragment_retries": 5,
-                "retries": 5,
-                "concurrent_fragment_downloads": 5,
-                "buffersize": "1024K",
-                "http_chunk_size": "10M",
-                "external_downloader": "aria2c",
-                "external_downloader_args": [
-                    "-x", "16", "-s", "16", "-k", "1M",
-                    *_aria2_proxy_args(),
-                ],
-            }
+                postprocessor_args={"ffmpeg": ["-threads", "4"]},
+            )
 
             info = extract_info_with_fallback(link, ydl_optssx)
             with YoutubeDL(ydl_optssx) as x:

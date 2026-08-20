@@ -195,10 +195,18 @@ async def stream(
             "[%s] youtube branch: vidid=%s title=%s instant=%s",
             _STREAM_LOG, vidid, title[:40], instant,
         )
+        stream_link = None
+        direct = None
         if instant:
             try:
-                n, stream_link = await Platform.youtube.stream_url(vidid, videoid=True, video=status)
+                n, stream_link = await Platform.youtube.stream_url(
+                    vidid, videoid=True, video=status
+                )
                 slog.info("[%s] stream_url() returned n=%s", _STREAM_LOG, n)
+                if n != 0 and stream_link:
+                    direct = True
+                else:
+                    n = 0
             except Exception as e:
                 slog.error("[%s] stream_url() EXCEPTION: %s", _STREAM_LOG, e)
                 n = 0
@@ -212,12 +220,14 @@ async def stream(
                 except Exception as e:
                     slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
                     try:
-                        await notify_owner("Stream.youtube.download(instant)", e, f"vidid={vidid} chat={chat_id}")
+                        await notify_owner(
+                            "Stream.youtube.download(instant)",
+                            e,
+                            f"vidid={vidid} chat={chat_id}",
+                        )
                     except Exception:
                         pass
                     raise AssistantErr(_["play_16"])
-            else:
-                direct = True
         else:
             try:
                 slog.info("[%s] non-instant: calling download()...", _STREAM_LOG)
@@ -228,7 +238,11 @@ async def stream(
             except Exception as e:
                 slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
                 try:
-                    await notify_owner("Stream.youtube.download(non-instant)", e, f"vidid={vidid} chat={chat_id}")
+                    await notify_owner(
+                        "Stream.youtube.download(non-instant)",
+                        e,
+                        f"vidid={vidid} chat={chat_id}",
+                    )
                 except Exception:
                     pass
                 raise AssistantErr(_["play_16"])

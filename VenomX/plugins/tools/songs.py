@@ -313,6 +313,10 @@ async def song_download_cb(client, CallbackQuery, _):
         "quiet": True,
         "extractor_args": {"youtube": {"client": ["web_creator"]}},
         "remote_components": ["ejs:github"],
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
     }
     if PROXY_URL:
         _ytdl_opts["proxy"] = PROXY_URL
