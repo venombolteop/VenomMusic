@@ -61,8 +61,14 @@ from VenomX.utils.database import (
 
 links = {}
 
+# YouTube direct URLs are IP-bound to the proxy that fetched them.
+# FFmpeg must use the same proxy or playback is silent (HTTP 403).
+_PROXY = (getattr(config, "PROXY_URL", None) or "").strip()
+_PROXY_FFMPEG = f"-http_proxy {_PROXY} " if _PROXY else ""
+
 # ffmpeg parameters for smoother playback: bigger buffers + thread queue + async resample
 _REMOTE_FFMPEG_PARAMS = (
+    f"{_PROXY_FFMPEG}"
     "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 "
     "-reconnect_delay_max 5 "
     "-analyzeduration 500000 -probesize 32768 "
@@ -81,6 +87,7 @@ _LOCAL_FFMPEG_PARAMS = (
 
 # Video-specific: faster decode + lower buffer for real-time pipe streaming
 _REMOTE_FFMPEG_PARAMS_VIDEO = (
+    f"{_PROXY_FFMPEG}"
     "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 "
     "-reconnect_delay_max 5 "
     "-analyzeduration 300000 -probesize 16384 "
@@ -197,18 +204,20 @@ class Call:
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
+        is_remote = isinstance(file_path, str) and file_path.startswith("http")
+        proxy_part = _PROXY_FFMPEG if is_remote else ""
         stream = (
             MediaStream(
                 file_path,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
-                ffmpeg_parameters=f"-ss {to_seek} -to {duration} -thread_queue_size 512 -fflags +genpts+discardcorrupt+nobuffer -flags low_delay",
+                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 512 -fflags +genpts+discardcorrupt+nobuffer -flags low_delay",
             )
             if mode == "video"
             else MediaStream(
                 file_path,
                 audio_parameters=audio_stream_quality,
-                ffmpeg_parameters=f"-ss {to_seek} -to {duration} -thread_queue_size 1024 -fflags +genpts+discardcorrupt -flags low_delay",
+                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 1024 -fflags +genpts+discardcorrupt -flags low_delay",
                 video_flags=MediaStream.Flags.IGNORE,
             )
         )
