@@ -16,7 +16,7 @@ from VenomX import HELPABLE, app
 from VenomX.utils.database import get_lang, is_commanddelete_on
 from VenomX.utils.decorators.language import LanguageStart
 from VenomX.utils.inline.help import private_help_panel
-from VenomX.utils.premium import back_btn, close_btn, nav_btn, star_btn
+from VenomX.utils.premium import back_btn, close_btn, custom_btn, fire_btn, link_btn, music_btn, nav_btn, rocket_btn, settings_btn, star_btn
 
 COLUMN_SIZE = 4  # Number of button height
 NUM_COLUMNS = 3  # Number of button width
@@ -130,22 +130,24 @@ async def paginate_modules(page_n, chat_id: int, close: bool = False):
     language = await get_lang(chat_id)
     helpers_dict = helpers.get(language, helpers.get("en", {}))
 
+    _cycle = [star_btn, music_btn, fire_btn, rocket_btn, settings_btn]
+
     helper_buttons = [
-        star_btn(
+        _cycle[i % len(_cycle)](
             helper_key,
             callback_data=f"help_helper({helper_key},{page_n},{int(close)})",
         )
-        for helper_key in helpers_dict
+        for i, helper_key in enumerate(helpers_dict)
     ]
 
     module_buttons = [
-        star_btn(
+        _cycle[i % len(_cycle)](
             x.__MODULE__,
             callback_data="help_module({},{},{})".format(
                 x.__MODULE__.lower(), page_n, int(close)
             ),
         )
-        for x in HELPABLE.values()
+        for i, x in enumerate(HELPABLE.values())
     ]
 
     all_buttons = helper_buttons + module_buttons
