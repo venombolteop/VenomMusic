@@ -321,9 +321,53 @@ async def validate_db(client, batch_size=100):
 # Premium button factories — NO DEFAULT/GRAY anywhere
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _strip_emojis(text):
+    """Remove all emoji characters from text — premium icon replaces them."""
+    if not text:
+        return text
+    out = []
+    for c in text:
+        cp = ord(c)
+        if (
+            0x1F000 <= cp <= 0x1FAFF
+            or 0x2600 <= cp <= 0x27BF
+            or 0x2B00 <= cp <= 0x2BFF
+            or cp == 0x200D
+            or 0xFE00 <= cp <= 0xFE0F
+            or 0x20E3 <= cp <= 0x20E3
+            or 0x2190 <= cp <= 0x21FF
+            or 0x2300 <= cp <= 0x23FF
+            or 0x25AA <= cp <= 0x25FE
+            or 0x2934 <= cp <= 0x2935
+            or 0x3030 <= cp <= 0x303D
+            or cp in (0x2122, 0x2139, 0x21A9, 0x21AA, 0x2328, 0x23CF,
+                       0x23E9, 0x23EA, 0x23EB, 0x23EC, 0x23ED, 0x23EE,
+                       0x23EF, 0x23F0, 0x23F1, 0x23F2, 0x23F3, 0x23F8,
+                       0x23F9, 0x23FA, 0x25FB, 0x25FC, 0x25FD, 0x25FE,
+                       0x2614, 0x2615, 0x2648, 0x2649, 0x264A, 0x264B,
+                       0x264C, 0x264D, 0x264E, 0x264F, 0x2650, 0x2651,
+                       0x2652, 0x2653, 0x267F, 0x2693, 0x26A1, 0x26AA,
+                       0x26AB, 0x26BD, 0x26BE, 0x26C4, 0x26C5, 0x26CE,
+                       0x26D4, 0x26EA, 0x26F2, 0x26F3, 0x26F5, 0x26FA,
+                       0x26FD, 0x2702, 0x2705, 0x2708, 0x2709, 0x270A,
+                       0x270B, 0x270C, 0x270F, 0x2712, 0x2714, 0x2716,
+                       0x271D, 0x2721, 0x2728, 0x2733, 0x2734, 0x2744,
+                       0x2747, 0x274C, 0x274E, 0x2753, 0x2754, 0x2755,
+                       0x2757, 0x2763, 0x2764, 0x2795, 0x2796, 0x2797,
+                       0x27A1, 0x27B0, 0x27BF, 0x2934, 0x2935, 0x2B05,
+                       0x2B06, 0x2B07, 0x2B1B, 0x2B1C, 0x2B50, 0x2B55,
+                       0x303D, 0x3297, 0x3299)
+        ):
+            continue
+        out.append(c)
+    return "".join(out)
+
+
 def _btn(text, callback_data=None, url=None, style=ButtonStyle.PRIMARY, emoji=None):
-    """Core button builder — never uses DEFAULT style."""
-    kw = dict(text=text, style=style)
+    """Core button builder — never uses DEFAULT style.
+    When emoji is set, strips all emoji chars from text (premium icon replaces them)."""
+    clean_text = _strip_emojis(text) if emoji else text
+    kw = dict(text=clean_text, style=style)
     if emoji:
         eid = pick_id(emoji)
         if eid:
