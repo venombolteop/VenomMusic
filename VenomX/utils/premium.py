@@ -434,3 +434,125 @@ def link_btn(text, url, emoji=None):
 def custom_btn(text, callback_data=None, url=None, style=ButtonStyle.PRIMARY, emoji=None):
     """Generic button with explicit style + optional emoji."""
     return _btn(text, callback_data=callback_data, url=url, style=style, emoji=emoji)
+
+
+# --- Additional button factories ---
+
+def volume_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔊")
+
+
+def queue_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="📋")
+
+
+def download_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="📥")
+
+
+def refresh_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔄")
+
+
+def info_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="ℹ️")
+
+
+def search_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔍")
+
+
+def like_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="❤️")
+
+
+def share_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="📤")
+
+
+def bookmark_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔖")
+
+
+def next_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏭")
+
+
+def prev_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏮")
+
+
+def help_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="❓")
+
+
+def pin_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="📌")
+
+
+def clear_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="🧹")
+
+
+def mic_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🎤")
+
+
+def headphone_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🎧")
+
+
+def eq_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🎛")
+
+
+def timer_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏰")
+
+
+def rocket_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="🚀")
+
+
+def lock_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="🔐")
+
+
+def globe_btn(text, url, emoji="🌐"):
+    return _btn(text, url=url, style=ButtonStyle.PRIMARY, emoji=emoji)
+
+
+def check_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="☑️")
+
+
+def cross_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="✖️")
+
+
+def lightning_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="⚡")
+
+
+def shield_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🛡")
+
+
+def heart_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="💖")
+
+
+def music2_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="🎵")
+
+
+def speaker_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔉")
+
+
+def rewind_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏪")
+
+
+def fastfwd_btn(text, callback_data):
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏩")
