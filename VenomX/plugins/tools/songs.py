@@ -308,7 +308,12 @@ async def song_download_cb(client, CallbackQuery, _):
 
     yturl = f"https://www.youtube.com/watch?v={vidid}"
 
-    with yt_dlp.YoutubeDL({"quiet": True, "cookiefile": f"{cookies()}"}) as ytdl:
+    with yt_dlp.YoutubeDL({
+        "quiet": True,
+        "extractor_args": {"youtube": {"client": ["web_creator"]}},
+        "proxy": "http://127.0.0.1:40000",
+        "remote_components": ["ejs:github"],
+    }) as ytdl:
 
         x = ytdl.extract_info(yturl, download=False)
 
