@@ -178,8 +178,8 @@ async def start_comm(client, message: Message, _):
             key = InlineKeyboardMarkup(
                 [
                     [
-                        link_btn("🎥 Watch ", url=f"{link}", emoji="🎥"),
-                        close_btn("🔄 Close", callback_data="close"),
+                        link_btn("Watch", url=f"{link}", emoji="🎥"),
+                        close_btn("Close", callback_data="close"),
                     ],
                 ]
             )
