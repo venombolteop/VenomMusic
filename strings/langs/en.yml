@@ -220,7 +220,7 @@ lyrics_4: "Click on the button below and get searched lyrics to avoid long spam 
 
 # Ping
 ping_1: "» {0} is pinging..."
-ping_2: "**» PONG**: `{0}`ms \n\n<b><u>{1} system stat's :</u></b>\n\n🌋 Uptime : {2}\n🌋 RAM : {3} \n🌋 CPU : {4} \n🌋 Disk : {5} \n🌋 Py-tgcalls : `{6} ms`"
+ping_2: "**» PONG**: `{0}`ms \n\n<b><u>{1} system stat's :</u></b>\n\n⏱ Uptime : {2}\n💾 RAM : {3} \n⚡ CPU : {4} \n💿 Disk : {5} \n📡 Py-tgcalls : `{6} ms`"
 
 # Song
 song_1: "🚫 You can download music or video from YouTube only in private chat. Please start me in private chat."

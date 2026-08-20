@@ -244,36 +244,112 @@ docker run -d --name venommusic --env-file .env venommusic
 
 ---
 
-## 🌐 Proxy Setup (Optional)
+## 🌐 Proxy Setup (Optional) — Cloudflare WARP (free)
 
-VenomMusic supports an HTTP proxy for YouTube requests. This helps bypass region restrictions and rate limits on yt-dlp.
+VenomMusic can route YouTube / yt-dlp traffic through a local HTTP proxy.  
+**Recommended free option:** [Cloudflare WARP](https://developers.cloudflare.com/warp-client/) in **proxy mode**.
 
 ### How it works
-- Set `PROXY_URL` in your `.env` file
-- The bot automatically routes all YouTube/yt-dlp requests through the proxy
-- aria2c downloads also use the proxy when configured
-- If `PROXY_URL` is empty, the bot works without a proxy (no changes needed)
+- Install WARP → set mode to `proxy` → it listens on `127.0.0.1:PORT`
+- Put that address in `.env` as `PROXY_URL`
+- Bot auto-uses it for yt-dlp + aria2c (no source edits)
+- Leave `PROXY_URL` empty to run without a proxy
 
-### Quick setup
+---
 
-1. Add to your `.env`:
-   ```
-   PROXY_URL=http://127.0.0.1:40000
-   ```
+### 1) Install Cloudflare WARP (Linux)
 
-2. Restart the bot:
-   ```bash
-   systemctl restart venommusic
-   ```
-
-### Using a SOCKS5 proxy
-
-If your proxy is SOCKS5, use the `socks5://` scheme:
+```bash
+# Debian / Ubuntu
+curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+sudo apt-get update && sudo apt-get install -y cloudflare-warp
 ```
+
+### 2) Register + enable proxy mode
+
+```bash
+# Accept ToS + register (one time)
+sudo warp-cli --accept-tos registration new
+
+# Switch to local HTTP proxy mode (default port 40000)
+sudo warp-cli mode proxy
+
+# Optional: change listen port (example: 40000)
+sudo warp-cli proxy port 40000
+
+# Connect
+sudo warp-cli connect
+
+# Check status (must show Connected + WarpProxy)
+warp-cli status
+warp-cli settings
+```
+
+### 3) Show proxy IP / port (so you can copy into `.env`)
+
+```bash
+# Show WARP mode + port from settings
+warp-cli settings | grep -i proxy
+
+# Confirm local listener
+ss -tlnp | grep 40000
+# or
+ss -tlnp | grep -i warp
+
+# Test proxy works
+curl -x http://127.0.0.1:40000 -I https://www.youtube.com
+
+# See public IP through the proxy
+curl -x http://127.0.0.1:40000 https://ifconfig.me
+curl -x http://127.0.0.1:40000 https://api.ipify.org
+```
+
+Typical output when ready:
+```text
+Mode: WarpProxy on port 40000
+LISTEN 127.0.0.1:40000
+```
+
+### 4) Add to bot `.env`
+
+```env
+PROXY_URL=http://127.0.0.1:40000
+```
+
+If you changed the port:
+```env
+PROXY_URL=http://127.0.0.1:YOUR_PORT
+```
+
+Restart the bot:
+```bash
+systemctl restart venommusic
+# or
+bash start
+```
+
+### Useful WARP commands
+
+| Command | What it does |
+|:--------|:-------------|
+| `warp-cli status` | Connection status |
+| `warp-cli settings` | Full config (mode + port) |
+| `warp-cli connect` | Connect WARP |
+| `warp-cli disconnect` | Disconnect |
+| `warp-cli mode proxy` | Enable local HTTP proxy mode |
+| `warp-cli proxy port 40000` | Set proxy listen port |
+| `ss -tlnp \| grep 40000` | Confirm proxy is listening |
+| `curl -x http://127.0.0.1:40000 https://ifconfig.me` | Show exit IP via proxy |
+
+### SOCKS5 (optional)
+
+If you use another SOCKS5 proxy instead of WARP:
+```env
 PROXY_URL=socks5://127.0.0.1:1080
 ```
 
-> ⚠️ The proxy address is **not** hardcoded — it's configurable via environment variables. No need to edit any source code.
+> ⚠️ Proxy is **env-only** (`PROXY_URL`). Your running proxy is never modified by the bot.
 
 ---
 

@@ -10,6 +10,7 @@
 
 import json
 import os
+import random
 
 from pyrogram.enums import ButtonStyle
 from pyrogram.raw import types as raw_types
@@ -138,12 +139,19 @@ def emoji_ids(emoji):
 
 
 def pick_id(emoji):
-    """Pick a stable custom emoji id for an emoji, or None."""
+    """Pick a random premium custom emoji id for an emoji, or None.
+
+    Random every call so each message/button render looks unique.
+    """
     ids = emoji_ids(emoji)
     if not ids:
+        # Try fallback unicode equivalent that exists in the DB
+        fb = _EMOJI_FALLBACK.get(_norm(emoji)) or _EMOJI_FALLBACK.get(emoji)
+        if fb:
+            ids = emoji_ids(fb)
+    if not ids:
         return None
-    # Deterministic pick so edits of the same message keep the same emoji.
-    return ids[sum(ord(c) for c in _norm(emoji)) % len(ids)]
+    return random.choice(ids)
 
 
 def _iter_emojis(text):
