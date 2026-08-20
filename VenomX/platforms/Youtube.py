@@ -74,6 +74,35 @@ def cookies():
     return None
 
 
+# --- Proxy and yt-dlp settings from wel ---
+PROXY = "http://127.0.0.1:40000"
+RUNTIME_PRIORITY = ["node", "bun", "deno"]
+
+
+def get_available_runtimes():
+    return [rt for rt in RUNTIME_PRIORITY if shutil.which(rt)]
+
+
+def extract_info_with_fallback(link, opts):
+    runtimes = get_available_runtimes()
+    last_error = None
+    if not runtimes:
+        with YoutubeDL(opts) as ydl:
+            return ydl.extract_info(link)
+    for runtime in runtimes:
+        try:
+            temp_opts = opts.copy()
+            temp_opts["js_runtime"] = runtime
+            _log("info", "extract_info_with_fallback: trying runtime %s", runtime)
+            with YoutubeDL(temp_opts) as ydl:
+                return ydl.extract_info(link)
+        except Exception as e:
+            _log("warning", "extract_info_with_fallback: runtime %s failed: %s", runtime, e)
+            last_error = e
+            continue
+    raise Exception(f"All JS runtimes failed: {last_error}")
+
+
 NOTHING = {"cookies_dead": None}
 
 
@@ -306,14 +335,14 @@ class YouTube:
             link = link.split("&")[0]
         cmd = [
             yt_dlp_binary(),
+            "--proxy",
+            PROXY,
             "-g",
             "-f",
             "bestvideo[height<=?720][ext=mp4]+bestaudio[ext=m4a]/best[height<=?720]",
+            "--extractor-args", "youtube:client=web_creator",
             f"{link}",
         ]
-        cookie_txt_file = cookies()
-        if cookie_txt_file:
-            cmd[1:1] = ["--cookies", cookie_txt_file]
         _log("info", "video() subprocess: %s", " ".join(cmd[:6]))
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -381,14 +410,14 @@ class YouTube:
             fmt = "bestaudio[ext=m4a]/bestaudio"
         cmd = [
             yt_dlp_binary(),
+            "--proxy",
+            PROXY,
             "-g",
             "-f",
             fmt,
+            "--extractor-args", "youtube:client=web_creator",
             f"{link}",
         ]
-        cookie_txt_file = cookies()
-        if cookie_txt_file:
-            cmd[1:1] = ["--cookies", cookie_txt_file]
         _log("info", "stream_url() subprocess: %s", " ".join(cmd[:8]))
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -443,7 +472,9 @@ class YouTube:
             link = link.split("&")[0]
 
         cmd = (
-            f"{shlex.quote(yt_dlp_binary())} -i --compat-options no-youtube-unavailable-videos "
+            f"{shlex.quote(yt_dlp_binary())} --proxy {PROXY} "
+            f"-i --compat-options no-youtube-unavailable-videos "
+            f"--extractor-args 'youtube:client=web_creator' "
             f'--get-id --flat-playlist --playlist-end {limit} --skip-download "{link}" '
             f"2>/dev/null"
         )
@@ -539,7 +570,9 @@ class YouTube:
             "noplaylist": True,
             "quiet": True,
             "extract_flat": "in_playlist",
-            "cookiefile": cookies(),
+            "extractor_args": {"youtube": {"client": ["web_creator"]}},
+            "proxy": PROXY,
+            "remote_components": ["ejs:github"],
         }
         try:
             with YoutubeDL(options) as ydl:
@@ -592,7 +625,12 @@ class YouTube:
 
         ytdl_opts = {
             "quiet": True,
-            "cookiefile": cookies(),
+            "extractor_args": {"youtube": {"client": ["web_creator"]}},
+            "proxy": PROXY,
+            "remote_components": ["ejs:github"],
+            "extractor_retries": 5,
+            "fragment_retries": 5,
+            "retries": 5,
         }
 
         ydl = YoutubeDL(ytdl_opts)
@@ -692,31 +730,43 @@ class YouTube:
             ydl_optssx = {
                 "format": "bestaudio[ext=m4a]/bestaudio",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
+                "extractor_args": {"youtube": {"client": ["web_creator"]}},
+                "proxy": PROXY,
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
                 "quiet": True,
                 "no_warnings": True,
-                "cookiefile": cookies(),
                 "prefer_ffmpeg": True,
                 "no_overwrites": True,
+                "remote_components": ["ejs:github"],
+                "extractor_retries": 5,
+                "fragment_retries": 5,
+                "retries": 5,
+                "concurrent_fragment_downloads": 5,
+                "buffersize": "1024K",
+                "http_chunk_size": "10M",
+                "external_downloader": "aria2c",
+                "external_downloader_args": [
+                    "-x", "16", "-s", "16", "-k", "1M",
+                    f"--all-proxy={PROXY}",
+                ],
             }
 
+            info = extract_info_with_fallback(link, ydl_optssx)
+            xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
+            if os.path.exists(xyz):
+                fsize = os.path.getsize(xyz)
+                if fsize < 10240:
+                    _log("warning", "audio_dl() stale/incomplete file (%d bytes), re-downloading: %s", fsize, xyz)
+                    try:
+                        os.remove(xyz)
+                    except Exception:
+                        pass
+                else:
+                    _log("info", "audio_dl() file exists (%d bytes): %s", fsize, xyz)
+                    return xyz
             with YoutubeDL(ydl_optssx) as x:
-                info = x.extract_info(link, False)
-                _log("info", "audio_dl() extract_info done in %.1fs", time.monotonic() - dl_t0)
-                xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
-                if os.path.exists(xyz):
-                    fsize = os.path.getsize(xyz)
-                    if fsize < 10240:
-                        _log("warning", "audio_dl() stale/incomplete file (%d bytes), re-downloading: %s", fsize, xyz)
-                        try:
-                            os.remove(xyz)
-                        except Exception:
-                            pass
-                    else:
-                        _log("info", "audio_dl() file exists (%d bytes): %s", fsize, xyz)
-                        return xyz
                 x.download([link])
                 final_size = os.path.getsize(xyz) if os.path.exists(xyz) else 0
                 _log("info", "audio_dl() download done in %.1fs size=%d -> %s", time.monotonic() - dl_t0, final_size, xyz)
@@ -729,39 +779,48 @@ class YouTube:
             ydl_optssx = {
                 "format": "best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best",
                 "outtmpl": "downloads/%(id)s.%(ext)s",
+                "extractor_args": {"youtube": {"client": ["web_creator"]}},
+                "proxy": PROXY,
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
                 "quiet": True,
                 "no_warnings": True,
                 "prefer_ffmpeg": True,
-                "cookiefile": cookies(),
                 "no_overwrites": True,
                 "merge_output_format": "mp4",
+                "remote_components": ["ejs:github"],
+                "extractor_retries": 5,
+                "fragment_retries": 5,
+                "retries": 5,
+                "concurrent_fragment_downloads": 5,
+                "buffersize": "1024K",
+                "http_chunk_size": "10M",
+                "external_downloader": "aria2c",
+                "external_downloader_args": [
+                    "-x", "16", "-s", "16", "-k", "1M",
+                    f"--all-proxy={PROXY}",
+                ],
             }
 
+            info = extract_info_with_fallback(link, ydl_optssx)
+            xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
+            if os.path.exists(xyz):
+                fsize = os.path.getsize(xyz)
+                if fsize < 10240:
+                    _log("warning", "video_dl() stale/incomplete file (%d bytes), re-downloading: %s", fsize, xyz)
+                    try:
+                        os.remove(xyz)
+                    except Exception:
+                        pass
+                else:
+                    _log("info", "video_dl() file exists (%d bytes): %s", fsize, xyz)
+                    return xyz
             with YoutubeDL(ydl_optssx) as x:
-                info = x.extract_info(link, False)
-                _log("info", "video_dl() extract_info done in %.1fs", time.monotonic() - dl_t0)
-                xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
-                if os.path.exists(xyz):
-                    fsize = os.path.getsize(xyz)
-                    if fsize < 10240:
-                        _log("warning", "video_dl() stale/incomplete file (%d bytes), re-downloading: %s", fsize, xyz)
-                        try:
-                            os.remove(xyz)
-                        except Exception:
-                            pass
-                    else:
-                        _log("info", "video_dl() file exists (%d bytes): %s", fsize, xyz)
-                        return xyz
                 x.download([link])
-                final_size = os.path.getsize(xyz) if os.path.exists(xyz) else 0
-                _log("info", "video_dl() download done in %.1fs size=%d -> %s", time.monotonic() - dl_t0, final_size, xyz)
-                return xyz
-                x.download([link])
-                _log("info", "video_dl() download done in %.1fs -> %s", time.monotonic() - dl_t0, xyz)
-                return xyz
+            final_size = os.path.getsize(xyz) if os.path.exists(xyz) else 0
+            _log("info", "video_dl() download done in %.1fs size=%d -> %s", time.monotonic() - dl_t0, final_size, xyz)
+            return xyz
 
         @asyncify
         def song_video_dl():
@@ -771,6 +830,8 @@ class YouTube:
             ydl_optssx = {
                 "format": formats,
                 "outtmpl": os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
+                "extractor_args": {"youtube": {"client": ["web_creator"]}},
+                "proxy": PROXY,
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
@@ -778,13 +839,23 @@ class YouTube:
                 "no_warnings": True,
                 "prefer_ffmpeg": True,
                 "merge_output_format": "mp4",
-                "cookiefile": cookies(),
                 "no_overwrites": True,
+                "remote_components": ["ejs:github"],
+                "extractor_retries": 5,
+                "fragment_retries": 5,
+                "retries": 5,
+                "concurrent_fragment_downloads": 5,
+                "buffersize": "1024K",
+                "http_chunk_size": "10M",
+                "external_downloader": "aria2c",
+                "external_downloader_args": [
+                    "-x", "16", "-s", "16", "-k", "1M",
+                    f"--all-proxy={PROXY}",
+                ],
             }
 
+            info = extract_info_with_fallback(link, ydl_optssx)
             with YoutubeDL(ydl_optssx) as x:
-                info = x.extract_info(link)
-                _log("info", "song_video_dl() done in %.1fs", time.monotonic() - dl_t0)
                 filename = f"{info['id']}_{format_id}.mp4"
                 file_path = os.path.join("downloads", filename)
                 return file_path
@@ -796,6 +867,8 @@ class YouTube:
             ydl_optssx = {
                 "format": format_id,
                 "outtmpl": os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
+                "extractor_args": {"youtube": {"client": ["web_creator"]}},
+                "proxy": PROXY,
                 "geo_bypass": True,
                 "noplaylist": True,
                 "nocheckcertificate": True,
@@ -809,13 +882,23 @@ class YouTube:
                         "preferredquality": "192",
                     }
                 ],
-                "cookiefile": cookies(),
                 "no_overwrites": True,
+                "remote_components": ["ejs:github"],
+                "extractor_retries": 5,
+                "fragment_retries": 5,
+                "retries": 5,
+                "concurrent_fragment_downloads": 5,
+                "buffersize": "1024K",
+                "http_chunk_size": "10M",
+                "external_downloader": "aria2c",
+                "external_downloader_args": [
+                    "-x", "16", "-s", "16", "-k", "1M",
+                    f"--all-proxy={PROXY}",
+                ],
             }
 
+            info = extract_info_with_fallback(link, ydl_optssx)
             with YoutubeDL(ydl_optssx) as x:
-                info = x.extract_info(link)
-                _log("info", "song_audio_dl() done in %.1fs", time.monotonic() - dl_t0)
                 filename = f"{info['id']}_{format_id}.mp3"
                 file_path = os.path.join("downloads", filename)
                 return file_path
