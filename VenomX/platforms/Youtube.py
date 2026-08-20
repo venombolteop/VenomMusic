@@ -442,15 +442,20 @@ class YouTube:
             return 0, str(e)
 
     async def _streamable(self, url: str) -> bool:
-        """True if the direct URL can be pulled by a plain HTTP client."""
+        """True if the direct URL can be pulled (uses proxy when configured)."""
         try:
+            proxies = PROXY if PROXY else None
             async with httpx.AsyncClient(
-                follow_redirects=True, timeout=_YT_STREAM_CHECK_TIMEOUT
+                follow_redirects=True,
+                timeout=_YT_STREAM_CHECK_TIMEOUT,
+                proxy=proxies,
+                headers=_YT_HTTP_HEADERS,
             ) as client:
                 resp = await client.get(url, headers={"Range": "bytes=0-1023"})
             return resp.status_code in (200, 206)
         except Exception:
-            return False
+            # Don't block streaming if probe fails — ffmpeg often still works
+            return True
 
     async def stream_url(
         self,
@@ -458,6 +463,7 @@ class YouTube:
         videoid: bool | str = None,
         video: bool = False,
     ):
+        """Get a direct playable URL (no full download). Fast path for VC play."""
         _log("info", "stream_url() link=%s videoid=%s video=%s", link[:80], videoid, video)
         t0 = time.monotonic()
         if videoid:
@@ -465,19 +471,22 @@ class YouTube:
         if "&" in link:
             link = link.split("&")[0]
         if video:
-            fmt = "bestvideo[height<=?720][acodec!=none]/best[height<=?720]"
+            fmt = "best[height<=?480]/bestvideo[height<=?480]+bestaudio/best"
         else:
-            fmt = "bestaudio[ext=m4a]/bestaudio"
+            fmt = "bestaudio/best"
         cmd = [
             yt_dlp_binary(),
             *_proxy_args(),
             "-g",
             "-f",
             fmt,
+            "--no-playlist",
             "--extractor-args", "youtube:client=web_creator",
+            "--remote-components", "ejs:github",
+            "--user-agent", _YT_HTTP_HEADERS["User-Agent"],
             f"{link}",
         ]
-        _log("info", "stream_url() subprocess: %s", " ".join(cmd[:8]))
+        _log("info", "stream_url() subprocess: %s", " ".join(cmd[:10]))
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -489,15 +498,14 @@ class YouTube:
             )
             elapsed = time.monotonic() - t0
             if stdout:
-                url = stdout.decode().split("\n")[0]
-                _log("info", "stream_url() got url in %.1fs, checking streamable...", elapsed)
-                if await self._streamable(url):
-                    _log("info", "stream_url() streamable OK in %.1fs total", time.monotonic() - t0)
-                    return 1, url
-                _log("warning", "stream_url() NOT streamable in %.1fs", time.monotonic() - t0)
-                return 0, stderr.decode() or (
-                    "Direct stream is not available right now, downloading instead."
-                )
+                # yt-dlp -g may print multiple lines (video+audio); take first http URL
+                lines = [ln.strip() for ln in stdout.decode().splitlines() if ln.strip()]
+                url = next((ln for ln in lines if ln.startswith("http")), lines[0] if lines else "")
+                if not url:
+                    _log("error", "stream_url() empty url in %.1fs", elapsed)
+                    return 0, "empty url"
+                _log("info", "stream_url() got direct URL in %.1fs (skip full download)", elapsed)
+                return 1, url
             else:
                 err = stderr.decode()[:200]
                 _log("error", "stream_url() FAILED in %.1fs stderr=%s", elapsed, err)

@@ -58,16 +58,10 @@ async def seek_comm(cli, message: Message, _, chat_id):
         if downloaded:
             file_path = downloaded[0]
         else:
-            instant = await get_instant_play(chat_id)
-            if instant:
-                n, file_path = await Platform.youtube.stream_url(
-                    vidid, videoid=True, video=video
-                )
-                if n == 0:
-                    n, file_path = await Platform.youtube.video(vidid, True)
-                    if n == 0:
-                        return await message.reply_text(_["admin_30"])
-            else:
+            n, file_path = await Platform.youtube.stream_url(
+                vidid, videoid=True, video=video
+            )
+            if n == 0:
                 n, file_path = await Platform.youtube.video(vidid, True)
                 if n == 0:
                     return await message.reply_text(_["admin_30"])

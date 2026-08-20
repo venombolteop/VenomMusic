@@ -127,25 +127,10 @@ async def skip(cli, message: Message, _, chat_id):
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
     elif "vid_" in queued:
-        instant = await get_instant_play(chat_id)
-        if instant:
-            n, stream_link = await Platform.youtube.stream_url(
-                videoid, videoid=True, video=status
-            )
-            if n == 0:
-                mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
-                try:
-                    stream_link, direct = await Platform.youtube.download(
-                        videoid,
-                        mystic,
-                        videoid=True,
-                        video=status,
-                    )
-                except Exception:
-                    return await mystic.edit_text(_["call_7"])
-            else:
-                mystic = None
-        else:
+        n, stream_link = await Platform.youtube.stream_url(
+            videoid, videoid=True, video=status
+        )
+        if n == 0:
             mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
             try:
                 stream_link, direct = await Platform.youtube.download(
@@ -156,6 +141,8 @@ async def skip(cli, message: Message, _, chat_id):
                 )
             except Exception:
                 return await mystic.edit_text(_["call_7"])
+        else:
+            mystic = None
         try:
             await Ayush.skip_stream(chat_id, stream_link, video=status)
         except Exception:

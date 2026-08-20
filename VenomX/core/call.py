@@ -496,26 +496,11 @@ class Call:
                 db[chat_id][0]["markup"] = "tg"
             elif "vid_" in queued:
                 video = True if str(streamtype) == "video" else False
-                instant = await get_instant_play(chat_id)
-                if instant:
-                    mystic = await app.send_message(original_chat_id, _["call_8"])
-                    n, stream_link = await Platform.youtube.stream_url(
-                        videoid, videoid=True, video=video
-                    )
-                    if n == 0:
-                        try:
-                            stream_link, direct = await Platform.youtube.download(
-                                videoid,
-                                mystic,
-                                videoid=True,
-                                video=video,
-                            )
-                        except Exception:
-                            return await mystic.edit_text(
-                                _["call_7"], disable_web_page_preview=True
-                            )
-                else:
-                    mystic = await app.send_message(original_chat_id, _["call_8"])
+                mystic = await app.send_message(original_chat_id, _["call_8"])
+                n, stream_link = await Platform.youtube.stream_url(
+                    videoid, videoid=True, video=video
+                )
+                if n == 0:
                     try:
                         stream_link, direct = await Platform.youtube.download(
                             videoid,
