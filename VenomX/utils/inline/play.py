@@ -1,6 +1,7 @@
 
 # All rights reserved.
 #
+
 import math
 
 from pyrogram.types import InlineKeyboardButton
@@ -40,7 +41,7 @@ def get_progress_bar(percentage):
     elif 50 < umm <= 60:
         return "▰▰▰▰▰▰▱▱▱"
     elif 60 < umm <= 70:
-        return "▰▰▰▰▰▰▰▱▱"
+            return "▰▰▰▰▰▰▰▱▱"
     elif 70 < umm <= 80:
         return "▰▰▰▰▰▰▰▰▱"
     elif 80 < umm <= 90:
@@ -72,10 +73,10 @@ def stream_markup_timer(_, videoid, chat_id, played, dur):
             music_btn(_["PL_B_3"], f"PanelMarkup {videoid}|{chat_id}"),
         ],
         [
-            play_btn("▶", f"ADMIN Resume|{chat_id}"),
-            pause_btn("⏸", f"ADMIN Pause|{chat_id}"),
-            skip_btn("⏩", f"ADMIN Skip|{chat_id}"),
-            stop_btn("🛑", f"ADMIN Stop|{chat_id}"),
+            play_btn("Resume", f"ADMIN Resume|{chat_id}"),
+            pause_btn("Pause", f"ADMIN Pause|{chat_id}"),
+            skip_btn("Skip", f"ADMIN Skip|{chat_id}"),
+            stop_btn("Stop", f"ADMIN Stop|{chat_id}"),
         ],
         [close_btn(_["CLOSEMENU_BUTTON"])],
     ]
@@ -89,10 +90,10 @@ def stream_markup(_, videoid, chat_id):
             music_btn(_["PL_B_3"], f"PanelMarkup None|{chat_id}"),
         ],
         [
-            play_btn("▶", f"ADMIN Resume|{chat_id}"),
-            pause_btn("⏸", f"ADMIN Pause|{chat_id}"),
-            skip_btn("⏩", f"ADMIN Skip|{chat_id}"),
-            stop_btn("🛑", f"ADMIN Stop|{chat_id}"),
+            play_btn("Resume", f"ADMIN Resume|{chat_id}"),
+            pause_btn("Pause", f"ADMIN Pause|{chat_id}"),
+            skip_btn("Skip", f"ADMIN Skip|{chat_id}"),
+            stop_btn("Stop", f"ADMIN Stop|{chat_id}"),
         ],
         [close_btn(_["CLOSEMENU_BUTTON"])],
     ]
@@ -119,10 +120,10 @@ def telegram_markup_timer(_, chat_id, played, dur):
             music_btn(_["PL_B_3"], f"PanelMarkup None|{chat_id}"),
         ],
         [
-            play_btn("▶", f"ADMIN Resume|{chat_id}"),
-            pause_btn("⏸", f"ADMIN Pause|{chat_id}"),
-            skip_btn("⏩", f"ADMIN Skip|{chat_id}"),
-            stop_btn("🛑", f"ADMIN Stop|{chat_id}"),
+            play_btn("Resume", f"ADMIN Resume|{chat_id}"),
+            pause_btn("Pause", f"ADMIN Pause|{chat_id}"),
+            skip_btn("Skip", f"ADMIN Skip|{chat_id}"),
+            stop_btn("Stop", f"ADMIN Stop|{chat_id}"),
         ],
         [
             close_btn(_["CLOSEMENU_BUTTON"]),
@@ -137,10 +138,10 @@ def telegram_markup(_, chat_id):
             music_btn(_["PL_B_3"], f"PanelMarkup None|{chat_id}"),
         ],
         [
-            play_btn("▶", f"ADMIN Resume|{chat_id}"),
-            pause_btn("⏸", f"ADMIN Pause|{chat_id}"),
-            skip_btn("⏩", f"ADMIN Skip|{chat_id}"),
-            stop_btn("🛑", f"ADMIN Stop|{chat_id}"),
+            play_btn("Resume", f"ADMIN Resume|{chat_id}"),
+            pause_btn("Pause", f"ADMIN Pause|{chat_id}"),
+            skip_btn("Skip", f"ADMIN Skip|{chat_id}"),
+            stop_btn("Stop", f"ADMIN Stop|{chat_id}"),
         ],
         [
             close_btn(_["CLOSEMENU_BUTTON"]),
@@ -231,14 +232,14 @@ def slider_markup(_, videoid, user_id, query, query_type, channel, fplay):
         ],
         [
             nav_btn(
-                "❮",
+                "Prev",
                 f"slider B|{query_type}|{query}|{user_id}|{channel}|{fplay}",
             ),
             close_btn(
                 _["CLOSE_BUTTON"], f"forceclose {query}|{user_id}"
             ),
             nav_btn(
-                "❯",
+                "Next",
                 f"slider F|{query_type}|{query}|{user_id}|{channel}|{fplay}",
             ),
         ],
@@ -250,33 +251,33 @@ def panel_markup_1(_, videoid, chat_id):
     buttons = [
         [
             pause_btn(
-                "⏸ Pause", f"ADMIN Pause|{chat_id}"
+                "Pause", f"ADMIN Pause|{chat_id}"
             ),
             play_btn(
-                "▶️ Resume",
+                "Resume",
                 f"ADMIN Resume|{chat_id}",
             ),
         ],
         [
-            skip_btn("⏯ Skip", f"ADMIN Skip|{chat_id}"),
-            stop_btn("⏹ Stop", f"ADMIN Stop|{chat_id}"),
+            skip_btn("Skip", f"ADMIN Skip|{chat_id}"),
+            stop_btn("Stop", f"ADMIN Stop|{chat_id}"),
         ],
         [
             loop_btn(
-                "🔁 Replay ", f"ADMIN Replay|{chat_id}"
+                "Replay", f"ADMIN Replay|{chat_id}"
             ),
         ],
         [
             nav_btn(
-                "◀️",
+                "Prev",
                 f"Pages Back|0|{videoid}|{chat_id}",
             ),
             back_btn(
-                "🔙 Back",
+                "Back",
                 f"MainMarkup {videoid}|{chat_id}",
             ),
             nav_btn(
-                "▶️",
+                "Next",
                 f"Pages Forw|0|{videoid}|{chat_id}",
             ),
         ],
@@ -287,30 +288,30 @@ def panel_markup_1(_, videoid, chat_id):
 def panel_markup_2(_, videoid, chat_id):
     buttons = [
         [
-            mute_btn("🔇 Mute", f"ADMIN Mute|{chat_id}"),
+            mute_btn("Mute", f"ADMIN Mute|{chat_id}"),
             unmute_btn(
-                "🔊 Unmute",
+                "Unmute",
                 f"ADMIN Unmute|{chat_id}",
             ),
         ],
         [
             shuffle_btn(
-                "🔀 Shuffle",
+                "Shuffle",
                 f"ADMIN Shuffle|{chat_id}",
             ),
-            loop_btn("🔁 Loop", f"ADMIN Loop|{chat_id}"),
+            loop_btn("Loop", f"ADMIN Loop|{chat_id}"),
         ],
         [
             nav_btn(
-                "◀️",
+                "Prev",
                 f"Pages Back|1|{videoid}|{chat_id}",
             ),
             back_btn(
-                "🔙 Back",
+                "Back",
                 f"MainMarkup {videoid}|{chat_id}",
             ),
             nav_btn(
-                "▶️",
+                "Next",
                 f"Pages Forw|1|{videoid}|{chat_id}",
             ),
         ],
@@ -322,35 +323,35 @@ def panel_markup_3(_, videoid, chat_id):
     buttons = [
         [
             seek_btn(
-                "⏮ 10 seconds",
+                "10s Back",
                 f"ADMIN 1|{chat_id}",
             ),
             seek_btn(
-                "⏭ 10 seconds",
+                "10s Forward",
                 f"ADMIN 2|{chat_id}",
             ),
         ],
         [
             seek_btn(
-                "⏮ 30 seconds",
+                "30s Back",
                 f"ADMIN 3|{chat_id}",
             ),
             seek_btn(
-                "⏭ 30 seconds",
+                "30s Forward",
                 f"ADMIN 4|{chat_id}",
             ),
         ],
         [
             nav_btn(
-                "◀️",
+                "Prev",
                 f"Pages Back|2|{videoid}|{chat_id}",
             ),
             back_btn(
-                "🔙 Back",
+                "Back",
                 f"MainMarkup {videoid}|{chat_id}",
             ),
             nav_btn(
-                "▶️",
+                "Next",
                 f"Pages Forw|2|{videoid}|{chat_id}",
             ),
         ],
