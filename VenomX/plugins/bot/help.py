@@ -267,10 +267,10 @@ async def help_button(client, query):
             [
                 [
                     back_btn(
-                        "↪️ Back",
+                        "Back",
                         callback_data=f"help_prev({prev_page_num},{int(close)})",
                     ),
-                    close_btn("🔄 Close", callback_data="close"),
+                    close_btn("Close", callback_data="close"),
                 ],
             ]
         )
@@ -309,9 +309,9 @@ async def help_button(client, query):
             [
                 [
                     back_btn(
-                        "↪️ Back", callback_data=f"help_prev({page_n},{int(close)})"
+                        "Back", callback_data=f"help_prev({page_n},{int(close)})"
                     ),
-                    close_btn("🔄 Close", callback_data="close"),
+                    close_btn("Close", callback_data="close"),
                 ]
             ]
         )
