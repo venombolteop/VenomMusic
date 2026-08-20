@@ -4,6 +4,7 @@
 
 from pykeyboard import InlineKeyboard
 from pyrogram import filters
+from pyrogram.enums import ButtonStyle
 from pyrogram.types import Message
 
 from config import BANNED_USERS
@@ -11,24 +12,25 @@ from strings import get_string, languages_present, command
 from VenomX import app
 from VenomX.utils.database import get_lang, set_lang
 from VenomX.utils.decorators import ActualAdminCB, language, languageCB
-from VenomX.utils.premium import back_btn, close_btn, music_btn
+from VenomX.utils.premium import back_btn, close_btn, custom_btn
 
-# Languages Available
+# One unique premium emoji per language button
+_LANG_EMOJIS = ["🌟", "🔥", "🚀", "⭐", "💫", "✨", "🎵", "🎶", "🎧", "🎤"]
 
 
 def lanuages_keyboard(_):
     keyboard = InlineKeyboard(row_width=2)
-    keyboard.add(
-        *[
-            (
-                music_btn(
-                    languages_present[i],
-                    callback_data=f"languages:{i}",
-                )
+    lang_buttons = []
+    for i, lang_key in enumerate(languages_present):
+        lang_buttons.append(
+            custom_btn(
+                languages_present[lang_key],
+                callback_data=f"languages:{lang_key}",
+                style=ButtonStyle.PRIMARY,
+                emoji=_LANG_EMOJIS[i % len(_LANG_EMOJIS)],
             )
-            for i in languages_present
-        ]
-    )
+        )
+    keyboard.add(*lang_buttons)
     keyboard.row(
         back_btn(
             _["BACK_BUTTON"],
