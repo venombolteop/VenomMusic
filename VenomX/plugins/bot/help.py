@@ -8,6 +8,7 @@ from math import ceil
 from typing import Union
 
 from pyrogram import filters, types
+from pyrogram.enums import ButtonStyle
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from config import BANNED_USERS, START_IMG_URL
@@ -16,7 +17,7 @@ from VenomX import HELPABLE, app
 from VenomX.utils.database import get_lang, is_commanddelete_on
 from VenomX.utils.decorators.language import LanguageStart
 from VenomX.utils.inline.help import private_help_panel
-from VenomX.utils.premium import back_btn, close_btn, custom_btn, fire_btn, link_btn, music_btn, nav_btn, rocket_btn, settings_btn, star_btn
+from VenomX.utils.premium import back_btn, close_btn, custom_btn, nav_btn
 
 COLUMN_SIZE = 4  # Number of button height
 NUM_COLUMNS = 3  # Number of button width
@@ -130,22 +131,31 @@ async def paginate_modules(page_n, chat_id: int, close: bool = False):
     language = await get_lang(chat_id)
     helpers_dict = helpers.get(language, helpers.get("en", {}))
 
-    _cycle = [star_btn, music_btn, fire_btn, rocket_btn, settings_btn]
+    _HELP_EMOJIS = [
+        "🌟", "🔥", "🚀", "⭐", "💫", "✨", "🎵", "🎶", "🎧", "🎤",
+        "💜", "🧡", "💛", "💚", "💙", "💖", "⚡", "🎯", "🎲", "🎮",
+        "📌", "🔖", "💎", "👑", "🌈", "🌙", "☀️", "🌸", "🍀", "🦋",
+    ]
 
     helper_buttons = [
-        _cycle[i % len(_cycle)](
+        custom_btn(
             helper_key,
             callback_data=f"help_helper({helper_key},{page_n},{int(close)})",
+            style=ButtonStyle.PRIMARY,
+            emoji=_HELP_EMOJIS[i % len(_HELP_EMOJIS)],
         )
         for i, helper_key in enumerate(helpers_dict)
     ]
 
+    _offset = len(helpers_dict)
     module_buttons = [
-        _cycle[i % len(_cycle)](
+        custom_btn(
             x.__MODULE__,
             callback_data="help_module({},{},{})".format(
                 x.__MODULE__.lower(), page_n, int(close)
             ),
+            style=ButtonStyle.PRIMARY,
+            emoji=_HELP_EMOJIS[(_offset + i) % len(_HELP_EMOJIS)],
         )
         for i, x in enumerate(HELPABLE.values())
     ]

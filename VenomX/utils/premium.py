@@ -322,7 +322,8 @@ async def validate_db(client, batch_size=100):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _strip_emojis(text):
-    """Remove all emoji characters from text — premium icon replaces them."""
+    """Remove all emoji characters from text — premium icon replaces them.
+    Preserves progress bar chars (▰▱) and block elements used for UI."""
     if not text:
         return text
     out = []
@@ -334,10 +335,10 @@ def _strip_emojis(text):
             or 0x2B00 <= cp <= 0x2BFF
             or cp == 0x200D
             or 0xFE00 <= cp <= 0xFE0F
-            or 0x20E3 <= cp <= 0x20E3
+            or cp == 0x20E3
             or 0x2190 <= cp <= 0x21FF
             or 0x2300 <= cp <= 0x23FF
-            or 0x25AA <= cp <= 0x25FE
+            or (0x25AA <= cp <= 0x25FE and cp not in (0x25B0, 0x25B1, 0x25AC, 0x25AD, 0x25AE, 0x25AF))
             or 0x2934 <= cp <= 0x2935
             or 0x3030 <= cp <= 0x303D
             or cp in (0x2122, 0x2139, 0x21A9, 0x21AA, 0x2328, 0x23CF,
@@ -363,13 +364,48 @@ def _strip_emojis(text):
     return "".join(out)
 
 
+# Fallback emoji for button factories — maps missing DB emojis to ones that exist
+_BTN_EMOJI_FALLBACK = {
+    "\U0001f504": "\u2b50",   # 🔄 → ⭐
+    "\U0001f4f1": "\U0001f3b6",  # 📱 → 🎶
+    "\u2728": "\u2b50",       # ✨ → ⭐
+    "\U0001f4bb": "\U0001f525",  # 💻 → 🔥
+    "\u25b6": "\u2b50",       # ▶ → ⭐
+    "\u23e9": "\u23ed",       # ⏩ → ⏭
+    "\U0001f535": "\u2b50",   # 🔵 → ⭐
+    "\U0001f6d1": "\u274c",   # 🛑 → ❌
+    "\U0001f501": "\u2b50",   # 🔁 → ⭐
+    "\U0001f500": "\u2b50",   # 🔀 → ⭐
+    "\U0001f3a8": "\U0001f3b6",  # 🎨 → 🎶
+    "\U0001f3ac": "\U0001f3b5",  # 🎬 → 🎵
+    "\U0001f4f7": "\U0001f4f1",  # 📷 → 📱 (might fail too, chain)
+    "\U0001f4e2": "\U0001f3a4",  # 📢 → 🎤
+    "\U0001f4ca": "\U0001f4cb",  # 📊 → 📋
+    "\U0001f5bc": "\U0001f4f7",  # 🖼 → 📷
+}
+
+
+def _resolve_btn_emoji(emoji):
+    """Try pick_id, then fallback, then skip."""
+    eid = pick_id(emoji)
+    if eid:
+        return eid
+    fb = _BTN_EMOJI_FALLBACK.get(emoji)
+    if fb:
+        eid = pick_id(fb)
+        if eid:
+            return eid
+    return None
+
+
 def _btn(text, callback_data=None, url=None, style=ButtonStyle.PRIMARY, emoji=None):
     """Core button builder — never uses DEFAULT style.
-    When emoji is set, strips all emoji chars from text (premium icon replaces them)."""
+    When emoji is set, strips all emoji chars from text (premium icon replaces them).
+    Falls back to alternative emojis if the requested one is missing from DB."""
     clean_text = _strip_emojis(text) if emoji else text
     kw = dict(text=clean_text, style=style)
     if emoji:
-        eid = pick_id(emoji)
+        eid = _resolve_btn_emoji(emoji)
         if eid:
             kw["icon_custom_emoji_id"] = eid
     if url:
@@ -392,7 +428,7 @@ def skip_btn(text, callback_data):
 
 
 def stop_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="🔴")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="🛑")
 
 
 def close_btn(text, callback_data="close"):
@@ -412,15 +448,15 @@ def on_btn(text, callback_data):
 
 
 def off_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="❌")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.DANGER, emoji="🚫")
 
 
 def music_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🌟")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🎵")
 
 
 def video_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🎞")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🎬")
 
 
 def star_btn(text, callback_data):
@@ -428,7 +464,7 @@ def star_btn(text, callback_data):
 
 
 def settings_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⭐")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⚙️")
 
 
 def loop_btn(text, callback_data):
@@ -440,15 +476,15 @@ def shuffle_btn(text, callback_data):
 
 
 def mute_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔴")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔇")
 
 
 def unmute_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="🔵")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.SUCCESS, emoji="🔊")
 
 
 def seek_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏩")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏱")
 
 
 def replay_btn(text, callback_data):
@@ -456,7 +492,7 @@ def replay_btn(text, callback_data):
 
 
 def fire_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🟣")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="🔥")
 
 
 def spark_btn(text, callback_data):
@@ -519,11 +555,11 @@ def bookmark_btn(text, callback_data):
 
 
 def next_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏭")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏩")
 
 
 def prev_btn(text, callback_data):
-    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏮")
+    return _btn(text, callback_data=callback_data, style=ButtonStyle.PRIMARY, emoji="⏪")
 
 
 def help_btn(text, callback_data):

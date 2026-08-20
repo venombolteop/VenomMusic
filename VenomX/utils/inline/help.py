@@ -19,7 +19,7 @@ def support_group_markup(_):
                 link_btn(
                     _["S_B_3"],
                     url=SUPPORT_GROUP,
-                    emoji="📱",
+                    emoji="💬",
                 ),
             ]
         ]
