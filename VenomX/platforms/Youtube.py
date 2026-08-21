@@ -399,7 +399,7 @@ class YouTube:
             *_proxy_args(),
             "-g",
             "-f",
-            "bestvideo[height<=?720][ext=mp4]+bestaudio[ext=m4a]/best[height<=?720]",
+            "bestvideo[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=?2160]+bestaudio/best[height<=?2160]/best",
             "--extractor-args", "youtube:client=web_creator",
             f"{link}",
         ]
