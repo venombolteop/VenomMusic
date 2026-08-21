@@ -93,6 +93,7 @@ async def song_commad_private(client, message: Message, _):
             thumbnail,
             caption=_["song_4"].format(title),
             reply_markup=InlineKeyboardMarkup(buttons),
+            has_spoiler=True,
         )
 
     else:
@@ -137,6 +138,7 @@ async def song_commad_private(client, message: Message, _):
         thumbnail,
         caption=_["song_4"].format(title),
         reply_markup=InlineKeyboardMarkup(buttons),
+        has_spoiler=True,
     )
 
 

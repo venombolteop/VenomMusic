@@ -50,7 +50,7 @@ async def check_playlist(client, message: Message, _):
         car = msg
     carbon = await Platform.carbon.generate(car, randint(100, 10000000000))
     await get.delete()
-    await message.reply_photo(carbon, caption=_["playlist_15"].format(link))
+    await message.reply_photo(carbon, caption=_["playlist_15"].format(link), has_spoiler=True)
 
 
 async def get_keyboard(_, user_id):
@@ -288,10 +288,10 @@ async def add_playlist(client, message: Message, _):
 
             await save_playlist(user_id, videoid, plist)
             await m.delete()
-            await message.reply_photo(thumbnail, caption=_["playlist_20"])
+            await message.reply_photo(thumbnail, caption=_["playlist_20"], has_spoiler=True)
 
         except KeyError:
-            return await message.reply_text("**Something wrong happens **")
+            return await message.reply_text("⚠️ **Something wrong happens **")
         except Exception:
             pass
 """
