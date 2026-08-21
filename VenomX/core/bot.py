@@ -42,9 +42,30 @@ class AyuBot(Client):
         self.mention = self.me.mention
 
         try:
+            start_msg = f"""
+╔══════════════════════╗
+  🎵 **{self.mention}** 🎵
+╚══════════════════════╝
+
+⚡ **ʙᴏᴛ sᴛᴀʀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ**
+
+┌──────────────────────┐
+│ 🔑 **ɪᴅ :** <code>{self.id}</code>
+│ 🧑 **ɴᴀᴍᴇ :** {self.name}
+│ 🔗 **ᴜsᴇʀɴᴀᴍᴇ :** @{self.username}
+│ 📡 **ʜᴜɴᴛᴇʀ :** {config.OWNER_ID[0]}
+│ 🌐 **ᴘʟᴀᴛғᴏʀᴍ :** 🐧 ʟɪɴᴜx
+│ 🐍 **ᴘʏᴛʜᴏɴ :** 3.x
+│ ⚙️ **ᴘʏᴛɢᴄᴀʟʟs :** v2.3.3
+└──────────────────────┘
+
+🚀 **ʀᴇᴀᴅʏ ᴛᴏ ᴘʟᴀʏ ᴍᴜsɪᴄ**
+💎 **ᴘʀᴇᴍɪᴜᴍ ᴜɪ ᴀᴄᴛɪᴠᴇ**
+🔥 **ᴠᴏɪᴄᴇᴄʜᴀᴛ ᴄᴏɴɴᴇᴄᴛᴇᴅ**
+"""
             await self.send_message(
                 config.LOGGER_ID,
-                text=f"<u><b>{self.mention} ʙᴏᴛ sᴛᴀʀᴛᴇᴅ :</b><u>\n\nɪᴅ : <code>{self.id}</code>\nɴᴀᴍᴇ : {self.name}\nᴜsᴇʀɴᴀᴍᴇ : @{self.username}",
+                text=start_msg,
             )
         except:
             LOGGER(__name__).error(

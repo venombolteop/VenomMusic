@@ -37,23 +37,41 @@ class Userbot(Client):
             await client.start()
             assistants.append(index)
             try:
-                await client.send_message(config.LOGGER_ID, "Assistant Started")
+                get_me = await client.get_me()
+                client.username = get_me.username
+                client.id = get_me.id
+                client.mention = get_me.mention
+                assistantids.append(get_me.id)
+                client.name = f"{get_me.first_name} {get_me.last_name or ''}".strip()
+
+                assistant_msg = f"""
+╔══════════════════════╗
+  🤖 **ᴀssɪsᴛᴀɴᴛ sᴛᴀʀᴛᴇᴅ** 🤖
+╚══════════════════════╝
+
+┌──────────────────────┐
+│ 🧑 **ɴᴀᴍᴇ :** {client.name}
+│ 🔑 **ɪᴅ :** <code>{client.id}</code>
+│ 🔗 **ᴜsᴇʀɴᴀᴍᴇ :** @{client.username}
+│ 🔢 **ɪɴsᴛᴀɴᴄᴇ :** #{index}
+│ 📡 **sᴛᴀᴛᴜs :** ✅ ᴀᴄᴛɪᴠᴇ
+│ 🎵 **ʀᴏʟᴇ :** ᴠᴏɪᴄᴇᴄʜᴀᴛ ᴀssɪsᴛᴀɴᴛ
+└──────────────────────┘
+
+⚡ **ʀᴇᴀᴅʏ ᴛᴏ ᴊᴏɪɴ ᴠᴏɪᴄᴇᴄʜᴀᴛs**
+💎 **ᴘʀᴇᴍɪᴜᴍ sᴛʀᴇᴀᴍɪɴɢ ᴀᴄᴛɪᴠᴇ**
+🔥 **ᴘʀᴏxʏ :** ᴄʟᴏᴜᴅғʟᴀʀᴇ ᴡᴀʀᴘ
+"""
+                await client.send_message(config.LOGGER_ID, assistant_msg)
             except ChatWriteForbidden:
                 try:
                     await client.join_chat(config.LOGGER_ID)
-                    await client.send_message(config.LOGGER_ID, "Assistant Started")
+                    await client.send_message(config.LOGGER_ID, assistant_msg)
                 except Exception:
                     LOGGER(__name__).error(
                         f"Assistant Account {index} has failed to send message in Loggroup Make sure you have added assistsant in Loggroup."
                     )
                     sys.exit(1)
-
-            get_me = await client.get_me()
-            client.username = get_me.username
-            client.id = get_me.id
-            client.mention = get_me.mention
-            assistantids.append(get_me.id)
-            client.name = f"{get_me.first_name} {get_me.last_name or ''}".strip()
 
         except Exception as e:
             LOGGER(__name__).error(

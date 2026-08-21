@@ -273,6 +273,7 @@ async def admin_callback(client, CallbackQuery, _):
                     f"https://t.me/{app.username}?start=info_{videoid}",
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
+                has_spoiler=True,
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
@@ -313,6 +314,7 @@ async def admin_callback(client, CallbackQuery, _):
                     user,
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
+                has_spoiler=True,
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"
@@ -329,6 +331,7 @@ async def admin_callback(client, CallbackQuery, _):
                 photo=STREAM_IMG_URL,
                 caption=_["stream_2"].format(user),
                 reply_markup=InlineKeyboardMarkup(button),
+                has_spoiler=True,
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
@@ -350,6 +353,7 @@ async def admin_callback(client, CallbackQuery, _):
                         title, SUPPORT_GROUP, check[0]["dur"], user
                     ),
                     reply_markup=InlineKeyboardMarkup(button),
+                    has_spoiler=True,
                 )
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
@@ -357,7 +361,7 @@ async def admin_callback(client, CallbackQuery, _):
                 button = telegram_markup(_, chat_id)
                 run = await CallbackQuery.message.reply_photo(
                     photo=(
-                        SOUNCLOUD_IMG_URL
+                        SOUNDCLOUD_IMG_URL
                         if str(streamtype) == "audio"
                         else TELEGRAM_VIDEO_URL
                     ),
@@ -365,6 +369,7 @@ async def admin_callback(client, CallbackQuery, _):
                         title, SUPPORT_GROUP, check[0]["dur"], user
                     ),
                     reply_markup=InlineKeyboardMarkup(button),
+                    has_spoiler=True,
                 )
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
@@ -376,6 +381,7 @@ async def admin_callback(client, CallbackQuery, _):
                     photo=details["thumb"],
                     caption=_["stream_1"].format(title, url, check[0]["dur"], user),
                     reply_markup=InlineKeyboardMarkup(button),
+                    has_spoiler=True,
                 )
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "tg"
@@ -391,6 +397,7 @@ async def admin_callback(client, CallbackQuery, _):
                         user,
                     ),
                     reply_markup=InlineKeyboardMarkup(button),
+                    has_spoiler=True,
                 )
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"

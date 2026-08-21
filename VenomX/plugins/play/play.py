@@ -537,6 +537,7 @@ async def play_commnd(
                 photo=img,
                 caption=cap,
                 reply_markup=InlineKeyboardMarkup(buttons),
+                has_spoiler=True,
             )
             return await play_logs(
                 message,
@@ -562,6 +563,7 @@ async def play_commnd(
                         details["duration_min"],
                     ),
                     reply_markup=InlineKeyboardMarkup(buttons),
+                    has_spoiler=True,
                 )
                 return await play_logs(
                     message,
@@ -581,6 +583,7 @@ async def play_commnd(
                     photo=img,
                     caption=cap,
                     reply_markup=InlineKeyboardMarkup(buttons),
+                    has_spoiler=True,
                 )
                 return await play_logs(
                     message,

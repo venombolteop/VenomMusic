@@ -55,6 +55,7 @@ async def play_logs(message, streamtype, thumbnail=None):
                         chat_id=LOGGER_ID,
                         photo=thumbnail,
                         caption=logger_text,
+                        has_spoiler=True,
                     )
                 else:
                     await app.send_message(

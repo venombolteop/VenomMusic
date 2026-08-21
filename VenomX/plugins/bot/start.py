@@ -52,6 +52,7 @@ async def start_comm(client, message: Message, _):
                     photo=START_IMG_URL,
                     caption=_["help_1"],
                     reply_markup=keyboard,
+                    has_spoiler=True,
                 )
             else:
                 return await message.reply_text(
@@ -122,7 +123,7 @@ async def start_comm(client, message: Message, _):
                 return
             thumbnail = await Platform.youtube.thumbnail(videoid, True)
             await m.delete()
-            await message.reply_photo(photo=thumbnail, caption=msg)
+            await message.reply_photo(photo=thumbnail, caption=msg, has_spoiler=True)
             return
         if name[0:3] == "sud":
             await sudoers_list(client=client, message=message, _=_)
@@ -190,6 +191,7 @@ async def start_comm(client, message: Message, _):
                 caption=searched_text,
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=key,
+                has_spoiler=True,
             )
             await asyncio.sleep(1)
             if await is_on_off(config.LOG):
@@ -197,7 +199,7 @@ async def start_comm(client, message: Message, _):
                 sender_name = message.from_user.first_name
                 return await app.send_message(
                     config.LOGGER_ID,
-                    f"{message.from_user.mention} Has just started bot ot check <code> Video information  </code>\n\n**User Id:** {sender_id}\n**User Name** {sender_name}",
+                    f"🚀 {message.from_user.mention} Has just started bot ot check <code> Video information  </code>\n\n👤 **User Id:** {sender_id}\n**User Name** {sender_name}",
                 )
     else:
         try:
@@ -212,6 +214,7 @@ async def start_comm(client, message: Message, _):
                     photo=config.START_IMG_URL,
                     caption=_["start_1"].format(app.mention),
                     reply_markup=InlineKeyboardMarkup(out),
+                    has_spoiler=True,
                 )
             except Exception:
                 await message.reply_text(
@@ -228,7 +231,7 @@ async def start_comm(client, message: Message, _):
             sender_name = message.from_user.first_name
             return await app.send_message(
                 config.LOGGER_ID,
-                f"{message.from_user.mention} Has started bot. \n\n**User id :** {sender_id}\n**User name:** {sender_name}",
+                f"👋 {message.from_user.mention} Has started bot. \n\n🆔 **User id :** {sender_id}\n**User name:** {sender_name}",
             )
 
 
