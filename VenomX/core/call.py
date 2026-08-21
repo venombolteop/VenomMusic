@@ -66,21 +66,21 @@ links = {}
 _PROXY = (getattr(config, "PROXY_URL", None) or "").strip()
 _PROXY_FFMPEG = f"-http_proxy {_PROXY} " if _PROXY else ""
 
-# ffmpeg parameters for smoother playback: bigger buffers + thread queue + async resample
+# ffmpeg parameters for remote URLs (YouTube direct streams via proxy).
+# -reconnect flags BREAK through HTTP proxies — removed.
+# Increased thread_queue_size to prevent audio pipeline starvation in group calls.
 _REMOTE_FFMPEG_PARAMS = (
     f"{_PROXY_FFMPEG}"
-    "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 "
-    "-reconnect_delay_max 5 "
-    "-analyzeduration 500000 -probesize 32768 "
-    "-thread_queue_size 1024 "
+    "-analyzeduration 5000000 -probesize 131072 "
+    "-thread_queue_size 4096 "
     "-fflags +genpts+discardcorrupt "
     "-flags low_delay"
 )
 
 # For local files: buffer tuning to prevent pipe starvation
 _LOCAL_FFMPEG_PARAMS = (
-    "-thread_queue_size 1024 "
-    "-analyzeduration 500000 -probesize 32768 "
+    "-thread_queue_size 4096 "
+    "-analyzeduration 5000000 -probesize 131072 "
     "-fflags +genpts+discardcorrupt "
     "-flags low_delay"
 )
@@ -88,17 +88,15 @@ _LOCAL_FFMPEG_PARAMS = (
 # Video-specific: faster decode + lower buffer for real-time pipe streaming
 _REMOTE_FFMPEG_PARAMS_VIDEO = (
     f"{_PROXY_FFMPEG}"
-    "-reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 "
-    "-reconnect_delay_max 5 "
-    "-analyzeduration 300000 -probesize 16384 "
-    "-thread_queue_size 512 "
+    "-analyzeduration 3000000 -probesize 65536 "
+    "-thread_queue_size 2048 "
     "-fflags +genpts+discardcorrupt+nobuffer "
     "-flags low_delay"
 )
 
 _LOCAL_FFMPEG_PARAMS_VIDEO = (
-    "-thread_queue_size 512 "
-    "-analyzeduration 300000 -probesize 16384 "
+    "-thread_queue_size 2048 "
+    "-analyzeduration 3000000 -probesize 65536 "
     "-fflags +genpts+discardcorrupt+nobuffer "
     "-flags low_delay"
 )
@@ -174,12 +172,17 @@ class Call:
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
+        is_remote = isinstance(link, str) and link.startswith("http")
+        if video:
+            ffmpeg_params = _REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO
+        else:
+            ffmpeg_params = _REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS
         if video:
             stream = MediaStream(
                 link,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
-                ffmpeg_parameters=_LOCAL_FFMPEG_PARAMS_VIDEO,
+                ffmpeg_parameters=ffmpeg_params,
             )
         elif image and config.PRIVATE_BOT_MODE == str(True):
             stream = MediaStream(
@@ -187,14 +190,14 @@ class Call:
                 audio_path=link,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
-                ffmpeg_parameters=_LOCAL_FFMPEG_PARAMS,
+                ffmpeg_parameters=ffmpeg_params,
             )
         else:
             stream = MediaStream(
                 link,
                 audio_parameters=audio_stream_quality,
                 video_flags=MediaStream.Flags.IGNORE,
-                ffmpeg_parameters=_LOCAL_FFMPEG_PARAMS,
+                ffmpeg_parameters=ffmpeg_params,
             )
 
         await assistant.play(chat_id, stream, config=call_config)
@@ -211,13 +214,13 @@ class Call:
                 file_path,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
-                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 512 -fflags +genpts+discardcorrupt+nobuffer -flags low_delay",
+                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 2048 -analyzeduration 3000000 -probesize 65536 -fflags +genpts+discardcorrupt+nobuffer -flags low_delay",
             )
             if mode == "video"
             else MediaStream(
                 file_path,
                 audio_parameters=audio_stream_quality,
-                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 1024 -fflags +genpts+discardcorrupt -flags low_delay",
+                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 4096 -analyzeduration 5000000 -probesize 131072 -fflags +genpts+discardcorrupt -flags low_delay",
                 video_flags=MediaStream.Flags.IGNORE,
             )
         )
