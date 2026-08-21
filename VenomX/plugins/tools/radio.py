@@ -51,7 +51,7 @@ valid_stations = "\n".join([f"`{name}`" for name in sorted(RADIO_STATION.keys())
     & ~BANNED_USERS
 )
 async def radio(client, message: Message):
-    msg = await message.reply_text("ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ᴍᴏᴍᴇɴᴛ....")
+    msg = await message.reply_text("⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ᴍᴏᴍᴇɴᴛ....")
     try:
         try:
             userbot = await get_assistant(message.chat.id)

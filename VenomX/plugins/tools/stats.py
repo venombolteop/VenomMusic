@@ -50,6 +50,7 @@ async def stats_global(client, message: Message, _):
         photo=config.STATS_IMG_URL,
         caption=_["gstats_11"].format(app.mention),
         reply_markup=upl,
+        has_spoiler=True,
     )
 
 
@@ -107,6 +108,7 @@ async def gstats_global(client, message: Message, _):
         photo=thumbnail,
         caption=final,
         reply_markup=upl,
+        has_spoiler=True,
     )
     await mystic.delete()
 
@@ -218,7 +220,7 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
         await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
     except MessageIdInvalid:
         await CallbackQuery.message.reply_photo(
-            photo=config.GLOBAL_IMG_URL, caption=msg, reply_markup=upl
+            photo=config.GLOBAL_IMG_URL, caption=msg, reply_markup=upl, has_spoiler=True
         )
 
 
@@ -272,7 +274,7 @@ async def overall_stats(client, CallbackQuery, _):
         await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
     except MessageIdInvalid:
         await CallbackQuery.message.reply_photo(
-            photo=config.STATS_IMG_URL, caption=text, reply_markup=upl
+            photo=config.STATS_IMG_URL, caption=text, reply_markup=upl, has_spoiler=True
         )
 
 
@@ -356,7 +358,7 @@ async def overall_stats(client, CallbackQuery, _):
         await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
     except MessageIdInvalid:
         await CallbackQuery.message.reply_photo(
-            photo=config.STATS_IMG_URL, caption=text, reply_markup=upl
+            photo=config.STATS_IMG_URL, caption=text, reply_markup=upl, has_spoiler=True
         )
 
 
@@ -383,6 +385,7 @@ async def back_buttons(client, CallbackQuery, _):
                 photo=config.GLOBAL_IMG_URL,
                 caption=_["gstats_9"],
                 reply_markup=upl,
+                has_spoiler=True,
             )
     if command == "GlobalStats":
         upl = get_stats_markup(
@@ -400,6 +403,7 @@ async def back_buttons(client, CallbackQuery, _):
                 photo=config.GLOBAL_IMG_URL,
                 caption=_["gstats_10"].format(app.mention),
                 reply_markup=upl,
+                has_spoiler=True,
             )
     if command == "GETSTATS":
         upl = stats_buttons(
@@ -417,4 +421,5 @@ async def back_buttons(client, CallbackQuery, _):
                 photo=config.STATS_IMG_URL,
                 caption=_["gstats_11"].format(app.mention),
                 reply_markup=upl,
+                has_spoiler=True,
             )

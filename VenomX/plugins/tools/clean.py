@@ -9,7 +9,7 @@ from VenomX.misc import SUDOERS
 
 @app.on_message(filters.command("clean") & SUDOERS)
 async def clean(_, message):
-    A = await message.reply_text("ᴄʟᴇᴀɴɪɴɢ ᴛᴇᴍᴘ ᴅɪʀᴇᴄᴛᴏʀɪᴇs...")
+    A = await message.reply_text("🧹 ᴄʟᴇᴀɴɪɴɢ ᴛᴇᴍᴘ ᴅɪʀᴇᴄᴛᴏʀɪᴇs...")
     dir = "downloads"
     dir1 = "cache"
     shutil.rmtree(dir)

@@ -54,4 +54,6 @@ async def pause_admin(cli, message: Message, _, chat_id):
         ),
     )
 
-    await message.reply_photo(photo=thumbs, caption=caption, reply_markup=reply_markup)
+    await message.reply_photo(
+        photo=thumbs, caption=caption, reply_markup=reply_markup, has_spoiler=True
+    )

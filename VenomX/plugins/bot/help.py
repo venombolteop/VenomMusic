@@ -234,6 +234,7 @@ async def helper_private(
                 photo=START_IMG_URL,
                 caption=_["help_1"],
                 reply_markup=keyboard,
+                has_spoiler=True,
             )
         else:
             await update.reply_text(

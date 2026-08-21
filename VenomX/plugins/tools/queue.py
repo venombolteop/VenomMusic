@@ -111,7 +111,9 @@ async def ping_com(client, message: Message, _):
         )
     )
     basic[videoid] = True
-    mystic = await message.reply_photo(IMAGE, caption=cap, reply_markup=upl)
+    mystic = await message.reply_photo(
+        IMAGE, caption=cap, reply_markup=upl, has_spoiler=True
+    )
     if DUR != "Unknown":
         try:
             while db[chat_id][0]["vidid"] == videoid:

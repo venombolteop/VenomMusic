@@ -64,7 +64,7 @@ async def export_database(client, message):
         return await message.reply_text(
             "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
         )
-    mystic = await message.reply_text("Exporting Your mongodatabase...")
+    mystic = await message.reply_text("📦 Exporting Your mongodatabase...")
     _mongo_async_ = AsyncIOMotorClient(MONGO_DB_URI)
     databases = await _mongo_async_.list_database_names()
 
@@ -135,7 +135,7 @@ async def import_database(client, message):
             "You need to reply an exported file to import it."
         )
 
-    mystic = await message.reply_text("Downloading...")
+    mystic = await message.reply_text("📥 Downloading...")
 
     async def progress(current, total):
         try:

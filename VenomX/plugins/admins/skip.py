@@ -123,6 +123,7 @@ async def skip(cli, message: Message, _, chat_id):
                 f"https://t.me/{app.username}?start=info_{videoid}",
             ),
             reply_markup=InlineKeyboardMarkup(button),
+            has_spoiler=True,
         )
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
@@ -160,6 +161,7 @@ async def skip(cli, message: Message, _, chat_id):
                 user,
             ),
             reply_markup=InlineKeyboardMarkup(button),
+            has_spoiler=True,
         )
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "stream"
@@ -175,6 +177,7 @@ async def skip(cli, message: Message, _, chat_id):
             photo=config.STREAM_IMG_URL,
             caption=_["stream_2"].format(user),
             reply_markup=InlineKeyboardMarkup(button),
+            has_spoiler=True,
         )
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
@@ -195,6 +198,7 @@ async def skip(cli, message: Message, _, chat_id):
                     title, config.SUPPORT_GROUP, check[0]["dur"], user
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
+                has_spoiler=True,
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
@@ -202,7 +206,7 @@ async def skip(cli, message: Message, _, chat_id):
             button = telegram_markup(_, chat_id)
             run = await message.reply_photo(
                 photo=(
-                    config.SOUNCLOUD_IMG_URL
+                    config.SOUNDCLOUD_IMG_URL
                     if str(streamtype) == "audio"
                     else config.TELEGRAM_VIDEO_URL
                 ),
@@ -210,6 +214,7 @@ async def skip(cli, message: Message, _, chat_id):
                     title, config.SUPPORT_GROUP, check[0]["dur"], user
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
+                has_spoiler=True,
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
@@ -221,6 +226,7 @@ async def skip(cli, message: Message, _, chat_id):
                 photo=details["thumb"] or config.TELEGRAM_AUDIO_URL,
                 caption=_["stream_1"].format(title, url, check[0]["dur"], user),
                 reply_markup=InlineKeyboardMarkup(button),
+                has_spoiler=True,
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "tg"
@@ -236,6 +242,7 @@ async def skip(cli, message: Message, _, chat_id):
                     user,
                 ),
                 reply_markup=InlineKeyboardMarkup(button),
+                has_spoiler=True,
             )
             db[chat_id][0]["mystic"] = run
             db[chat_id][0]["markup"] = "stream"

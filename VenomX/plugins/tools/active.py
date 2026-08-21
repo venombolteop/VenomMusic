@@ -24,7 +24,7 @@ async def _clear_(chat_id):
 
 @app.on_message(command("ACTIVEVC_COMMAND") & SUDOERS)
 async def activevc(_, message: Message):
-    mystic = await message.reply_text("Getting Active Voicechats....\nPlease hold on")
+    mystic = await message.reply_text("🎧 Getting Active Voicechats....\n⏳ Please hold on")
     served_chats = await get_active_chats()
     text = ""
     j = 0
@@ -51,7 +51,7 @@ async def activevc(_, message: Message):
 
 @app.on_message(command("ACTIVEVIDEO_COMMAND") & SUDOERS)
 async def activevi_(_, message: Message):
-    mystic = await message.reply_text("Getting Active Voicechats....\nPlease hold on")
+    mystic = await message.reply_text("🎧 Getting Active Voicechats....\n⏳ Please hold on")
     served_chats = await get_active_video_chats()
     text = ""
     j = 0
@@ -79,4 +79,4 @@ async def activevi_(_, message: Message):
 @app.on_message(command("AC_COMMAND") & SUDOERS)
 async def vc(client, message: Message):
     ac_audio = str(len(await get_active_chats()))
-    await message.reply_text(f"Active Chats info: {ac_audio}")
+    await message.reply_text(f"📡 Active Chats info: {ac_audio}")

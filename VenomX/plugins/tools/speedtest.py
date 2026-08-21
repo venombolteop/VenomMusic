@@ -29,7 +29,7 @@ def testspeed(m):
 
 @app.on_message(command("SPEEDTEST_COMMAND") & SUDOERS)
 async def speedtest_function(client, message):
-    m = await message.reply_text("ʀᴜɴɴɪɴɢ sᴘᴇᴇᴅᴛᴇsᴛ")
+    m = await message.reply_text("⚡ ʀᴜɴɴɪɴɢ sᴘᴇᴇᴅᴛᴇsᴛ")
     loop = asyncio.get_event_loop_policy().get_event_loop()
     result = await loop.run_in_executor(None, testspeed, m)
     output = f"""**Speedtest Results**
@@ -45,6 +45,6 @@ async def speedtest_function(client, message):
 **Latency:** {result['server']['latency']}  
 **Ping :** {result['ping']}"""
     msg = await app.send_photo(
-        chat_id=message.chat.id, photo=result["share"], caption=output
+        chat_id=message.chat.id, photo=result["share"], caption=output, has_spoiler=True
     )
     await m.delete()
