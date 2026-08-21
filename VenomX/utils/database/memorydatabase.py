@@ -646,7 +646,7 @@ async def get_aud_bit_name(chat_id: int) -> str:
 
 
 async def get_vid_bit_name(chat_id: int) -> str:
-    return video.get(str(chat_id), "HD_720p")
+    return video.get(str(chat_id), "UHD_4K")
 
 
 async def get_audio_bitrate(chat_id: int) -> str:
@@ -661,7 +661,7 @@ async def get_audio_bitrate(chat_id: int) -> str:
 
 async def get_video_bitrate(chat_id: int) -> str:
     mode = video.get(
-        str(chat_id), "SD_480p"
+        str(chat_id), "UHD_4K"
     )  # Ensure chat_id is a string for JSON compatibility
     return {
         "UHD_4K": VideoQuality.UHD_4K,
@@ -670,4 +670,4 @@ async def get_video_bitrate(chat_id: int) -> str:
         "HD_720p": VideoQuality.HD_720p,
         "SD_480p": VideoQuality.SD_480p,
         "SD_360p": VideoQuality.SD_360p,
-    }.get(mode, VideoQuality.SD_480p)
+    }.get(mode, VideoQuality.UHD_4K)

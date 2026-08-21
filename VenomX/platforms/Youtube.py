@@ -133,7 +133,7 @@ def _base_ydl_opts(**extra):
             *_aria2_proxy_args(),
         ],
         "postprocessor_args": {
-            "ffmpeg": ["-threads", "4", "-preset", "veryfast"],
+            "ffmpeg": ["-threads", "4", "-preset", "slow", "-q:a", "0"],
         },
     }
     opts.update(extra)
@@ -471,7 +471,7 @@ class YouTube:
         if "&" in link:
             link = link.split("&")[0]
         if video:
-            fmt = "best[height<=?480]/bestvideo[height<=?480]+bestaudio/best"
+            fmt = "bestvideo[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=?2160]+bestaudio/best[height<=?2160]/best"
         else:
             fmt = "bestaudio/best"
         cmd = [
@@ -824,7 +824,7 @@ class YouTube:
             dl_t0 = time.monotonic()
             _log("info", "video_dl() starting for: %s", link[:80])
             ydl_optssx = _base_ydl_opts(
-                format="best[height<=480]/bestvideo[height<=480]+bestaudio/best",
+                format="bestvideo[ext=mp4][height<=2160]+bestaudio[ext=m4a]/bestvideo[height<=2160]+bestaudio/best[height<=2160]/best",
                 outtmpl="downloads/%(id)s.%(ext)s",
                 merge_output_format="mp4",
             )
@@ -875,11 +875,11 @@ class YouTube:
                 postprocessors=[
                     {
                         "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
-                        "preferredquality": "192",
+                        "preferredcodec": "opus",
+                        "preferredquality": "320",
                     }
                 ],
-                postprocessor_args={"ffmpeg": ["-threads", "4"]},
+                postprocessor_args={"ffmpeg": ["-threads", "4", "-b:a", "320k"]},
             )
 
             info = extract_info_with_fallback(link, ydl_optssx)
