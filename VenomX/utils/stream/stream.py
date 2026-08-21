@@ -98,20 +98,39 @@ async def stream(
                 if not forceplay:
                     db[chat_id] = []
                 status = True if video else None
+                instant = await get_instant_play(chat_id)
                 slog.info(
-                    "[%s] playlist first-track: vidid=%s mode=direct-stream-first",
-                    _STREAM_LOG, vidid,
+                    "[%s] playlist first-track: vidid=%s instant=%s",
+                    _STREAM_LOG, vidid, instant,
                 )
-                n = 0
-                try:
-                    n, stream_link = await Platform.youtube.stream_url(
-                        vidid, videoid=True, video=status
-                    )
-                    slog.info("[%s] playlist stream_url() returned n=%s", _STREAM_LOG, n)
-                except Exception as e:
-                    slog.error("[%s] playlist stream_url() EXCEPTION: %s", _STREAM_LOG, e)
+                if instant:
                     n = 0
-                if n == 0:
+                    try:
+                        n, stream_link = await Platform.youtube.stream_url(
+                            vidid, videoid=True, video=status
+                        )
+                        slog.info("[%s] playlist stream_url() returned n=%s", _STREAM_LOG, n)
+                    except Exception as e:
+                        slog.error("[%s] playlist stream_url() EXCEPTION: %s", _STREAM_LOG, e)
+                        n = 0
+                    if n == 0:
+                        try:
+                            stream_link, direct = await Platform.youtube.download(
+                                vidid, mystic, video=status, videoid=True
+                            )
+                        except Exception as e:
+                            try:
+                                await notify_owner(
+                                    "Stream.playlist.download(fallback)",
+                                    e,
+                                    f"vidid={vidid} chat={chat_id}",
+                                )
+                            except Exception:
+                                pass
+                            raise AssistantErr(_["play_16"])
+                    else:
+                        direct = True
+                else:
                     try:
                         stream_link, direct = await Platform.youtube.download(
                             vidid, mystic, video=status, videoid=True
@@ -119,15 +138,13 @@ async def stream(
                     except Exception as e:
                         try:
                             await notify_owner(
-                                "Stream.playlist.download(fallback)",
+                                "Stream.playlist.download",
                                 e,
                                 f"vidid={vidid} chat={chat_id}",
                             )
                         except Exception:
                             pass
                         raise AssistantErr(_["play_16"])
-                else:
-                    direct = True
                 await Ayush.join_call(
                     chat_id, original_chat_id, stream_link, video=status, image=thumbnail
                 )
@@ -184,29 +201,48 @@ async def stream(
         duration_min = result["duration_min"]
         thumbnail = result["thumb"]
         status = True if video else None
-        # Always prefer direct stream (no full download) — fallback to download only if needed
+        instant = await get_instant_play(chat_id)
         slog.info(
-            "[%s] youtube branch: vidid=%s title=%s mode=direct-stream-first",
-            _STREAM_LOG, vidid, title[:40],
+            "[%s] youtube branch: vidid=%s title=%s instant=%s",
+            _STREAM_LOG, vidid, title[:40], instant,
         )
         stream_link = None
         direct = None
-        n = 0
-        try:
-            n, stream_link = await Platform.youtube.stream_url(
-                vidid, videoid=True, video=status
-            )
-            slog.info("[%s] stream_url() returned n=%s", _STREAM_LOG, n)
-            if n != 0 and stream_link:
-                direct = True
-            else:
-                n = 0
-        except Exception as e:
-            slog.error("[%s] stream_url() EXCEPTION: %s", _STREAM_LOG, e)
+        if instant:
             n = 0
-        if n == 0:
             try:
-                slog.info("[%s] stream_url failed, fallback download()...", _STREAM_LOG)
+                n, stream_link = await Platform.youtube.stream_url(
+                    vidid, videoid=True, video=status
+                )
+                slog.info("[%s] stream_url() returned n=%s", _STREAM_LOG, n)
+                if n != 0 and stream_link:
+                    direct = True
+                else:
+                    n = 0
+            except Exception as e:
+                slog.error("[%s] stream_url() EXCEPTION: %s", _STREAM_LOG, e)
+                n = 0
+            if n == 0:
+                try:
+                    slog.info("[%s] stream_url failed, fallback download()...", _STREAM_LOG)
+                    stream_link, direct = await Platform.youtube.download(
+                        vidid, mystic, videoid=True, video=status
+                    )
+                    slog.info("[%s] download() returned direct=%s", _STREAM_LOG, direct)
+                except Exception as e:
+                    slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
+                    try:
+                        await notify_owner(
+                            "Stream.youtube.download(fallback)",
+                            e,
+                            f"vidid={vidid} chat={chat_id}",
+                        )
+                    except Exception:
+                        pass
+                    raise AssistantErr(_["play_16"])
+        else:
+            try:
+                slog.info("[%s] instant OFF, downloading...", _STREAM_LOG)
                 stream_link, direct = await Platform.youtube.download(
                     vidid, mystic, videoid=True, video=status
                 )
@@ -215,7 +251,7 @@ async def stream(
                 slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
                 try:
                     await notify_owner(
-                        "Stream.youtube.download(fallback)",
+                        "Stream.youtube.download",
                         e,
                         f"vidid={vidid} chat={chat_id}",
                     )
