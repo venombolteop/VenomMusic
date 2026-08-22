@@ -1,10 +1,12 @@
 <div align="center">
 
-<img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg" width="480" height="auto" alt="Venom Music">
+<img width="100%" src="https://capsule-render.vercel.app/api?type=venom&color=0:39ff14,45:a855f7,100:22d3ee&height=230&section=header&text=VENOM%20%E2%9C%98%20MUSIC&fontSize=56&fontColor=ffffff&fontAlignY=34&desc=The%20Deadliest%20Telegram%20Music%20Bot&descAlignY=55&descSize=18&animation=twinkling" alt="VENOM MUSIC animated banner"/>
 
-# 𝗩𝗘𝗡𝗢𝗠 ✘ 𝗠𝗨𝗦𝗜𝗖
+<img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg" width="320" height="auto" alt="Venom Music">
 
-### ⚡ The Deadliest Telegram Music Bot You'll Ever Meet ⚡
+<br>
+
+<a href="https://github.com/venombolteop/VenomMusic"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1000&color=7DFF00&center=true&vCenter=true&multiline=true&repeat=true&width=740&height=78&lines=Instant+Play+%E2%9A%A1+%C2%B7+4K+Video+Calls+%F0%9F%8E%AC+%C2%B7+Premium+Emoji+UI+%F0%9F%92%8E;PO-Token-Hardened+YouTube+Pipeline+%F0%9F%9B%A1%EF%B8%8F;Multi-Assistant+Fleet+%F0%9F%91%A5+%C2%B7+WARP+Proxy+Routing+%F0%9F%8C%90;Non-Stop+Playback+%E2%80%94+No+Waiting+%2C+Just+Play+%F0%9F%8E%A7" alt="Typing SVG"/></a>
 
 *A power-packed, feature-rich group voice-chat music bot built for **non-stop playback** — crystal-clear audio, full video streams, premium emoji UI and a battle-tested YouTube pipeline.*
 
@@ -17,6 +19,7 @@
 [![Python](https://img.shields.io/badge/Written%20in-Python%203.10-facc15?style=for-the-badge&logo=python&logoColor=facc15)](https://www.python.org/)
 [![Last Commit](https://img.shields.io/github/last-commit/venombolteop/VenomMusic?color=22d3ee&logo=github&logoColor=22d3ee&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/commits/main)
 [![Repo Size](https://img.shields.io/github/repo-size/venombolteop/VenomMusic?color=ef4444&logo=github&logoColor=ef4444&style=for-the-badge)](https://github.com/venombolteop/VenomMusic)
+[![Views](https://komarev.com/ghpvc/?username=venombolteop&label=PROFILE+VIEWS&color=a855f7&style=for-the-badge)](https://github.com/venombolteop/VenomMusic)
 
 <br>
 
@@ -74,6 +77,10 @@ No half-measures: when YouTube blocks one extraction path, Venom silently falls 
 | 🌐 **Multilingual** | English · Hindi · Arabic · Turkish · Sorani Kurdish |
 | 🛡️ **Moderation Suite** | Global bans, chat blacklists, sudoers, broadcast, maintenance mode |
 | 🗄️ **MongoDB Persistence** | Queues, playlists, settings and stats survive every restart |
+
+<br>
+
+<img src="https://skillicons.dev/icons?i=python,docker,git,github,linux,bash,heroku&theme=dark&perline=10" width="100%" alt="Tech stack"/>
 
 ---
 
@@ -258,7 +265,7 @@ flowchart TD
 
 > 📌 **Prefixes:** `/` `!` `%` `,` `@` `#` — English shown; every command is localized for all supported languages.
 
----
+<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" alt="divider"/>
 
 ## 🚀 Deployment
 
@@ -348,7 +355,7 @@ tail -f ~/VenomMusic/bot.log             # live logs
 sudo systemctl restart venommusic        # apply .env/code changes
 ```
 
----
+<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" alt="divider"/>
 
 ## ⚙️ Environment Variables
 
@@ -566,7 +573,7 @@ Cookies unlock age-gated content and reduce bot-check frequency.
 
 > 🔒 Use a **dedicated account**, never your main Google login.
 
----
+<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" alt="divider"/>
 
 ## 🔧 Troubleshooting & FAQ
 
@@ -648,6 +655,38 @@ VenomMusic/
 
 ---
 
+## 📊 Live Repo Analytics
+
+<div align="center">
+
+<table>
+<tr>
+<td width="50%">
+
+<img src="https://github-readme-stats.vercel.app/api?username=venombolteop&show_icons=true&theme=tokyonight&hide_border=true&bg_color=0d1117&title_color=7dff00&icon_color=a855f7" width="100%" alt="GitHub stats"/>
+
+</td>
+<td width="50%">
+
+<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=venombolteop&layout=compact&theme=tokyonight&hide_border=true&bg_color=0d1117&title_color=7dff00&langs_count=6" width="100%" alt="Top languages"/>
+
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
+<img src="https://streak-stats.demolab.com?user=venombolteop&theme=tokyonight&hide_border=true&background=0d1117&ring=7DFF00&fire=A855F7&currStreakLabel=22D3EE" width="100%" alt="Streak stats"/>
+
+</td>
+</tr>
+</table>
+
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" width="100%" alt="gradient divider"/>
+
+</div>
+
+---
+
 ## 🆘 Support & Credits
 
 - 👥 **Support Group:** [Join here](https://t.me/venom_chatting)
@@ -667,21 +706,28 @@ For bug reports include: bot logs (`bot.log` tail), your deployment type, and re
 
 **Venom Music** — *Built with 🖤 by ll_dark_poison_ll*
 
+<br>
+
+<a href="https://github.com/venombolteop/VenomMusic"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&pause=1200&color=A855F7&center=true&vCenter=true&width=560&lines=Thanks+for+visiting+%F0%9F%92%9C;Star+the+repo+if+it+rocked+your+VC+%E2%AD%90;Report+bugs+in+Issues+%2B+join+Support+Group" alt="Typing SVG"/></a>
+
+<br>
+
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Built%20With-Python-3776AB?style=flat-square&logo=python&logoColor=white"></a>
 <a href="https://github.com/pyrogram/pyrogram"><img src="https://img.shields.io/badge/Powered%20By-PyroBlack-2CA5E0?style=flat-square&logo=telegram&logoColor=white"></a>
 <a href="https://github.com/Laky-64/pytgcalls"><img src="https://img.shields.io/badge/Voice%20Bridge-PyTgCalls-e91e63?style=flat-square"></a>
 <a href="https://github.com/yt-dlp/yt-dlp"><img src="https://img.shields.io/badge/Media%20Engine-yt--dlp-red?style=flat-square"></a>
 
 <br>
-
-If this project helped you, consider dropping a ⭐ — it keeps development alive!
-
-<a href="https://github.com/venombolteop/VenomMusic/stargazers">
-  <img src="https://img.shields.io/github/stars/venombolteop/VenomMusic?color=facc15&logo=github&logoColor=facc15&style=social" alt="Star the repo">
-</a>
 <br>
-<a href="https://github.com/venombolteop/VenomMusic/blob/main/LICENSE">
-  <img src="https://img.shields.io/badge/License-MIT-blueviolet?style=flat-square" alt="MIT License">
-</a>
+
+<a href="https://github.com/venombolteop/VenomMusic/stargazers"><img src="https://img.shields.io/github/stars/venombolteop/VenomMusic?color=facc15&logo=github&logoColor=facc15&style=social" alt="Star the repo"></a>
+&nbsp;
+<a href="https://github.com/venombolteop/VenomMusic/fork"><img src="https://img.shields.io/github/forks/venombolteop/VenomMusic?color=a855f7&logo=github&logoColor=a855f7&style=social" alt="Fork the repo"></a>
+&nbsp;
+<a href="https://github.com/venombolteop/VenomMusic/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blueviolet?style=flat-square" alt="MIT License"></a>
+
+<br><br>
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:39ff14,45:a855f7,100:22d3ee&height=110&section=footer" alt="animated wave footer"/>
 
 </div>
