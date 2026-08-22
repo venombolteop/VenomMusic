@@ -1,9 +1,7 @@
 
 # All rights reserved.
 #
-import uvloop
 
-uvloop.install()
 
 
 import sys
@@ -16,6 +14,10 @@ from pyrogram.types import (
     BotCommandScopeAllGroupChats,
     BotCommandScopeAllPrivateChats,
 )
+
+import uvloop
+
+uvloop.install()
 
 import config
 
