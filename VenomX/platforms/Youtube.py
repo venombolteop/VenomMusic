@@ -90,6 +90,22 @@ _VIDEO_FMT = (
     "best[height<=?2160]/18/best"
 )
 
+# --- WPC PO Token Provider settings ---
+# Uses browser to mint PO Tokens to bypass YouTube bot detection
+_WPC_BROWSER_PATH = "/home/ubuntu/.cache/ms-playwright/chromium-1228/chrome-linux/chrome"
+_WPC_BROWSER_ARGS = {"no_sandbox": True}
+_POT_PROVIDERS = ["wpc"]
+
+
+def _pot_args():
+    """Return PO Token provider CLI args."""
+    args = []
+    for provider in _POT_PROVIDERS:
+        args.extend(["--extractor-args", f"youtubepot-wpc:browser_path={_WPC_BROWSER_PATH}"])
+        for key, val in _WPC_BROWSER_ARGS.items():
+            args.extend(["--extractor-args", f"youtubepot-wpc:{key}={val}"])
+    return args
+
 
 def _proxy_args():
     """Return proxy CLI args list, or empty list if no proxy configured."""
@@ -135,9 +151,12 @@ _YT_HTTP_HEADERS = {
 
 
 def _base_ydl_opts(**extra):
-    """Common yt-dlp options: proxy + cookies + multi-client SABR-safe fallback."""
+    """Common yt-dlp options: proxy + cookies + multi-client SABR-safe fallback + PO Token."""
+    extractor_args = {"youtube": {"player_client": list(_YT_CLIENTS)}}
+    # Add WPC PO Token provider browser path and args
+    extractor_args["youtubepot-wpc"] = {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
     opts = {
-        "extractor_args": {"youtube": {"player_client": list(_YT_CLIENTS)}},
+        "extractor_args": extractor_args,
         **_proxy_dict(),
         **_cookie_dict(),
         "geo_bypass": True,
@@ -439,6 +458,7 @@ class YouTube:
             "-f",
             _VIDEO_FMT,
             "--extractor-args", f"youtube:player_client={_YT_CLIENTS_STR}",
+            *_pot_args(),
             "--remote-components", "ejs:github",
             f"{link}",
         ]
@@ -519,6 +539,7 @@ class YouTube:
             fmt,
             "--no-playlist",
             "--extractor-args", f"youtube:player_client={_YT_CLIENTS_STR}",
+            *_pot_args(),
             "--remote-components", "ejs:github",
             "--user-agent", _YT_HTTP_HEADERS["User-Agent"],
             f"{link}",
@@ -578,8 +599,9 @@ class YouTube:
         proxy_part = f"--proxy {shlex.quote(PROXY)} " if PROXY else ""
         cookie_path = cookies()
         cookie_part = f"--cookies {shlex.quote(cookie_path)} " if cookie_path else ""
+        pot_part = f"--extractor-args 'youtubepot-wpc:browser_path={_WPC_BROWSER_PATH}' "
         cmd = (
-            f"{shlex.quote(yt_dlp_binary())} {proxy_part}{cookie_part}"
+            f"{shlex.quote(yt_dlp_binary())} {proxy_part}{cookie_part}{pot_part}"
             f"-i --compat-options no-youtube-unavailable-videos "
             f"--extractor-args 'youtube:player_client={_YT_CLIENTS_STR}' "
             f'--get-id --flat-playlist --playlist-end {limit} --skip-download "{link}" '
@@ -672,12 +694,14 @@ class YouTube:
     def _track(self, q):
         _log("info", "_track() ytsearch: %s", q[:80])
         t0 = time.monotonic()
+        extractor_args = {"youtube": {"player_client": list(_YT_CLIENTS)}}
+        extractor_args["youtubepot-wpc"] = {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
         options = {
             "format": _AUDIO_FMT,
             "noplaylist": True,
             "quiet": True,
             "extract_flat": "in_playlist",
-            "extractor_args": {"youtube": {"player_client": list(_YT_CLIENTS)}},
+            "extractor_args": extractor_args,
             **_proxy_dict(),
             **_cookie_dict(),
             "remote_components": ["ejs:github"],
@@ -741,6 +765,7 @@ class YouTube:
             "fragment_retries": 5,
             "retries": 5,
         }
+        ytdl_opts["extractor_args"]["youtubepot-wpc"] = {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
 
         ydl = YoutubeDL(ytdl_opts)
         with ydl:
