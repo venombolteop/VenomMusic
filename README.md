@@ -8,6 +8,7 @@
 
 <a href="https://github.com/venombolteop/VenomMusic"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1000&color=7DFF00&center=true&vCenter=true&multiline=true&repeat=true&width=740&height=78&lines=Instant+Play+%E2%9A%A1+%C2%B7+4K+Video+Calls+%F0%9F%8E%AC+%C2%B7+Premium+Emoji+UI+%F0%9F%92%8E;PO-Token-Hardened+YouTube+Pipeline+%F0%9F%9B%A1%EF%B8%8F;Multi-Assistant+Fleet+%F0%9F%91%A5+%C2%B7+WARP+Proxy+Routing+%F0%9F%8C%90;Non-Stop+Playback+%E2%80%94+No+Waiting+%2C+Just+Play+%F0%9F%8E%A7" alt="Typing SVG"/></a>
 
+
 *A power-packed, feature-rich group voice-chat music bot built for **non-stop playback** — crystal-clear audio, full video streams, premium emoji UI and a battle-tested YouTube pipeline.*
 
 <br>
