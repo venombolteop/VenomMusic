@@ -1,89 +1,194 @@
 <div align="center">
 
-# VENOM ✘ MUSIC
+<img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg" width="480" height="auto" alt="Venom Music">
 
-### The Deadliest Telegram Music Bot You'll Ever Meet
+# 𝗩𝗘𝗡𝗢𝗠 ✘ 𝗠𝗨𝗦𝗜𝗖
 
-`A power-packed, feature-rich Telegram group voice-chat music bot built for non-stop playback.`
+### ⚡ The Deadliest Telegram Music Bot You'll Ever Meet ⚡
 
-<img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg" width="420" height="auto">
-
-<br>
-
-<a href="https://github.com/venombolteop/VenomMusic/stargazers"><img src="https://img.shields.io/github/stars/venombolteop/VenomMusic?color=7dff00&logo=github&logoColor=7dff00&style=for-the-badge" alt="Stars"></a>
-<a href="https://github.com/venombolteop/VenomMusic/network/members"><img src="https://img.shields.io/github/forks/venombolteop/VenomMusic?color=a855f7&logo=github&logoColor=a855f7&style=for-the-badge" alt="Forks"></a>
-<a href="https://github.com/venombolteop/VenomMusic/issues"><img src="https://img.shields.io/github/issues/venombolteop/VenomMusic?color=06b6d4&logo=github&logoColor=06b6d4&style=for-the-badge" alt="Issues"></a>
-<a href="https://github.com/venombolteop/VenomMusic/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge" alt="License"></a>
-<a href="https://www.python.org/"><img src="https://img.shields.io/badge/Written%20in-Python-facc15?style=for-the-badge&logo=python&logoColor=facc15" alt="Python"></a>
-<a href="https://github.com/venombolteop/VenomMusic/commits/main"><img src="https://img.shields.io/github/last-commit/venombolteop/VenomMusic?color=22d3ee&logo=github&logoColor=22d3ee&style=for-the-badge" alt="Last Commit"></a>
-<a href="https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/github/repo-size/venombolteop/VenomMusic?color=ef4444&logo=github&logoColor=ef4444&style=for-the-badge" alt="Repo Size"></a>
+*A power-packed, feature-rich group voice-chat music bot built for **non-stop playback** — crystal-clear audio, full video streams, premium emoji UI and a battle-tested YouTube pipeline.*
 
 <br>
 
-<a href="https://t.me/venom_chatting"><img src="https://img.shields.io/badge/Support%20Group-0ea5e9?style=for-the-badge&logo=telegram&logoColor=white"></a>
-<a href="https://t.me/TomatoFist"><img src="https://img.shields.io/badge/Updates%20Channel-22c55e?style=for-the-badge&logo=telegram&logoColor=white"></a>
-<a href="https://t.me/ll_dark_poison_ll"><img src="https://img.shields.io/badge/Developer-b91c1c?style=for-the-badge&logo=telegram&logoColor=white"></a>
+[![Stars](https://img.shields.io/github/stars/venombolteop/VenomMusic?color=7dff00&logo=github&logoColor=7dff00&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/stargazers)
+[![Forks](https://img.shields.io/github/forks/venombolteop/VenomMusic?color=a855f7&logo=github&logoColor=a855f7&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/network/members)
+[![Issues](https://img.shields.io/github/issues/venombolteop/VenomMusic?color=06b6d4&logo=github&logoColor=06b6d4&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/issues)
+[![License](https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge)](./LICENSE)
+[![Python](https://img.shields.io/badge/Written%20in-Python%203.10-facc15?style=for-the-badge&logo=python&logoColor=facc15)](https://www.python.org/)
+[![Last Commit](https://img.shields.io/github/last-commit/venombolteop/VenomMusic?color=22d3ee&logo=github&logoColor=22d3ee&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/commits/main)
+[![Repo Size](https://img.shields.io/github/repo-size/venombolteop/VenomMusic?color=ef4444&logo=github&logoColor=ef4444&style=for-the-badge)](https://github.com/venombolteop/VenomMusic)
+
+<br>
+
+<a href="https://t.me/venom_chatting"><img src="https://img.shields.io/badge/%F0%9F%91%A5%20Support%20Group-0ea5e9?style=for-the-badge&logo=telegram&logoColor=white"></a>
+<a href="https://t.me/TomatoFist"><img src="https://img.shields.io/badge/%F0%9F%93%A2%20Updates%20Channel-22c55e?style=for-the-badge&logo=telegram&logoColor=white"></a>
+<a href="https://t.me/ll_dark_poison_ll"><img src="https://img.shields.io/badge/%F0%9F%91%A8%F0%9F%92%BB%20Developer-b91c1c?style=for-the-badge&logo=telegram&logoColor=white"></a>
+
+<br>
+<br>
+
+<a href="https://dashboard.heroku.com/new?template=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/%E2%98%81%EF%B8%8F%20Deploy%20On%20Heroku-6567a5?style=flat-square&logo=heroku&logoColor=white" height="34"></a>
+<a href="https://render.com/deploy?repo=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Deploy%20On%20Render-46e3b7?style=flat-square&logo=render&logoColor=black" height="34"></a>
+<a href="#-deploy-with-docker"><img src="https://img.shields.io/badge/%F0%9F%90%B3%20Deploy%20With%20Docker-2496ed?style=flat-square&logo=docker&logoColor=white" height="34"></a>
+<a href="#-deploy-on-a-vps--local-host"><img src="https://img.shields.io/badge/%F0%9F%96%A5%EF%B8%8F%20Deploy%20On%20VPS-4c1?style=flat-square&logo=gnu-bash&logoColor=white" height="34"></a>
 
 </div>
 
 ---
 
-## ☠️ Why Venom Music?
+## 📑 Table of Contents
 
-Venom Music is a **next-gen voice-chat music player** for Telegram groups. It streams crystal-clear audio & video directly into group voice chats using a fleet of assistant accounts — **no downloads, no latency, just play.**
-
-> ⚡ **Instant Streaming** · 🎬 **Video Calls** · 🌍 **Multilingual** · 💎 **Premium Emoji UI**
+- [About](#-about-venom-music)
+- [Architecture — How It Works](#-architecture--how-it-works)
+- [Features](#-features-in-depth)
+- [Supported Platforms](#-supported-platforms)
+- [Commands](#-commands)
+- [Deployment](#-deployment)
+  - [Heroku](#-deploy-on-heroku) · [Render](#-deploy-on-render) · [Docker](#-deploy-with-docker) · [VPS + systemd](#-deploy-on-a-vps--local-host)
+- [Environment Variables](#-environment-variables)
+- **Advanced Guides**
+  - [Proxy Setup — Cloudflare WARP](#-proxy-setup-optional--cloudflare-warp-free)
+  - [PO Token Browser Setup](#-po-token-browser-setup-optional--fixes-youtube-sign-in-to-confirm-youre-not-a-bot)
+  - [YouTube Cookies](#-youtube-cookies-optional-but-recommended)
+- [Troubleshooting & FAQ](#-troubleshooting--faq)
+- [Project Structure](#-project-structure)
+- [Support & Credits](#-support--credits)
 
 ---
 
-## ✨ Highlights
+## ☠️ About Venom Music
 
-- ⚡ **Instant Play** — music starts almost instantly, no waiting around.
-- 🎬 **Audio + Video** — play songs or full music videos in voice chats.
-- 💎 **Premium Emoji UI** — the bot renders animated *premium* emojis for a next-level look.
-- 👥 **Multiple Assistant Accounts** — automatically distributes load across several userbots to dodge floodwaits & limits.
-- 🔁 **Seamless Queue** — skip, shuffle, loop, seek & auto-continue.
-- 🌐 **Multilingual** — English, Hindi, Arabic, Turkish & Sorani Kurdish.
-- 🍪 **YouTube Cookie Support** — avoids age/region blocks on YouTube downloads.
-- 🧹 **Clean Mode** — keeps your group tidy after playback.
-- 🛡️ **Global Ban & Blacklist** — full moderator toolkit for the owner.
-- 🗄️ **MongoDB Backed** — everything persisted, survives restarts & reboots.
+**Venom Music** is a next-generation voice-chat music player for Telegram groups. It streams audio & video directly into group calls using a fleet of **assistant accounts** (userbot sessions), backed by a hardened YouTube extraction pipeline:
+
+> 🧲 **PO Token minting** · 🍪 **Cookie auth** · 🌐 **WARP proxy routing** · ♻️ **Multi-layer fallbacks**
+
+No half-measures: when YouTube blocks one extraction path, Venom silently falls through four more until the music plays.
+
+| | |
+|:---|:---|
+| ⚡ **Instant Play** | Direct-stream URLs start in seconds — download only as a last resort |
+| 🎬 **Audio + Video** | Songs or full music videos, up to 4K, straight into the VC |
+| 👥 **Assistant Fleet** | Load-balanced userbots dodge FloodWaits and join limits automatically |
+| 💎 **Premium Emoji UI** | Custom-emoji buttons, progress bars and animated player cards |
+| 🔁 **Full Player Control** | Skip · loop · shuffle · seek · pause · resume · autoend |
+| 🌐 **Multilingual** | English · Hindi · Arabic · Turkish · Sorani Kurdish |
+| 🛡️ **Moderation Suite** | Global bans, chat blacklists, sudoers, broadcast, maintenance mode |
+| 🗄️ **MongoDB Persistence** | Queues, playlists, settings and stats survive every restart |
+
+---
+
+## 🏗️ Architecture — How It Works
+
+```mermaid
+flowchart TD
+    U["👤 User sends /play"] --> B["🤖 Bot Client (pyroblack)<br/>command router"]
+    B --> T["🔎 Track Resolver<br/>py-yt-search / Spotify / Saavn APIs"]
+    T --> E{"Playback Engine"}
+    E -->|"INSTANT_PLAY on"| SU["⚡ stream_url()<br/>yt-dlp -g direct URL"]
+    E -->|"fallback / instant off"| DL["⬇️ Full Download<br/>yt-dlp + aria2c"]
+    SU --> FF
+    DL --> FF
+    YT["🛡️ PO Token Provider<br/>(headless Chrome mints tokens)<br/>+ cookies + multi-client"] -.->|unblocks| SU
+    YT -.->|unblocks| DL
+    PX["🌐 WARP Proxy<br/>PROXY_URL"] -.->|routes all YouTube traffic| YT
+    FF["🎚️ FFmpeg<br/>buffer-tuned decode"] --> NT["📡 ntgcalls bridge"]
+    NT --> TG["🎙️ Telegram Group Call"]
+    TG --> Q["♻️ Queue Engine<br/>on stream_end → next track"]
+```
+
+**The playback pipeline in detail:**
+
+1. **Command layer** — `/play` resolves the query via fast search APIs and validates duration limits.
+2. **Extraction layer** — `yt-dlp` fetches a direct media URL (`stream_url()`, ~2–7 s). When YouTube's bot-check intervenes, the **WPC PO Token provider** spins up headless Chromium to mint fresh tokens, cookies authenticate the session, and the `tv/mweb/web` client trio plus progressive itag-18 provide SABR-proof fallbacks.
+3. **Network layer** — all YouTube traffic is routed through `PROXY_URL` when configured; under a proxy the bot auto-switches to *download-first* mode because googlevideo URLs are IP-bound.
+4. **Transport layer** — FFmpeg decodes with tuned buffer parameters and feeds raw frames into `ntgcalls`, which bridges them into Telegram's group call via the assistant account.
+5. **Queue engine** — a `stream_end` event pops the next track from MongoDB-backed queues, so playback continues hands-free until the queue is empty.
+
+---
+
+## ✨ Features In Depth
+
+<details open>
+<summary><b>🎧 Playback</b></summary>
+
+- **Instant streaming first** — direct URLs are probed before falling back to full downloads
+- **Video up to 4K** with per-chat configurable audio/video bitrates
+- **Loop** a single track or the entire queue, **shuffle**, **seek forward/backward**
+- **Force play** to cut the current track immediately
+- **Auto-end** empty calls and **auto-leave** idle assistants (configurable timers)
+- **Channel play** — linked-channel groups get their own playback flow
+
+</details>
+
+<details>
+<summary><b>🛡️ YouTube Hardening Pipeline</b></summary>
+
+- **PO Token minting** via [`yt-dlp-getpot-wpc`](https://github.com/coletdjnz/yt-dlp-getpot-wpc) — headless browser defeats *"Sign in to confirm you're not a bot"*
+- **Netscape cookie support** — drop any exported `cookies.txt` into `cookies/`
+- **Multi-client strategy** — `tv` → `mweb` → `web` clients, then progressive itag 18
+- **JS runtime fallbacks** — node → bun → deno → default extractor chains
+- **Proxy-aware everywhere** — yt-dlp, aria2c and ffmpeg probes all honor `PROXY_URL`
+- **Stale-file cleanup** — corrupted/partial downloads (<10 KB) auto-purge and re-fetch
+
+</details>
+
+<details>
+<summary><b>💎 Interface</b></summary>
+
+- **Premium custom emojis** on every button, icon and player card
+- **Live progress bars** with thumbnail artwork generated per track
+- **Inline search** results playable without commands
+- **Clean mode** auto-deletes now-playing spam after playback
+- **Play logger** — rich log cards posted to your log group
+
+</details>
+
+<details>
+<summary><b>👑 Owner & Moderation</b></summary>
+
+- Global ban/unban, per-user block, chat blacklisting
+- Broadcast to all active chats, sudoer management
+- Heroku config-var management from chat (`/setvar`, `/getvar`)
+- Git-based `/update` and `/restart`, live speedtest & system stats
+
+</details>
 
 ---
 
 ## 🎵 Supported Platforms
 
-| Platform | Audio | Video | Playlist |
-|:--------:|:-----:|:-----:|:--------:|
-| 🇾🇹 **YouTube** | ✅ | ✅ | ✅ |
-| 🟢 **Spotify** | ✅ | ⛔ | ✅ |
-| 🍎 **Apple Music** | ✅ | ⛔ | ✅ |
-| 🔴 **Resso** | ✅ | ⛔ | ⛔ |
-| 🟣 **JioSaavn** | ✅ | ⛔ | ✅ |
-| 🟠 **SoundCloud** | ✅ | ⛔ | ⛔ |
-| 📎 **Telegram Files** | ✅ | ✅ | ⛔ |
-| 📡 **M3u8 / Radio / Streams** | ✅ | ✅ | ⛔ |
+| Platform | Audio | Video | Playlists | Notes |
+|:---------|:-----:|:-----:|:---------:|:------|
+| ▶️ **YouTube** | ✅ | ✅ | ✅ | Search, links, Shorts; PO-Token hardened |
+| 🟢 **Spotify** | ✅ | ⛔ | ✅ | Metadata resolved → streamed via YouTube |
+| 🍎 **Apple Music** | ✅ | ⛔ | ✅ | Same resolution pipeline |
+| 🟣 **JioSaavn** | ✅ | ⛔ | ✅ | Native high-quality downloads |
+| 🔴 **Resso** | ✅ | ⛔ | ⛔ | Direct track fetch |
+| 🟠 **SoundCloud** | ✅ | ⛔ | ⛔ | Native downloads |
+| 📎 **Telegram Files** | ✅ | ✅ | ⛔ | Reply to any audio/video to play it |
+| 📡 **Direct Links** | ✅ | ✅ | ⛔ | m3u8 / index / radio / live streams |
 
 ---
 
 ## 🎮 Commands
 
-<details>
+<details open>
 <summary><b>🎧 Play Commands</b></summary>
 <br>
 
 | Command | Description |
 |:--------|:------------|
-| `/play` / `/vplay` | Play a song or video by name or link |
-| `/playforce` / `/vplayforce` | Force play, skipping the current track |
-| `/channelplay` | Play for a linked channel group |
-| `/stream` | Stream m3u8 / index / radio links |
+| `/play <query>` | Play audio by name or link (searches if not a URL) |
+| `/vplay <query>` | Play video by name or link |
+| `/playforce` / `/vplayforce` | Instantly replace the current track |
+| `/channelplay` | Play in a linked channel group |
+| `/stream <url>` | Stream m3u8 / index / radio / live links |
 | `/playlist` | View your saved playlists |
-| `/addplaylist` | Save the current track to a playlist |
-| `/playplaylist` | Play a saved playlist |
-| `/deleteplaylist` | Delete a playlist |
-| `/playmode` | Change playback mode (Direct / Search) |
-| `/instantplay` | Toggle instant streaming mode |
+| `/addplaylist <name>` | Save current queue to a playlist |
+| `/playplaylist <name>` | Play a saved playlist |
+| `/deleteplaylist <name>` | Delete a saved playlist |
+| `/playmode` | Toggle Direct ↔ Search playback mode |
+| `/instantplay` | Toggle instant URL streaming |
 
 </details>
 
@@ -94,15 +199,14 @@ Venom Music is a **next-gen voice-chat music player** for Telegram groups. It st
 | Command | Description |
 |:--------|:------------|
 | `/pause` / `/resume` | Pause & resume playback |
-| `/skip` | Skip to the next track |
-| `/stop` / `/end` | Stop playback & clear the queue |
-| `/shuffle` | Shuffle the queue |
-| `/loop` | Loop the current track or queue |
-| `/seek` / `/seekback` | Jump forward / backward in a track |
-| `/auth` / `/unauth` | Grant / revoke auth to users |
-| `/authusers` | List authorized users |
-| `/mute` / `/unmute` | Mute / unmute the assistant |
-| `/reboot` | Restart the voice-chat bridge |
+| `/skip` | Skip to the next queued track |
+| `/stop` / `/end` | Stop and clear the queue |
+| `/shuffle` | Shuffle remaining queue |
+| `/loop [n]` | Loop track n× times, or forever |
+| `/seek <time>` / `/seekback <time>` | Jump forward / backward |
+| `/auth` / `/unauth` / `/authusers` | Manage authorized users |
+| `/mute` / `/unmute` | Mute / unmute the assistant itself |
+| `/reboot` | Restart the voice-call bridge |
 
 </details>
 
@@ -112,19 +216,17 @@ Venom Music is a **next-gen voice-chat music player** for Telegram groups. It st
 
 | Command | Description |
 |:--------|:------------|
-| `/song` / `/video` | Download audio / video |
-| `/lyrics` | Fetch song lyrics |
-| `/queue` / `/player` | View the current queue |
-| `/radio` | Stream live radio stations |
-| `/ping` | Check bot latency |
-| `/stats` | Bot & system statistics |
-| `/speedtest` | Run a server speed test |
-| `/lang` | Change bot language |
-| `/id` | Get chat / user / media IDs |
-| `/font` | Generate styled fonts |
-| `/love` | Romance percentage generator 💘 |
-| `/sg` | Search a user's profile name history |
-| `/telegraph` | Upload media to Telegraph |
+| `/song <name>` / `/video <name>` | Download audio / video files |
+| `/lyrics <song>` | Fetch lyrics |
+| `/queue` / `/player` | Inspect queue & now-playing |
+| `/radio` | Browse live radio stations |
+| `/ping` · `/stats` · `/speedtest` | Latency · uptime/system stats · network test |
+| `/lang` | Switch bot language |
+| `/id` | Get IDs of chats, users or replied media |
+| `/font <text>` | Styled unicode fonts |
+| `/love @user` | Romance calculator 💘 |
+| `/sg <username>` | Telegram username history search |
+| `/telegraph` | Upload replied media to Telegraph |
 
 </details>
 
@@ -134,134 +236,183 @@ Venom Music is a **next-gen voice-chat music player** for Telegram groups. It st
 
 | Command | Description |
 |:--------|:------------|
-| `/addsudo` / `/delsudo` | Add / remove sudo users |
-| `/sudolist` | List all sudo users |
-| `/broadcast` | Broadcast a message to all chats |
-| `/gban` / `/ungban` | Global ban / unban users |
-| `/block` / `/unblock` | Block / unblock users in the bot |
-| `/blacklistchat` / `/whitelistchat` | Manage chat blacklist |
-| `/logger` | Toggle play logs to the log group |
-| `/maintenance` | Put the bot into maintenance mode |
-| `/autoend` | Auto-end voice calls when empty |
-| `/videolimit` / `/videomode` | Control video streaming limits |
-| `/authorize` / `/unauthorize` | Manage private-bot access |
-| `/activevoice` / `/activevideo` | List active voice / video calls |
-| `/update` | Update the bot via git pull |
-| `/restart` | Restart the bot |
-| `/log` / `/usage` | Heroku logs & dyno usage |
-| `/setvar` / `/getvar` / `/delvar` | Manage Heroku config vars |
+| `/addsudo` / `/delsudo` / `/sudolist` | Manage sudo users |
+| `/broadcast` | Send to all chats using the bot |
+| `/gban` / `/ungban` | Global bans |
+| `/block` / `/unblock` | Bot-level DM blocking |
+| `/blacklistchat` / `/whitelistchat` | Chat blacklist management |
+| `/logger` | Toggle log-group play cards |
+| `/maintenance` | Maintenance mode gate |
+| `/autoend` | Auto-close empty VCs |
+| `/videolimit` / `/videomode` | Video call limits & quality mode |
+| `/authorize` / `/unauthorize` | Private-bot access list |
+| `/activevoice` / `/activevideo` | List live calls |
+| `/update` | `git pull` upstream and restart |
+| `/restart` | Restart bot process |
+| `/log` / `/usage` | Heroku dyno logs & usage |
+| `/setvar` / `/getvar` / `/delvar` | Heroku config vars from chat |
 
 </details>
 
 <br>
 
-> 📌 Prefixes: `/` `!` `%` `,` `@` `#` — *English commands shown; all commands are localized per language.*
+> 📌 **Prefixes:** `/` `!` `%` `,` `@` `#` — English shown; every command is localized for all supported languages.
 
 ---
 
 ## 🚀 Deployment
 
+> **Prerequisites:** an [API_ID/API_HASH](https://my.telegram.org) pair, a [@BotFather](https://t.me/BotFather) token, 1+ assistant session strings, a MongoDB instance and a log-group ID.
+
 ### ☁️ Deploy on Heroku
 
-<a href="https://dashboard.heroku.com/new?template=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/Deploy%20On-Heroku-6567a5?style=for-the-badge&logo=heroku&logoColor=white" width="220" height="38"></a>
+<a href="https://dashboard.heroku.com/new?template=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/%E2%98%81%EF%B8%8F%20Deploy%20On%20Heroku-6567a5?style=for-the-badge&logo=heroku&logoColor=white" width="230" height="40"></a>
+
+One click → fill vars → deploy. Worker dyno included via `heroku.yml`.
 
 ### 🌐 Deploy on Render
 
-<a href="https://render.com/deploy?repo=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/Deploy%20On-Render-46e3b7?style=for-the-badge&logo=render&logoColor=white" width="220" height="38"></a>
+<a href="https://render.com/deploy?repo=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Deploy%20On%20Render-46e3b7?style=for-the-badge&logo=render&logoColor=black" width="230" height="40"></a>
+
+Uses `render.yaml` blueprint — fill env vars in the dashboard.
 
 ### 🐳 Deploy with Docker
 
 ```bash
 git clone https://github.com/venombolteop/VenomMusic && cd VenomMusic
-cp sample.env .env            # fill in all required variables
+cp sample.env .env                # then edit .env with your values
 docker build -t venommusic .
-docker run -d --name venommusic --env-file .env venommusic
+docker run -d --name venommusic \
+  --env-file .env \
+  --restart unless-stopped \
+  venommusic
 ```
 
 ### 🖥️ Deploy on a VPS / Local Host
 
-1. **Update the system**
-   ```bash
-   sudo apt-get update && sudo apt-get upgrade -y
-   ```
-2. **Install dependencies**
-   ```bash
-   sudo apt-get install python3-pip ffmpeg -y
-   sudo pip3 install -U pip
-   ```
-3. **Add your cookies** (optional but recommended) to [`cookies/cookies.txt`](https://github.com/venombolteop/VenomMusic/blob/main/cookies/cookies.txt)
-4. **Clone the repository**
-   ```bash
-   git clone https://github.com/venombolteop/VenomMusic && cd VenomMusic
-   ```
-5. **Install requirements**
-   ```bash
-   pip3 install -U -r requirements.txt
-   ```
-6. **Set your variables**
-   ```bash
-   cp sample.env .env
-   vi .env
-   ```
-   > Press `I` to edit, `Ctrl+C` when done, then `:wq` to save.
-7. **Run the bot**
-   ```bash
-   bash start
-   ```
-   > Prefer to keep it alive after you close the terminal? Run inside **tmux**:
-   > `sudo apt install tmux && tmux` → run `bash start` → detach with `Ctrl+B` then `D`.
+**1. System prep**
+```bash
+sudo apt-get update && sudo apt-get upgrade -y
+sudo apt-get install -y python3-pip ffmpeg git
+sudo pip3 install -U pip
+```
+
+**2. Clone & install**
+```bash
+git clone https://github.com/venombolteop/VenomMusic && cd VenomMusic
+pip3 install -U -r requirements.txt
+```
+
+**3. Configure**
+```bash
+cp sample.env .env
+nano .env        # fill ALL required variables, Ctrl+O save, Ctrl+X exit
+```
+
+**4. Test-run** *(recommended before systemd)*
+```bash
+bash start
+```
+> Prefer tmux so it survives disconnects: `sudo apt install tmux && tmux` → run `bash start` → detach `Ctrl+B` `D`.
+
+**5. Run as a systemd service** *(production-grade, auto-restart on boot/crash)*
+
+Create `/etc/systemd/system/venommusic.service`:
+```ini
+[Unit]
+Description=VenomMusic Telegram Music Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu                       # your linux user
+WorkingDirectory=/home/ubuntu/VenomMusic
+ExecStart=/usr/bin/python3 -u -m VenomX
+Restart=always
+RestartSec=5
+LimitNOFILE=1048576
+StandardOutput=append:/home/ubuntu/VenomMusic/bot.log
+StandardError=append:/home/ubuntu/VenomMusic/bot.log
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable & control it:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now venommusic   # start now + on boot
+systemctl status venommusic              # health check
+tail -f ~/VenomMusic/bot.log             # live logs
+sudo systemctl restart venommusic        # apply .env/code changes
+```
 
 ---
 
 ## ⚙️ Environment Variables
 
-| Variable | Required | Description |
-|:---------|:--------:|:------------|
-| `API_ID` | ✅ | Your Telegram API ID (from my.telegram.org) |
-| `API_HASH` | ✅ | Your Telegram API Hash |
-| `BOT_TOKEN` | ✅ | Bot token from @BotFather |
-| `STRING_SESSIONS` | ✅ | Assistant account session strings (space-separated, 1+ clients) |
-| `MONGO_DB_URI` | ✅ | MongoDB connection string |
-| `LOGGER_ID` | ✅ | Group ID where play logs are sent |
-| `OWNER_ID` | ✅ | Owner user ID (space-separated for multiple) |
-| `DURATION_LIMIT` | ❌ | Max track duration in seconds (default `5400`) |
-| `SONG_DOWNLOAD_DURATION_LIMIT` | ❌ | Max duration for `/song` downloads |
-| `PLAYLIST_FETCH_LIMIT` | ❌ | Max tracks fetched per playlist |
-| `VIDEO_STREAM_LIMIT` | ❌ | Max concurrent video calls (default `999`) |
-| `TG_AUDIO_FILESIZE_LIMIT` / `TG_VIDEO_FILESIZE_LIMIT` | ❌ | Max Telegram file sizes (bytes) |
-| `PRIVATE_BOT_MODE` | ❌ | Set `True` to restrict bot to authorized users |
-| `INSTANT_PLAY` | ❌ | Toggle instant streaming (default `True`) |
-| `AUTO_LEAVING_ASSISTANT` / `ASSISTANT_LEAVE_TIME` | ❌ | Auto-leave idle assistants |
-| `CLEANMODE_MINS` | ❌ | Minutes before clean-mode clears messages |
-| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | ❌ | Enable Spotify playback |
-| `UPSTREAM_REPO` / `UPSTREAM_BRANCH` / `GIT_TOKEN` | ❌ | Auto-update source repo |
-| `GITHUB_REPO` | ❌ | Repo link shown in bot |
-| `SUPPORT_CHANNEL` / `SUPPORT_GROUP` | ❌ | Support links shown in bot |
-| `HEROKU_API_KEY` / `HEROKU_APP_NAME` | ❌ | Enable Heroku sudo commands |
-| `PROXY_URL` | ❌ | HTTP proxy for YouTube/yt-dlp (e.g. `http://127.0.0.1:40000`) |
-| `WPC_BROWSER_PATH` | ❌ | Chrome/Chromium path for the PO Token provider (auto-detected if unset) |
+### Required
 
-> 📄 Full reference: [`sample.env`](https://github.com/venombolteop/VenomMusic/blob/main/sample.env)
+| Variable | Description |
+|:---------|:------------|
+| `API_ID` / `API_HASH` | Telegram API credentials from [my.telegram.org](https://my.telegram.org) |
+| `BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) |
+| `STRING_SESSIONS` | Assistant account session strings — comma/space separated, add more to scale |
+| `MONGO_DB_URI` | MongoDB connection string ([free cluster](https://www.mongodb.com/cloud/atlas)) |
+| `LOGGER_ID` | Private group ID where play logs land |
+| `OWNER_ID` | Your numeric Telegram user ID(s) |
+
+### Playback & Limits
+
+| Variable | Default | Description |
+|:---------|:-------:|:------------|
+| `DURATION_LIMIT` | `5400` | Max track length (seconds) for VC playback |
+| `SONG_DOWNLOAD_DURATION_LIMIT` | `5400` | Max duration for `/song` `/video` downloads |
+| `PLAYLIST_FETCH_LIMIT` | `255` | Max tracks fetched per playlist |
+| `VIDEO_STREAM_LIMIT` | `999` | Concurrent video calls allowed |
+| `TG_AUDIO_FILESIZE_LIMIT` / `TG_VIDEO_FILESIZE_LIMIT` | `1073741824` | Telegram file size caps (bytes) |
+| `INSTANT_PLAY` | `True` | Stream direct URLs first instead of downloading |
+| `PRIVATE_BOT_MODE` | `False` | Only whitelisted chats can use the bot |
+| `AUTO_LEAVING_ASSISTANT` / `ASSISTANT_LEAVE_TIME` | off / `5800` | Auto-leave assistants after idle seconds |
+| `CLEANMODE_MINS` | `5` | Minutes before clean-mode wipes messages |
+| `SET_CMDS` | `True` | Auto-register command menu in Telegram |
+
+### Networking & YouTube
+
+| Variable | Description |
+|:---------|:------------|
+| `PROXY_URL` | HTTP/SOCKS5 proxy for all YouTube traffic — e.g. `http://127.0.0.1:40000`. See [WARP guide](#-proxy-setup-optional--cloudflare-warp-free) |
+| `WPC_BROWSER_PATH` | Chrome/Chromium binary path for the PO Token provider. Auto-detected if unset — see [browser setup](#-po-token-browser-setup-optional--fixes-youtube-sign-in-to-confirm-youre-not-a-bot) |
+
+### Integrations & Misc
+
+| Variable | Description |
+|:---------|:------------|
+| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | Spotify API keys for metadata resolution |
+| `SUPPORT_CHANNEL` / `SUPPORT_GROUP` | Links shown inside the bot |
+| `UPSTREAM_REPO` / `UPSTREAM_BRANCH` / `GIT_TOKEN` | Source repo for `/update` |
+| `GITHUB_REPO` | Repo link shown in `/start` |
+| `HEROKU_API_KEY` / `HEROKU_APP_NAME` | Enables Heroku var/log commands |
+| `EXTRA_PLUGINS` / `EXTRA_PLUGINS_REPO` | Load external plugin packs |
+| `START_IMG_URL` etc. | Override UI artwork URLs |
+
+> 📄 Full reference: [`sample.env`](sample.env)
 
 ---
 
-## 🌐 Proxy Setup (Optional) — Cloudflare WARP (free)
+## 🌐 Proxy Setup (Optional) — Cloudflare WARP (Free)
 
-VenomMusic can route YouTube / yt-dlp traffic through a local HTTP proxy.  
-**Recommended free option:** [Cloudflare WARP](https://developers.cloudflare.com/warp-client/) in **proxy mode**.
+Route YouTube / yt-dlp traffic through a local HTTP proxy — ideal when YouTube rate-limits or geo-blocks your VPS IP.
 
-### How it works
-- Install WARP → set mode to `proxy` → it listens on `127.0.0.1:PORT`
-- Put that address in `.env` as `PROXY_URL`
-- Bot auto-uses it for yt-dlp + aria2c (no source edits)
-- Leave `PROXY_URL` empty to run without a proxy
+> **TL;DR:** Install WARP → `warp-cli mode proxy` → connect → put `http://127.0.0.1:40000` into `.env` as `PROXY_URL`.
 
----
+<details>
+<summary><b>📖 Full step-by-step WARP guide</b></summary>
 
-### 1) Install Cloudflare WARP (Linux)
+### 1) Install Cloudflare WARP (Debian/Ubuntu)
 
 ```bash
-# Debian / Ubuntu
 curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
 sudo apt-get update && sudo apt-get install -y cloudflare-warp
@@ -270,163 +421,230 @@ sudo apt-get update && sudo apt-get install -y cloudflare-warp
 ### 2) Register + enable proxy mode
 
 ```bash
-# Accept ToS + register (one time)
-sudo warp-cli --accept-tos registration new
-
-# Switch to local HTTP proxy mode (default port 40000)
-sudo warp-cli mode proxy
-
-# Optional: change listen port (example: 40000)
-sudo warp-cli proxy port 40000
-
-# Connect
-sudo warp-cli connect
-
-# Check status (must show Connected + WarpProxy)
-warp-cli status
-warp-cli settings
+sudo warp-cli --accept-tos registration new   # one-time registration
+sudo warp-cli mode proxy                      # local HTTP proxy mode
+sudo warp-cli proxy port 40000                # optional: change port
+sudo warp-cli connect                         # connect
+warp-cli status                               # must show Connected + WarpProxy
 ```
 
-### 3) Show proxy IP / port (so you can copy into `.env`)
+### 3) Verify the listener
 
 ```bash
-# Show WARP mode + port from settings
-warp-cli settings | grep -i proxy
-
-# Confirm local listener
-ss -tlnp | grep 40000
-# or
-ss -tlnp | grep -i warp
-
-# Test proxy works
-curl -x http://127.0.0.1:40000 -I https://www.youtube.com
-
-# See public IP through the proxy
-curl -x http://127.0.0.1:40000 https://ifconfig.me
-curl -x http://127.0.0.1:40000 https://api.ipify.org
+ss -tlnp | grep 40000                                   # confirm listening
+curl -x http://127.0.0.1:40000 https://api.ipify.org    # show exit IP via proxy
 ```
 
-Typical output when ready:
+Expected:
 ```text
-Mode: WarpProxy on port 40000
 LISTEN 127.0.0.1:40000
+Mode: WarpProxy on port 40000
 ```
 
-### 4) Add to bot `.env`
+### 4) Add to `.env`
 
 ```env
 PROXY_URL=http://127.0.0.1:40000
 ```
 
-If you changed the port:
-```env
-PROXY_URL=http://127.0.0.1:YOUR_PORT
-```
+Then restart the bot. **Under a proxy the bot automatically switches to download-first mode** — googlevideo URLs are bound to the proxy's exit IP, so ffmpeg plays the locally downloaded file instead of the remote URL.
 
-Restart the bot:
-```bash
-systemctl restart venommusic
-# or
-bash start
-```
+</details>
 
 ### Useful WARP commands
 
-| Command | What it does |
-|:--------|:-------------|
-| `warp-cli status` | Connection status |
-| `warp-cli settings` | Full config (mode + port) |
-| `warp-cli connect` | Connect WARP |
-| `warp-cli disconnect` | Disconnect |
-| `warp-cli mode proxy` | Enable local HTTP proxy mode |
-| `warp-cli proxy port 40000` | Set proxy listen port |
-| `ss -tlnp \| grep 40000` | Confirm proxy is listening |
-| `curl -x http://127.0.0.1:40000 https://ifconfig.me` | Show exit IP via proxy |
+| Command | Purpose |
+|:--------|:--------|
+| `warp-cli status` / `settings` | Connection status / mode + port |
+| `warp-cli connect` / `disconnect` | Toggle tunnel |
+| `warp-cli mode proxy` | Enable local HTTP proxy |
+| `warp-cli proxy port 40000` | Set listen port |
+| `curl -x http://127.0.0.1:40000 https://ifconfig.me` | Show proxy exit IP |
 
-### SOCKS5 (optional)
+### SOCKS5 alternative
 
-If you use another SOCKS5 proxy instead of WARP:
 ```env
 PROXY_URL=socks5://127.0.0.1:1080
 ```
 
-> ⚠️ Proxy is **env-only** (`PROXY_URL`). Your running proxy is never modified by the bot.
+> ⚠️ Proxy is **env-only** (`PROXY_URL`) — the bot never touches your running proxy config.
 
 ---
 
 ## 🤖 PO Token Browser Setup (Optional) — fixes YouTube "Sign in to confirm you're not a bot"
 
-YouTube sometimes blocks servers with:
+YouTube sometimes blocks datacenter IPs with:
 
-```
+```text
 ERROR: [youtube] <video_id>: Sign in to confirm you're not a bot.
 ```
 
-VenomMusic ships with the **[`yt-dlp-getpot-wpc`](https://github.com/coletdjnz/yt-dlp-getpot-wpc)** PO Token provider (already in `requirements.txt`). It launches a real browser in the background to mint PO Tokens, which bypasses the bot-check. You only need to give it a Chrome/Chromium binary.
+VenomMusic ships with the **[`yt-dlp-getpot-wpc`](https://github.com/coletdjnz/yt-dlp-getpot-wpc)** PO Token provider (already in `requirements.txt`). It launches a real browser in the background to mint PO Tokens that bypass this check. All you must supply is a Chrome/Chromium binary.
 
-### 1) Install a browser (pick ONE option)
+### 1️⃣ Install a browser — pick ONE option
 
-**Option A — Playwright Chromium (works everywhere, no root needed):**
+<details open>
+<summary><b>Option A — Playwright Chromium</b> <i>(works everywhere, no root)</i></summary>
+
 ```bash
 python3 -m playwright install chromium
 ```
+
 Binary lands at:
-```
+```text
 ~/.cache/ms-playwright/chromium-<version>/chrome-linux/chrome
 ```
+</details>
 
-**Option B — apt (Debian / Ubuntu, needs root):**
+<details>
+<summary><b>Option B — apt</b> <i>(Debian/Ubuntu, needs root)</i></summary>
+
 ```bash
 sudo apt install -y chromium-browser   # Ubuntu (snap-backed)
 sudo apt install -y chromium           # Debian
 ```
+</details>
 
-**Option C — snap:**
+<details>
+<summary><b>Option C — snap</b></summary>
+
 ```bash
 sudo snap install chromium
 ```
-Binary lands at `/snap/bin/chromium` → real path `/usr/lib/chromium/chrome` or `/snap/chromium/current/usr/lib/chromium-browser/chrome`.
 
-**Option D — Google Chrome (`.deb`):**
+Binary: `/snap/bin/chromium` → real path `/snap/chromium/current/usr/lib/chromium-browser/chrome`.
+</details>
+
+<details>
+<summary><b>Option D — Google Chrome (.deb)</b></summary>
+
 ```bash
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo apt install -y ./google-chrome-stable_current_amd64.deb
 ```
+</details>
 
-### 2) Get the browser path
+### 2️⃣ Get the browser path
 
-Any of these works:
 ```bash
-# If installed via package manager / snap:
+# Package-manager / snap installs:
 which chromium chromium-browser google-chrome google-chrome-stable
 
-# If installed via Playwright:
+# Playwright install:
 ls -1 ~/.cache/ms-playwright/chromium-*/chrome-linux/chrome | tail -1
 
 # Last resort — find it anywhere:
 find / -type f \( -name "chrome" -o -name "chromium" \) -perm -u+x 2>/dev/null
 ```
 
-### 3) Set it in `.env`
+### 3️⃣ Set it in `.env`
 
 ```env
 WPC_BROWSER_PATH=/home/ubuntu/.cache/ms-playwright/chromium-1228/chrome-linux/chrome
 ```
 
-Then restart the bot (`sudo systemctl restart venommusic2`, or however you run it).
+Then restart the bot (`sudo systemctl restart venommusic` — or however you run yours).
 
 ### Notes
 
-- 🔍 **Auto-detection:** if `WPC_BROWSER_PATH` is empty, the bot checks `PATH` (`chromium-browser`, `chromium`, `google-chrome`, `google-chrome-stable`) and then the Playwright cache automatically. Only set it explicitly if auto-detection fails.
-- 🪫 **Graceful fallback:** no browser found = PO Token provider simply disabled; the bot still plays using cookies + multi-client yt-dlp fallbacks.
-- 🧪 **Verify it's working:** run a play command and check `bot.log` — a successful mint looks like a normal `stream_url() got direct URL` line with no `Sign in to confirm` errors.
-- ⚠️ The provider runs the browser with `no_sandbox` internally (required on most servers/root containers). Keep the machine's browser up to date — old builds may fail token minting.
+- 🔍 **Auto-detection:** with `WPC_BROWSER_PATH` unset, the bot checks `PATH` (`chromium-browser`, `chromium`, `google-chrome`, `google-chrome-stable`) then the Playwright cache. Set it explicitly only if detection fails.
+- 🪫 **Graceful fallback:** no browser found ⇒ PO Token provider disabled; playback continues via cookies + multi-client yt-dlp fallbacks.
+- 🧪 **Verify:** run a `/play` and watch `bot.log` — success looks like `stream_url() got direct URL ...` with zero `Sign in to confirm` errors.
+- ⚠️ Runs the browser with `no_sandbox` internally (required on servers/root containers). Keep the browser updated — stale builds can fail token minting.
 
 ---
 
-## 🗄️ Database
+## 🍪 YouTube Cookies (Optional but Recommended)
 
-The bot uses **MongoDB** to store chats, users, playlists, assistant assignments, sudoers and settings — everything survives restarts, crashes and server reboots.
+Cookies unlock age-gated content and reduce bot-check frequency.
+
+1. Install the **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)** extension (Chrome/Firefox).
+2. Log in to [youtube.com](https://youtube.com) — ideally with a throwaway Google account.
+3. While on youtube.com, export cookies via the extension.
+4. Place the file at `cookies/cookies.txt` (must start with `# Netscape HTTP Cookie File`).
+5. Restart the bot — logs will confirm `using cookie file: .../cookies/cookies.txt`.
+
+> 🔒 Use a **dedicated account**, never your main Google login.
+
+---
+
+## 🔧 Troubleshooting & FAQ
+
+<details>
+<summary><b>❌ "Sign in to confirm you're not a bot" during /play</b></summary>
+
+YouTube is bot-checking your server IP. Fix stack (apply in order):
+1. Add fresh cookies → [guide](#-youtube-cookies-optional-but-recommended)
+2. Install a browser for PO Tokens → [guide](#-po-token-browser-setup-optional--fixes-youtube-sign-in-to-confirm-youre-not-a-bot)
+3. Route through WARP proxy → [guide](#-proxy-setup-optional--cloudflare-warp-free)
+</details>
+
+<details>
+<summary><b>🔇 Assistant joins the VC but there's no sound</b></summary>
+
+Usually caused by playing a **direct googlevideo URL that is IP-bound** to another exit point (e.g. fetched through a proxy). With `PROXY_URL` set, Venom auto-forces download-first playback which sidesteps this entirely. Also verify: assistant isn't muted in Telegram, and device output isn't routed elsewhere.
+</details>
+
+<details>
+<summary><b>🚪 Assistant doesn't join the voice chat</b></summary>
+
+- Make sure a **voice chat is actually started** in the group (not just enabled).
+- Promote the assistant account to **admin** (or disable join restrictions).
+- For private groups, invite the assistant once manually.
+- Check logs for `No Active Voice Chat Found` — end and re-create the VC, then `/play` again.
+</details>
+
+<details>
+<summary><b>⚠️ FloodWait errors</b></summary>
+
+Add **more assistant accounts** (`STRING_SESSIONS=A,B,C`). The fleet load-balances joins across accounts automatically.
+</details>
+
+<details>
+<summary><b>🐢 Downloads are slow / stall</b></summary>
+
+The pipeline already uses `aria2c` with 16 connections. If your host throttles media traffic, enable the WARP proxy — it frequently improves googlevideo throughput.
+</details>
+
+<details>
+<summary><b>🔄 How do I apply new code/env changes?</b></summary>
+
+systemd: `sudo systemctl restart venommusic` · tmux: detach and rerun `bash start` · Docker: `docker restart venommusic`.
+</details>
+
+---
+
+## 🗂️ Project Structure
+
+```text
+VenomMusic/
+├── app.py                  # Health-check web server (Render/Heroku)
+├── start                   # Launcher script
+├── requirements.txt        # Python dependencies
+├── runtime.txt             # Python version (3.10)
+├── Procfile / heroku.yml / render.yaml / Dockerfile
+├── config/
+│   └── config.py           # Env parsing & constants
+├── strings/                 # Localizations (en, hi, ar, tr, ku)
+├── cookies/
+│   └── cookies.txt          # Netscape-format YouTube cookies
+├── downloads/ cache/ tempdb/
+└── VenomX/                  # Core package
+    ├── __main__.py          # Entrypoint
+    ├── core/
+    │   ├── bot.py           # Pyrogram client factory
+    │   ├── call.py          # PyTgCalls/ntgcalls bridge, ffmpeg params, queue engine
+    │   ├── userbot.py       # Assistant fleet
+    │   ├── git.py / mongo.py / dir.py
+    ├── platforms/           # Extractors
+    │   ├── Youtube.py       # yt-dlp pipeline + PO Token provider + cookies
+    │   ├── Spotify.py Apple.py JioSavan.py Resso.py Soundcloud.py Telegram.py Carbon.py
+    ├── plugins/             # Handlers grouped by role
+    │   ├── play/ admins/ bot/ sudo/ tools/ misc/
+    └── utils/
+        ├── stream/          # stream.py, queue.py, autoclear.py
+        ├── database/ inline/ decorators/ ...
+```
 
 ---
 
@@ -436,7 +654,12 @@ The bot uses **MongoDB** to store chats, users, playlists, assistant assignments
 - 📢 **Updates Channel:** [Follow here](https://t.me/TomatoFist)
 - 👨‍💻 **Developer:** [Contact](https://t.me/ll_dark_poison_ll)
 
-Special thanks to **[Team Yukki](https://github.com/TeamYukki)** for the original **[Yukki Music Bot](https://github.com/TeamYukki/YukkiMusicBot)** that this project is built upon.
+Special thanks to **[Team Yukki](https://github.com/TeamYukki)** for the original **[Yukki Music Bot](https://github.com/TeamYukki/YukkiMusicBot)** that this project is built upon, and to **[coletdjnz](https://github.com/coletdjnz)** for the **[yt-dlp-getpot-wpc](https://github.com/coletdjnz/yt-dlp-getpot-wpc)** PO Token provider.
+
+## 🤝 Contributing
+
+PRs are welcome! Fork → branch → commit with clear messages → PR against `main`.
+For bug reports include: bot logs (`bot.log` tail), your deployment type, and reproduction steps.
 
 ---
 
@@ -445,10 +668,20 @@ Special thanks to **[Team Yukki](https://github.com/TeamYukki)** for the origina
 **Venom Music** — *Built with 🖤 by ll_dark_poison_ll*
 
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Built%20With-Python-3776AB?style=flat-square&logo=python&logoColor=white"></a>
-<a href="https://pyrogram.org/"><img src="https://img.shields.io/badge/Powered%20By-PyroBlack-2CA5E0?style=flat-square&logo=telegram&logoColor=white"></a>
-<a href="https://t.me/venom_chatting"><img src="https://img.shields.io/badge/Telegram%20Music%20Bot-24A1DE?style=flat-square&logo=telegram&logoColor=white"></a>
+<a href="https://github.com/pyrogram/pyrogram"><img src="https://img.shields.io/badge/Powered%20By-PyroBlack-2CA5E0?style=flat-square&logo=telegram&logoColor=white"></a>
+<a href="https://github.com/Laky-64/pytgcalls"><img src="https://img.shields.io/badge/Voice%20Bridge-PyTgCalls-e91e63?style=flat-square"></a>
+<a href="https://github.com/yt-dlp/yt-dlp"><img src="https://img.shields.io/badge/Media%20Engine-yt--dlp-red?style=flat-square"></a>
 
 <br>
-<a href="https://github.com/venombolteop/VenomMusic/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blueviolet?style=flat-square" alt="License"></a>
-<a href="https://github.com/venombolteop/VenomMusic/stargazers"><img src="https://img.shields.io/badge/⭐%20Star%20the%20Repo-7dff00?style=flat-square&logo=github&logoColor=black" alt="Star"></a>
+
+If this project helped you, consider dropping a ⭐ — it keeps development alive!
+
+<a href="https://github.com/venombolteop/VenomMusic/stargazers">
+  <img src="https://img.shields.io/github/stars/venombolteop/VenomMusic?color=facc15&logo=github&logoColor=facc15&style=social" alt="Star the repo">
+</a>
+<br>
+<a href="https://github.com/venombolteop/VenomMusic/blob/main/LICENSE">
+  <img src="https://img.shields.io/badge/License-MIT-blueviolet?style=flat-square" alt="MIT License">
+</a>
+
 </div>
