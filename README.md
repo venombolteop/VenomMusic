@@ -239,6 +239,7 @@ docker run -d --name venommusic --env-file .env venommusic
 | `SUPPORT_CHANNEL` / `SUPPORT_GROUP` | ❌ | Support links shown in bot |
 | `HEROKU_API_KEY` / `HEROKU_APP_NAME` | ❌ | Enable Heroku sudo commands |
 | `PROXY_URL` | ❌ | HTTP proxy for YouTube/yt-dlp (e.g. `http://127.0.0.1:40000`) |
+| `WPC_BROWSER_PATH` | ❌ | Chrome/Chromium path for the PO Token provider (auto-detected if unset) |
 
 > 📄 Full reference: [`sample.env`](https://github.com/venombolteop/VenomMusic/blob/main/sample.env)
 
@@ -350,6 +351,76 @@ PROXY_URL=socks5://127.0.0.1:1080
 ```
 
 > ⚠️ Proxy is **env-only** (`PROXY_URL`). Your running proxy is never modified by the bot.
+
+---
+
+## 🤖 PO Token Browser Setup (Optional) — fixes YouTube "Sign in to confirm you're not a bot"
+
+YouTube sometimes blocks servers with:
+
+```
+ERROR: [youtube] <video_id>: Sign in to confirm you're not a bot.
+```
+
+VenomMusic ships with the **[`yt-dlp-getpot-wpc`](https://github.com/coletdjnz/yt-dlp-getpot-wpc)** PO Token provider (already in `requirements.txt`). It launches a real browser in the background to mint PO Tokens, which bypasses the bot-check. You only need to give it a Chrome/Chromium binary.
+
+### 1) Install a browser (pick ONE option)
+
+**Option A — Playwright Chromium (works everywhere, no root needed):**
+```bash
+python3 -m playwright install chromium
+```
+Binary lands at:
+```
+~/.cache/ms-playwright/chromium-<version>/chrome-linux/chrome
+```
+
+**Option B — apt (Debian / Ubuntu, needs root):**
+```bash
+sudo apt install -y chromium-browser   # Ubuntu (snap-backed)
+sudo apt install -y chromium           # Debian
+```
+
+**Option C — snap:**
+```bash
+sudo snap install chromium
+```
+Binary lands at `/snap/bin/chromium` → real path `/usr/lib/chromium/chrome` or `/snap/chromium/current/usr/lib/chromium-browser/chrome`.
+
+**Option D — Google Chrome (`.deb`):**
+```bash
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install -y ./google-chrome-stable_current_amd64.deb
+```
+
+### 2) Get the browser path
+
+Any of these works:
+```bash
+# If installed via package manager / snap:
+which chromium chromium-browser google-chrome google-chrome-stable
+
+# If installed via Playwright:
+ls -1 ~/.cache/ms-playwright/chromium-*/chrome-linux/chrome | tail -1
+
+# Last resort — find it anywhere:
+find / -type f \( -name "chrome" -o -name "chromium" \) -perm -u+x 2>/dev/null
+```
+
+### 3) Set it in `.env`
+
+```env
+WPC_BROWSER_PATH=/home/ubuntu/.cache/ms-playwright/chromium-1228/chrome-linux/chrome
+```
+
+Then restart the bot (`sudo systemctl restart venommusic2`, or however you run it).
+
+### Notes
+
+- 🔍 **Auto-detection:** if `WPC_BROWSER_PATH` is empty, the bot checks `PATH` (`chromium-browser`, `chromium`, `google-chrome`, `google-chrome-stable`) and then the Playwright cache automatically. Only set it explicitly if auto-detection fails.
+- 🪫 **Graceful fallback:** no browser found = PO Token provider simply disabled; the bot still plays using cookies + multi-client yt-dlp fallbacks.
+- 🧪 **Verify it's working:** run a play command and check `bot.log` — a successful mint looks like a normal `stream_url() got direct URL` line with no `Sign in to confirm` errors.
+- ⚠️ The provider runs the browser with `no_sandbox` internally (required on most servers/root containers). Keep the machine's browser up to date — old builds may fail token minting.
 
 ---
 
