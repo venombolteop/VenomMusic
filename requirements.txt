@@ -27,5 +27,6 @@ uvloop
 flask
 gunicorn
 yt-dlp
+yt-dlp-getpot-wpc
 py-yt-search>=0.2
 pyroblack

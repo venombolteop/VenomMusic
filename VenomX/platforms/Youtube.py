@@ -91,14 +91,45 @@ _VIDEO_FMT = (
 )
 
 # --- WPC PO Token Provider settings ---
-# Uses browser to mint PO Tokens to bypass YouTube bot detection
-_WPC_BROWSER_PATH = "/home/ubuntu/.cache/ms-playwright/chromium-1228/chrome-linux/chrome"
+# Uses a browser (yt-dlp-getpot-wpc + nodriver) to mint PO Tokens, bypassing
+# YouTube's "Sign in to confirm you're not a bot" checks.
+# Set WPC_BROWSER_PATH env var to override auto-detection.
+def _find_browser():
+    env = os.getenv("WPC_BROWSER_PATH", "").strip()
+    if env and os.path.isfile(env):
+        return env
+    for name in ("chromium-browser", "chromium", "google-chrome", "google-chrome-stable"):
+        path = shutil.which(name)
+        if path:
+            return path
+    import glob as _glob
+    for pattern in (
+        os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux/chrome"),
+        "/usr/lib/chromium/chrome",
+        "/opt/google/chrome/chrome",
+    ):
+        matches = sorted(_glob.glob(pattern))
+        if matches:
+            return matches[-1]
+    return ""
+
+
+_WPC_BROWSER_PATH = _find_browser()
 _WPC_BROWSER_ARGS = {"no_sandbox": True}
 _POT_PROVIDERS = ["wpc"]
 
 
+def _wpc_extractor_args():
+    """WPC extractor args dict, or None when no browser is available."""
+    if not _WPC_BROWSER_PATH:
+        return None
+    return {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
+
+
 def _pot_args():
-    """Return PO Token provider CLI args."""
+    """Return PO Token provider CLI args (empty when browser unavailable)."""
+    if not _WPC_BROWSER_PATH:
+        return []
     args = []
     for provider in _POT_PROVIDERS:
         args.extend(["--extractor-args", f"youtubepot-wpc:browser_path={_WPC_BROWSER_PATH}"])
@@ -153,8 +184,10 @@ _YT_HTTP_HEADERS = {
 def _base_ydl_opts(**extra):
     """Common yt-dlp options: proxy + cookies + multi-client SABR-safe fallback + PO Token."""
     extractor_args = {"youtube": {"player_client": list(_YT_CLIENTS)}}
-    # Add WPC PO Token provider browser path and args
-    extractor_args["youtubepot-wpc"] = {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
+    # Add WPC PO Token provider when a browser is available
+    wpc = _wpc_extractor_args()
+    if wpc:
+        extractor_args["youtubepot-wpc"] = wpc
     opts = {
         "extractor_args": extractor_args,
         **_proxy_dict(),
@@ -599,7 +632,7 @@ class YouTube:
         proxy_part = f"--proxy {shlex.quote(PROXY)} " if PROXY else ""
         cookie_path = cookies()
         cookie_part = f"--cookies {shlex.quote(cookie_path)} " if cookie_path else ""
-        pot_part = f"--extractor-args 'youtubepot-wpc:browser_path={_WPC_BROWSER_PATH}' "
+        pot_part = f"--extractor-args 'youtubepot-wpc:browser_path={_WPC_BROWSER_PATH}' " if _WPC_BROWSER_PATH else ""
         cmd = (
             f"{shlex.quote(yt_dlp_binary())} {proxy_part}{cookie_part}{pot_part}"
             f"-i --compat-options no-youtube-unavailable-videos "
@@ -695,7 +728,9 @@ class YouTube:
         _log("info", "_track() ytsearch: %s", q[:80])
         t0 = time.monotonic()
         extractor_args = {"youtube": {"player_client": list(_YT_CLIENTS)}}
-        extractor_args["youtubepot-wpc"] = {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
+        wpc = _wpc_extractor_args()
+        if wpc:
+            extractor_args["youtubepot-wpc"] = wpc
         options = {
             "format": _AUDIO_FMT,
             "noplaylist": True,
@@ -765,7 +800,9 @@ class YouTube:
             "fragment_retries": 5,
             "retries": 5,
         }
-        ytdl_opts["extractor_args"]["youtubepot-wpc"] = {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
+        wpc = _wpc_extractor_args()
+        if wpc:
+            ytdl_opts["extractor_args"]["youtubepot-wpc"] = wpc
 
         ydl = YoutubeDL(ytdl_opts)
         with ydl:
