@@ -68,7 +68,9 @@ _PROXY_FFMPEG = f"-http_proxy {_PROXY} " if _PROXY else ""
 
 # ffmpeg parameters for remote URLs (YouTube direct streams via proxy).
 # -reconnect flags BREAK through HTTP proxies — removed.
-# Increased thread_queue_size to prevent audio pipeline starvation in group calls.
+# IMPORTANT: only INPUT-side options allowed here — pytgcalls places these
+# before the input file. Output/encoder options (-acodec/-ar/-vn etc.) will
+# crash ffmpeg with "Option not found" and kill the stream instantly.
 _REMOTE_FFMPEG_PARAMS = (
     f"{_PROXY_FFMPEG}"
     "-analyzeduration 5000000 -probesize 131072 "
@@ -405,6 +407,15 @@ class Call:
         check = db.get(chat_id)
         popped = None
         loop = await get_loop(chat_id)
+        # Empty/missing queue: nothing to play next. Leave quietly instead of
+        # raising (a stale stream_end can arrive while a new track is joining).
+        if not check:
+            await _clear_(chat_id)
+            try:
+                await client.leave_call(chat_id, close=False)
+            except Exception as e:
+                LOGGER(__name__).error(f"Failed to leave call for empty queue chat {chat_id}: {e}")
+            return
         try:
             if loop == 0:
                 popped = check.pop(0)

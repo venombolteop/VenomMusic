@@ -29,6 +29,10 @@ from VenomX.utils.notify import notify_owner
 
 _STREAM_LOG = "Stream"
 
+# When proxy is configured, always download first (ffmpeg can't use proxy reliably)
+_PROXY_URL = getattr(config, "PROXY_URL", None)
+_FORCE_DOWNLOAD = bool(_PROXY_URL)
+
 
 async def stream(
     _,
@@ -202,9 +206,12 @@ async def stream(
         thumbnail = result["thumb"]
         status = True if video else None
         instant = await get_instant_play(chat_id)
+        # Force download when proxy is configured (ffmpeg proxy issues cause no sound)
+        if _FORCE_DOWNLOAD:
+            instant = False
         slog.info(
-            "[%s] youtube branch: vidid=%s title=%s instant=%s",
-            _STREAM_LOG, vidid, title[:40], instant,
+            "[%s] youtube branch: vidid=%s title=%s instant=%s (force_download=%s)",
+            _STREAM_LOG, vidid, title[:40], instant, _FORCE_DOWNLOAD,
         )
         stream_link = None
         direct = None
