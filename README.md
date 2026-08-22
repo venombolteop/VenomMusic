@@ -55,6 +55,7 @@
   - [YouTube Cookies](#-youtube-cookies-optional-but-recommended)
 - [Troubleshooting & FAQ](#-troubleshooting--faq)
 - [Project Structure](#-project-structure)
+- [Repo Showcase](#-repo-showcase)
 - [Support & Credits](#-support--credits)
 
 ---
@@ -77,6 +78,17 @@ No half-measures: when YouTube blocks one extraction path, Venom silently falls 
 | 🌐 **Multilingual** | English · Hindi · Arabic · Turkish · Sorani Kurdish |
 | 🛡️ **Moderation Suite** | Global bans, chat blacklists, sudoers, broadcast, maintenance mode |
 | 🗄️ **MongoDB Persistence** | Queues, playlists, settings and stats survive every restart |
+
+### ⚔️ How Venom Stacks Up
+
+| Capability | ⚡ Venom Music | Typical Yukki fork | Plain pytgcalls bot |
+|:-----------|:--------------:|:------------------:|:-------------------:|
+| PO Token minting (bot-check bypass) | ✅ built-in | ❌ | ❌ |
+| Multi-layer extraction fallbacks | ✅ 4 layers | ⚠️ partial | ❌ |
+| Proxy-aware download-first switching | ✅ automatic | ❌ | ❌ |
+| Premium custom-emoji player UI | ✅ | ❌ | ❌ |
+| Assistant fleet load-balancing | ✅ | ⚠️ partial | ❌ |
+| 5 languages out of the box | ✅ | ⚠️ varies | ❌ |
 
 <br>
 
@@ -270,6 +282,18 @@ flowchart TD
 ## 🚀 Deployment
 
 > **Prerequisites:** an [API_ID/API_HASH](https://my.telegram.org) pair, a [@BotFather](https://t.me/BotFather) token, 1+ assistant session strings, a MongoDB instance and a log-group ID.
+
+<details open>
+<summary><b>⚡ TL;DR — VPS in 60 seconds</b></summary>
+
+```bash
+sudo apt-get update && sudo apt-get install -y python3-pip ffmpeg git
+git clone https://github.com/venombolteop/VenomMusic && cd VenomMusic
+pip3 install -U -r requirements.txt && cp sample.env .env && nano .env   # fill vars
+bash start
+```
+
+</details>
 
 ### ☁️ Deploy on Heroku
 
@@ -655,9 +679,15 @@ VenomMusic/
 
 ---
 
-## 📊 Live Repo Analytics
+## 📊 Repo Showcase
 
 <div align="center">
+
+### 🏆 Achievements
+
+<img src="https://github-profile-trophy.vercel.app/?username=venombolteop&theme=tokyonight&no-frame=true&no-bg=true&row=1&column=7&margin-w=8" width="100%" alt="Trophies"/>
+
+<br>
 
 <table>
 <tr>
@@ -672,16 +702,23 @@ VenomMusic/
 
 </td>
 </tr>
-<tr>
-<td colspan="2">
-
-<img src="https://streak-stats.demolab.com?user=venombolteop&theme=tokyonight&hide_border=true&background=0d1117&ring=7DFF00&fire=A855F7&currStreakLabel=22D3EE" width="100%" alt="Streak stats"/>
-
-</td>
-</tr>
 </table>
 
-<img src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" width="100%" alt="gradient divider"/>
+### 📈 Commit Activity
+
+<img src="https://github-readme-activity-graph.vercel.app/graph?username=venombolteop&theme=tokyo-night&hide_border=true&bg_color=0d1117&color=7dff00&line=a855f7&point=22d3ee&area=true&area_color=a855f7" width="100%" alt="Activity graph"/>
+
+### 🕹️ The Contribution Snake
+
+*It eats the contribution graph — watch it hunt.*
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/venombolteop/VenomMusic/output/github-contribution-grid-snake-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/venombolteop/VenomMusic/output/github-contribution-grid-snake.svg" />
+  <img alt="Contribution snake animation" src="https://raw.githubusercontent.com/venombolteop/VenomMusic/output/github-contribution-grid-snake-dark.svg" width="100%"/>
+</picture>
+
+<sub>Auto-generated daily by a GitHub Action — first render appears a few minutes after the workflow's initial run.</sub>
 
 </div>
 
