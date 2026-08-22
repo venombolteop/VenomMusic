@@ -74,10 +74,21 @@ def cookies():
     return None
 
 
-# --- Proxy and yt-dlp settings from wel ---
+# --- Proxy and yt-dlp settings ---
 from config import PROXY_URL
 PROXY = PROXY_URL if PROXY_URL else None
 RUNTIME_PRIORITY = ["node", "bun", "deno"]
+
+# YouTube SABR experiment blocks adaptive bestaudio without PO tokens.
+# Progressive itag 18 (360p mp4) still works with cookies + tv/mweb/web clients.
+_YT_CLIENTS = ["tv", "mweb", "web"]
+_YT_CLIENTS_STR = "tv,mweb,web"
+_AUDIO_FMT = "bestaudio/best/18/worst"
+_VIDEO_FMT = (
+    "bestvideo[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/"
+    "bestvideo[height<=?2160]+bestaudio/"
+    "best[height<=?2160]/18/best"
+)
 
 
 def _proxy_args():
@@ -94,6 +105,22 @@ def _proxy_dict():
     return {"proxy": PROXY}
 
 
+def _cookie_args():
+    """Return --cookies CLI args when a valid Netscape cookie file exists."""
+    path = cookies()
+    if not path:
+        return []
+    return ["--cookies", path]
+
+
+def _cookie_dict():
+    """Return cookiefile dict option when cookies are available."""
+    path = cookies()
+    if not path:
+        return {}
+    return {"cookiefile": path}
+
+
 def _aria2_proxy_args():
     """Return aria2c proxy args list, or empty list if no proxy configured."""
     if not PROXY:
@@ -108,10 +135,11 @@ _YT_HTTP_HEADERS = {
 
 
 def _base_ydl_opts(**extra):
-    """Common yt-dlp options matching wel's reliable download path."""
+    """Common yt-dlp options: proxy + cookies + multi-client SABR-safe fallback."""
     opts = {
-        "extractor_args": {"youtube": {"client": ["web_creator"]}},
+        "extractor_args": {"youtube": {"player_client": list(_YT_CLIENTS)}},
         **_proxy_dict(),
+        **_cookie_dict(),
         "geo_bypass": True,
         "noplaylist": True,
         "nocheckcertificate": True,
@@ -145,23 +173,32 @@ def get_available_runtimes():
 
 
 def extract_info_with_fallback(link, opts):
-    runtimes = get_available_runtimes()
+    """Try JS runtimes, then progressive format 18 if adaptive formats fail (SABR)."""
+    runtimes = get_available_runtimes() or [None]
     last_error = None
-    if not runtimes:
-        with YoutubeDL(opts) as ydl:
-            return ydl.extract_info(link)
+    attempts = []
     for runtime in runtimes:
-        try:
-            temp_opts = opts.copy()
+        temp_opts = opts.copy()
+        if runtime:
             temp_opts["js_runtime"] = runtime
-            _log("info", "extract_info_with_fallback: trying runtime %s", runtime)
+        attempts.append((runtime or "default", temp_opts))
+    # SABR-safe progressive fallback
+    fallback_opts = opts.copy()
+    fallback_opts["format"] = "18/best/worst"
+    if runtimes and runtimes[0]:
+        fallback_opts["js_runtime"] = runtimes[0]
+    attempts.append(("progressive-18", fallback_opts))
+
+    for label, temp_opts in attempts:
+        try:
+            _log("info", "extract_info_with_fallback: trying %s", label)
             with YoutubeDL(temp_opts) as ydl:
                 return ydl.extract_info(link)
         except Exception as e:
-            _log("warning", "extract_info_with_fallback: runtime %s failed: %s", runtime, e)
+            _log("warning", "extract_info_with_fallback: %s failed: %s", label, e)
             last_error = e
             continue
-    raise Exception(f"All JS runtimes failed: {last_error}")
+    raise Exception(f"All extract attempts failed: {last_error}")
 
 
 NOTHING = {"cookies_dead": None}
@@ -397,10 +434,12 @@ class YouTube:
         cmd = [
             yt_dlp_binary(),
             *_proxy_args(),
+            *_cookie_args(),
             "-g",
             "-f",
-            "bestvideo[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=?2160]+bestaudio/best[height<=?2160]/best",
-            "--extractor-args", "youtube:client=web_creator",
+            _VIDEO_FMT,
+            "--extractor-args", f"youtube:player_client={_YT_CLIENTS_STR}",
+            "--remote-components", "ejs:github",
             f"{link}",
         ]
         _log("info", "video() subprocess: %s", " ".join(cmd[:6]))
@@ -470,18 +509,16 @@ class YouTube:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
-        if video:
-            fmt = "bestvideo[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=?2160]+bestaudio/best[height<=?2160]/best"
-        else:
-            fmt = "bestaudio/best"
+        fmt = _VIDEO_FMT if video else _AUDIO_FMT
         cmd = [
             yt_dlp_binary(),
             *_proxy_args(),
+            *_cookie_args(),
             "-g",
             "-f",
             fmt,
             "--no-playlist",
-            "--extractor-args", "youtube:client=web_creator",
+            "--extractor-args", f"youtube:player_client={_YT_CLIENTS_STR}",
             "--remote-components", "ejs:github",
             "--user-agent", _YT_HTTP_HEADERS["User-Agent"],
             f"{link}",
@@ -539,10 +576,12 @@ class YouTube:
             link = link.split("&")[0]
 
         proxy_part = f"--proxy {shlex.quote(PROXY)} " if PROXY else ""
+        cookie_path = cookies()
+        cookie_part = f"--cookies {shlex.quote(cookie_path)} " if cookie_path else ""
         cmd = (
-            f"{shlex.quote(yt_dlp_binary())} {proxy_part}"
+            f"{shlex.quote(yt_dlp_binary())} {proxy_part}{cookie_part}"
             f"-i --compat-options no-youtube-unavailable-videos "
-            f"--extractor-args 'youtube:client=web_creator' "
+            f"--extractor-args 'youtube:player_client={_YT_CLIENTS_STR}' "
             f'--get-id --flat-playlist --playlist-end {limit} --skip-download "{link}" '
             f"2>/dev/null"
         )
@@ -634,12 +673,13 @@ class YouTube:
         _log("info", "_track() ytsearch: %s", q[:80])
         t0 = time.monotonic()
         options = {
-            "format": "bestaudio[ext=m4a]/bestaudio",
+            "format": _AUDIO_FMT,
             "noplaylist": True,
             "quiet": True,
             "extract_flat": "in_playlist",
-            "extractor_args": {"youtube": {"client": ["web_creator"]}},
+            "extractor_args": {"youtube": {"player_client": list(_YT_CLIENTS)}},
             **_proxy_dict(),
+            **_cookie_dict(),
             "remote_components": ["ejs:github"],
         }
         try:
@@ -693,8 +733,9 @@ class YouTube:
 
         ytdl_opts = {
             "quiet": True,
-            "extractor_args": {"youtube": {"client": ["web_creator"]}},
+            "extractor_args": {"youtube": {"player_client": list(_YT_CLIENTS)}},
             **_proxy_dict(),
+            **_cookie_dict(),
             "remote_components": ["ejs:github"],
             "extractor_retries": 5,
             "fragment_retries": 5,
@@ -796,7 +837,7 @@ class YouTube:
             dl_t0 = time.monotonic()
             _log("info", "audio_dl() starting for: %s", link[:80])
             ydl_optssx = _base_ydl_opts(
-                format="bestaudio/best",
+                format=_AUDIO_FMT,
                 outtmpl="downloads/%(id)s.%(ext)s",
             )
 
@@ -824,7 +865,7 @@ class YouTube:
             dl_t0 = time.monotonic()
             _log("info", "video_dl() starting for: %s", link[:80])
             ydl_optssx = _base_ydl_opts(
-                format="bestvideo[ext=mp4][height<=2160]+bestaudio[ext=m4a]/bestvideo[height<=2160]+bestaudio/best[height<=2160]/best",
+                format=_VIDEO_FMT,
                 outtmpl="downloads/%(id)s.%(ext)s",
                 merge_output_format="mp4",
             )
@@ -851,7 +892,7 @@ class YouTube:
         @asyncify
         def song_video_dl():
             dl_t0 = time.monotonic()
-            formats = f"{format_id}+bestaudio/best"
+            formats = f"{format_id}+bestaudio/best/18/best" if format_id else _VIDEO_FMT
             _log("info", "song_video_dl() starting format=%s for: %s", formats, link[:80])
             ydl_optssx = _base_ydl_opts(
                 format=formats,
@@ -870,7 +911,7 @@ class YouTube:
             dl_t0 = time.monotonic()
             _log("info", "song_audio_dl() starting format=%s for: %s", format_id, link[:80])
             ydl_optssx = _base_ydl_opts(
-                format=format_id or "bestaudio/best",
+                format=format_id or _AUDIO_FMT,
                 outtmpl=os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
                 postprocessors=[
                     {
