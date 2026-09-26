@@ -10,12 +10,12 @@ hachoir
 heroku3
 httpx[http2]
 motor
-pillow==9.5.0
+pillow==12.3.0
 psutil
 pytube
 pykeyboard
-py-tgcalls==2.3.3
-ntgcalls==2.2.5
+py-tgcalls==3.0.0
+ntgcalls==3.0.0
 python-dotenv
 pyyaml
 requests
@@ -30,3 +30,4 @@ yt-dlp
 yt-dlp-getpot-wpc
 py-yt-search>=0.2
 pyroblack
+playwright
