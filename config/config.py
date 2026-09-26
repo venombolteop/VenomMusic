@@ -182,7 +182,10 @@ raw_sessions = getenv("STRING_SESSIONS", "")
 # Split the sessions only if raw_sessions is not empty
 STRING_SESSIONS = list(map(str.strip, raw_sessions.split(","))) if raw_sessions else []
 
-print("STRING_SESSIONS =", STRING_SESSIONS)
+# NOTE: this used to `print("STRING_SESSIONS =", STRING_SESSIONS)`, which wrote
+# every assistant session string in full to bot.log and journald on each start.
+# Report the count only.
+print(f"STRING_SESSIONS loaded: {len(STRING_SESSIONS)}")
 
 ### DONT TOUCH or EDIT codes after this line
 BANNED_USERS = filters.user()

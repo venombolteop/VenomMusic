@@ -130,7 +130,7 @@ class Saavn:
         new_width = int(img.width * scale_factor)
         new_height = size[1]
 
-        resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+        resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         new_img = Image.new("RGB", size, (0, 0, 0))
         new_img.paste(resized_img, ((size[0] - new_width) // 2, 0))
 
