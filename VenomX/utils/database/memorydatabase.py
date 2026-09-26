@@ -650,7 +650,11 @@ async def get_vid_bit_name(chat_id: int) -> str:
 
 
 async def get_audio_bitrate(chat_id: int) -> str:
-    mode = audio.get(str(chat_id), "STUDIO")
+    # Default must match get_aud_bit_name()'s "HIGH". The old "STUDIO" default
+    # disagreed with the name shown in settings: it silently streamed 96 kHz
+    # stereo, doubling the raw PCM pipe load (3.1 vs 1.5 Mbit/s) for no
+    # audible gain over 48 kHz, which showed up as stuttering playback.
+    mode = audio.get(str(chat_id), "HIGH")
     return {
         "STUDIO": AudioQuality.STUDIO,
         "HIGH": AudioQuality.HIGH,

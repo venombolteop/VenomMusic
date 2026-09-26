@@ -17,3 +17,8 @@ bot.log
 VenomX/utils/smart_emoji_db.json
 smart_emoji_db.json
 smart_emoji_db.json
+
+# Virtualenvs
+.venv/
+.venv.old/
+venv/

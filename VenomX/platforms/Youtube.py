@@ -6,6 +6,8 @@ import os
 import re
 import shlex
 import shutil
+import socket
+import sys
 import time
 
 import httpx
@@ -34,7 +36,16 @@ def _log(level, msg, *a, **kw):
 
 
 def yt_dlp_binary():
-    """Locate the yt-dlp binary even if it's outside the process PATH."""
+    """Locate the yt-dlp binary even if it's outside the process PATH.
+
+    Prefer the yt-dlp sitting next to the running interpreter so the
+    subprocess uses the same Python as the bot. A stray ~/.local/bin/yt-dlp
+    tied to an older interpreter would otherwise emit yt-dlp's
+    "Support for Python version 3.10 has been deprecated" warning.
+    """
+    alongside = os.path.join(os.path.dirname(sys.executable), "yt-dlp")
+    if os.path.isfile(alongside) and os.access(alongside, os.X_OK):
+        return alongside
     path = shutil.which("yt-dlp")
     if path:
         return path
@@ -103,14 +114,25 @@ def _find_browser():
         if path:
             return path
     import glob as _glob
+    import re as _re
+    # Playwright ships chrome-linux64/ on current releases, chrome-linux/ on
+    # older ones, so match both.
+    candidates = []
     for pattern in (
+        os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome"),
         os.path.expanduser("~/.cache/ms-playwright/chromium-*/chrome-linux/chrome"),
         "/usr/lib/chromium/chrome",
         "/opt/google/chrome/chrome",
     ):
-        matches = sorted(_glob.glob(pattern))
-        if matches:
-            return matches[-1]
+        candidates.extend(_glob.glob(pattern))
+    if candidates:
+        # Sort by the numeric build id so chromium-999 beats chromium-1243
+        # instead of losing to plain lexicographic order.
+        def _build(path):
+            m = _re.search(r"chromium-(\d+)", path)
+            return int(m.group(1)) if m else -1
+
+        return max(candidates, key=_build)
     return ""
 
 
@@ -138,16 +160,37 @@ def _pot_args():
     return args
 
 
-def _proxy_args():
-    """Return proxy CLI args list, or empty list if no proxy configured."""
+def _proxy_reachable(timeout: float = 1.5) -> bool:
+    """True when the configured proxy is actually accepting connections.
+
+    A hardcoded PROXY_URL turns a WARP outage into a total YouTube outage,
+    because every extract and download would fail to connect. Probing the
+    listener first lets playback fall back to a direct connection instead.
+    """
     if not PROXY:
+        return False
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(PROXY if "//" in PROXY else f"//{PROXY}")
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or (1080 if parsed.scheme == "socks5" else 80)
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def _proxy_args():
+    """Return proxy CLI args list, or empty list if no proxy is usable."""
+    if not _proxy_reachable():
         return []
     return ["--proxy", PROXY]
 
 
 def _proxy_dict():
-    """Return proxy dict option, or empty dict if no proxy configured."""
-    if not PROXY:
+    """Return proxy dict option, or empty dict if no proxy is usable."""
+    if not _proxy_reachable():
         return {}
     return {"proxy": PROXY}
 
@@ -200,18 +243,30 @@ def _base_ydl_opts(**extra):
         "prefer_ffmpeg": True,
         "no_overwrites": True,
         "remote_components": ["ejs:github"],
+        **_js_runtime_opt(),
         "extractor_retries": 5,
         "fragment_retries": 5,
         "retries": 5,
         "concurrent_fragment_downloads": 5,
-        "buffersize": "1024K",
-        "http_chunk_size": "10M",
+        # Both must be ints (bytes), not filesize strings. yt-dlp only runs
+        # validate_bytes() on its CLI path; the Python API hands these straight
+        # to urllib3/HTTP code, where a str raises
+        # "can't multiply sequence by non-int of type 'float'" or
+        # "'<' not supported between instances of 'str' and 'int'".
+        # This stayed hidden while aria2c was the external downloader because
+        # aria2c bypasses the internal HTTP downloader entirely.
+        "buffersize": 1024 * 1024,
+        "http_chunk_size": 10 * 1024 * 1024,
         "http_headers": _YT_HTTP_HEADERS,
-        "external_downloader": "aria2c",
-        "external_downloader_args": [
-            "-x", "16", "-s", "16", "-k", "1M",
-            *_aria2_proxy_args(),
-        ],
+        # NOTE: an aria2c external downloader was configured here with
+        # "-x 16 -s 16 -k 1M". Measured on this host it was ~2.3x SLOWER than
+        # yt-dlp's native downloader (17.8s vs 7.7s for an 11 MiB audio file):
+        # aria2c's startup cost and 16-way splitting outweigh any gain, because
+        # googlevideo already streams a single progressive file at full speed.
+        # The real per-track cost is YouTube's mandated pre-download sleep
+        # (5-6s) plus JS challenge solving, neither of which a downloader helps.
+        # Keys are omitted entirely rather than set to "default", which is not
+        # a valid external_downloader value and made extract_info return None.
         "postprocessor_args": {
             "ffmpeg": ["-threads", "4", "-preset", "slow", "-q:a", "0"],
         },
@@ -222,6 +277,28 @@ def _base_ydl_opts(**extra):
 
 def get_available_runtimes():
     return [rt for rt in RUNTIME_PRIORITY if shutil.which(rt)]
+
+
+def _js_runtime_args():
+    """CLI form of the JS runtime flag.
+
+    YouTube's "n challenge" solver (downloaded via --remote-components
+    ejs:github) is inert without a runtime to execute it. Passing
+    --remote-components alone yields "n challenge solving failed" and NO
+    formats, so the runtime is mandatory, not optional.
+    """
+    runtimes = get_available_runtimes()
+    return ["--js-runtimes", runtimes[0]] if runtimes else []
+
+
+def _js_runtime_opt():
+    """dict form of the JS runtime option for YoutubeDL opts.
+
+    NOTE: the Python API wants {runtime: {config}}, NOT a list — passing a list
+    raises "Invalid js_runtimes format, expected a dict of {runtime: {config}}".
+    """
+    runtimes = get_available_runtimes()
+    return {"js_runtimes": {runtimes[0]: {}}} if runtimes else {}
 
 
 def extract_info_with_fallback(link, opts):
@@ -549,6 +626,28 @@ class YouTube:
             # Don't block streaming if probe fails — ffmpeg often still works
             return True
 
+    @staticmethod
+    async def _url_reachable(url: str, timeout: float = 8.0):
+        """Verify a googlevideo URL is actually playable by ffmpeg.
+
+        yt-dlp -g can hand back a URL that extracts fine but is rejected with
+        HTTP 403 at playback time. Returning n=1 in that case makes the bot
+        join the voice chat in silence, so probe it and let the caller fall
+        back to a real download.
+        """
+        headers = dict(_YT_HTTP_HEADERS)
+        headers["Range"] = "bytes=0-1023"
+        try:
+            async with httpx.AsyncClient(
+                timeout=timeout, follow_redirects=True, headers=headers
+            ) as client:
+                resp = await client.get(url)
+            if resp.status_code in (200, 206):
+                return True, ""
+            return False, f"http_{resp.status_code}"
+        except Exception as e:
+            return False, type(e).__name__
+
     async def stream_url(
         self,
         link: str,
@@ -574,6 +673,7 @@ class YouTube:
             "--extractor-args", f"youtube:player_client={_YT_CLIENTS_STR}",
             *_pot_args(),
             "--remote-components", "ejs:github",
+            *_js_runtime_args(),
             "--user-agent", _YT_HTTP_HEADERS["User-Agent"],
             f"{link}",
         ]
@@ -595,6 +695,10 @@ class YouTube:
                 if not url:
                     _log("error", "stream_url() empty url in %.1fs", elapsed)
                     return 0, "empty url"
+                ok, why = await self._url_reachable(url)
+                if not ok:
+                    _log("error", "stream_url() direct URL unusable (%s) in %.1fs -> forcing download fallback", why, elapsed)
+                    return 0, f"direct url {why}"
                 _log("info", "stream_url() got direct URL in %.1fs (skip full download)", elapsed)
                 return 1, url
             else:
