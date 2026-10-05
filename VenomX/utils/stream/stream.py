@@ -212,6 +212,7 @@ async def stream(
                     user_id,
                     "video" if video else "audio",
                 )
+                _prefetch_next(chat_id)
                 position = len(db.get(chat_id)) - 1
                 count += 1
                 msg += f"{count}- {title[:70]}\n"
