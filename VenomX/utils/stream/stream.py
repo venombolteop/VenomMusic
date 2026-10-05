@@ -2,11 +2,14 @@
 # All rights reserved.
 #
 
+import asyncio
+import logging
 import os
 import time as _time
 from random import randint
 from typing import Union
 
+import aiohttp
 from pyrogram.types import InlineKeyboardMarkup
 
 import config
@@ -26,12 +29,57 @@ from VenomX.utils.pastebin import Ayushbin
 from VenomX.utils.stream.queue import put_queue, put_queue_index
 from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
 from VenomX.utils.notify import notify_owner
+from VenomX.core.venom_api import VenomApi
+
+_api_session = None
+slog = logging.getLogger("VenomX.utils.stream.stream")
+
+
+_VIDEO_HEIGHTS = (144, 240, 360, 480, 720, 1080, 1440, 2160)
+
+
+def _video_height() -> int:
+    limit = getattr(config, "VIDEO_STREAM_LIMIT", 720) or 720
+    allowed = [h for h in _VIDEO_HEIGHTS if h <= limit]
+    return allowed[-1] if allowed else 360
+
+
+async def _api_stream_url(vidid, video):
+    """Resolve a playable permalink through the local media API.
+
+    Returns None when the API is unreachable or the id cannot be resolved, so
+    the caller keeps its existing download path.
+    """
+    global _api_session
+    try:
+        if _api_session is None or _api_session.closed:
+            _api_session = aiohttp.ClientSession()
+        async with VenomApi(
+            base_url=_VENOM_API_URL, api_key=getattr(config, "VENOM_API_KEY", "") or None
+        ) as api:
+            api._session = _api_session
+            url = await asyncio.wait_for(
+                api.stream_url(
+                    f"https://www.youtube.com/watch?v={vidid}",
+                    kind="video" if video else "audio",
+                    height=_video_height(),
+                ),
+                timeout=25,
+            )
+            if url:
+                return url.replace("https://api.tomatofist.com", _VENOM_API_URL)
+    except Exception as e:
+        slog.warning("[%s] media API stream_url failed: %s: %s", _STREAM_LOG, type(e).__name__, e)
+    return None
 
 _STREAM_LOG = "Stream"
 
-# When proxy is configured, always download first (ffmpeg can't use proxy reliably)
 _PROXY_URL = getattr(config, "PROXY_URL", None)
-_FORCE_DOWNLOAD = bool(_PROXY_URL)
+# GoogleVideo direct URLs are bound to the proxy exit IP (which WARP rotates),
+# so they 403 at playback time. The media API hands back a stable permalink on
+# this box instead, which streams instantly. Falls back to download when absent.
+_VENOM_API_URL = getattr(config, "VENOM_API_URL", "http://127.0.0.1:3200")
+_FORCE_DOWNLOAD = False
 
 
 async def stream(
@@ -47,8 +95,6 @@ async def stream(
     spotify: Union[bool, str] = None,
     forceplay: Union[bool, str] = None,
 ):
-    import logging
-    slog = logging.getLogger("VenomX.utils.stream.stream")
     st0 = _time.monotonic()
     slog.info(
         "[%s] stream() entry streamtype=%s chat=%s video=%s forceplay=%s result=%s",
@@ -216,22 +262,31 @@ async def stream(
         stream_link = None
         direct = None
         if instant:
-            n = 0
-            try:
-                n, stream_link = await Platform.youtube.stream_url(
-                    vidid, videoid=True, video=status
+            api_url = await _api_stream_url(vidid, bool(status))
+            if api_url:
+                slog.info(
+                    "[%s] media API permalink ready for vidid=%s video=%s",
+                    _STREAM_LOG, vidid, bool(status),
                 )
-                slog.info("[%s] stream_url() returned n=%s", _STREAM_LOG, n)
+                stream_link = api_url
+                direct = True
+            else:
+                n = 0
+                try:
+                    n, stream_link = await Platform.youtube.stream_url(
+                        vidid, videoid=True, video=status
+                    )
+                    slog.info("[%s] stream_url() returned n=%s", _STREAM_LOG, n)
+                except Exception as e:
+                    slog.error("[%s] stream_url() EXCEPTION: %s", _STREAM_LOG, e)
+                    n = 0
                 if n != 0 and stream_link:
                     direct = True
                 else:
                     n = 0
-            except Exception as e:
-                slog.error("[%s] stream_url() EXCEPTION: %s", _STREAM_LOG, e)
-                n = 0
-            if n == 0:
+            if not direct:
                 try:
-                    slog.info("[%s] stream_url failed, fallback download()...", _STREAM_LOG)
+                    slog.info("[%s] instant path unavailable, fallback download()...", _STREAM_LOG)
                     stream_link, direct = await Platform.youtube.download(
                         vidid, mystic, videoid=True, video=status
                     )
