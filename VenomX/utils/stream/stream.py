@@ -54,20 +54,20 @@ async def _api_stream_url(vidid, video):
     try:
         if _api_session is None or _api_session.closed:
             _api_session = aiohttp.ClientSession()
-        async with VenomApi(
+        api = VenomApi(
             base_url=_VENOM_API_URL, api_key=getattr(config, "VENOM_API_KEY", "") or None
-        ) as api:
-            api._session = _api_session
-            url = await asyncio.wait_for(
-                api.stream_url(
-                    f"https://www.youtube.com/watch?v={vidid}",
-                    kind="video" if video else "audio",
-                    height=_video_height(),
-                ),
-                timeout=25,
-            )
-            if url:
-                return url.replace("https://api.tomatofist.com", _VENOM_API_URL)
+        )
+        api._session = _api_session
+        url = await asyncio.wait_for(
+            api.stream_url(
+                f"https://www.youtube.com/watch?v={vidid}",
+                kind="video" if video else "audio",
+                height=_video_height(),
+            ),
+            timeout=25,
+        )
+        if url:
+            return url.replace("https://api.tomatofist.com", _VENOM_API_URL)
     except Exception as e:
         slog.warning("[%s] media API stream_url failed: %s: %s", _STREAM_LOG, type(e).__name__, e)
     return None
