@@ -9,6 +9,12 @@ from bs4 import BeautifulSoup
 from py_yt import VideosSearch
 
 
+UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+)
+
+
 class Apple:
     def __init__(self):
         self.regex = r"^(https:\/\/music.apple.com\/)(.*)$"
@@ -23,8 +29,8 @@ class Apple:
     async def track(self, url, playid: bool | str = None):
         if playid:
             url = self.base + url
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
+        async with aiohttp.ClientSession(headers={"User-Agent": UA}) as session:
+            async with session.get(url, allow_redirects=True) as response:
                 if response.status != 200:
                     return False
                 html = await response.text()
@@ -55,8 +61,8 @@ class Apple:
         if playid:
             url = self.base + url
         playlist_id = url.split("playlist/")[1]
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
+        async with aiohttp.ClientSession(headers={"User-Agent": UA}) as session:
+            async with session.get(url, allow_redirects=True) as response:
                 if response.status != 200:
                     return False
                 html = await response.text()
@@ -64,11 +70,8 @@ class Apple:
         applelinks = soup.find_all("meta", attrs={"property": "music:song"})
         results = []
         for item in applelinks:
-            try:
-                xx = (((item["content"]).split("album/")[1]).split("/")[0]).replace(
-                    "-", " "
-                )
-            except Exception:
-                xx = ((item["content"]).split("album/")[1]).split("/")[0]
-            results.append(xx)
+            content = item.get("content", "")
+            match = re.search(r"music\.apple\.com/[^/]+/(?:song|album|playlist)/([^/]+)/", content)
+            if match:
+                results.append(match.group(1).replace("-", " "))
         return results, playlist_id
