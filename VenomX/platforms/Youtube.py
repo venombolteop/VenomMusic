@@ -730,6 +730,11 @@ class YouTube:
         t0 = time.monotonic()
         if videoid:
             link = self.listbase + link
+        match = re.search(r"[?&]list=([\w-]+)", link)
+        if not match:
+            match = re.search(r"youtube\.com/playlist\?([\w-]+)", link)
+        if match:
+            link = f"https://www.youtube.com/playlist?list={match.group(1)}"
         if "&" in link:
             link = link.split("&")[0]
 
