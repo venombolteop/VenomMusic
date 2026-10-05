@@ -66,6 +66,17 @@ links = {}
 _PROXY = (getattr(config, "PROXY_URL", None) or "").strip()
 _PROXY_FFMPEG = f"-http_proxy {_PROXY} " if _PROXY else ""
 
+
+def _needs_proxy(link) -> bool:
+    """Only external remote URLs need the ffmpeg proxy.
+
+    The media API serves a permalink on this box (127.0.0.1) — routing that
+    through the WARP proxy breaks playback.
+    """
+    if not isinstance(link, str) or not link.startswith("http"):
+        return False
+    return not any(host in link for host in ("127.0.0.1", "localhost", "[::1]"))
+
 # ffmpeg parameters for remote URLs (YouTube direct streams via proxy).
 # -reconnect flags BREAK through HTTP proxies — removed.
 # IMPORTANT: only INPUT-side options allowed here — pytgcalls places these
@@ -174,7 +185,7 @@ class Call:
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
-        is_remote = isinstance(link, str) and link.startswith("http")
+        is_remote = _needs_proxy(link)
         if video:
             ffmpeg_params = _REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO
         else:
@@ -209,7 +220,7 @@ class Call:
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
-        is_remote = isinstance(file_path, str) and file_path.startswith("http")
+        is_remote = _needs_proxy(file_path)
         proxy_part = _PROXY_FFMPEG if is_remote else ""
         stream = (
             MediaStream(
@@ -343,7 +354,7 @@ class Call:
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
-        is_remote = isinstance(link, str) and link.startswith("http")
+        is_remote = _needs_proxy(link)
         if video:
             ffmpeg_params = _REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO
         else:
@@ -466,7 +477,7 @@ class Call:
                         original_chat_id,
                         text=_["call_7"],
                     )
-                is_remote = isinstance(link, str) and link.startswith("http")
+                is_remote = _needs_proxy(link)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
                 if video:
                     stream = MediaStream(
@@ -535,7 +546,7 @@ class Call:
                         return await mystic.edit_text(
                             _["call_7"], disable_web_page_preview=True
                         )
-                is_remote = isinstance(stream_link, str) and stream_link.startswith("http")
+                is_remote = _needs_proxy(stream_link)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
                 if video:
                     stream = MediaStream(
@@ -589,7 +600,7 @@ class Call:
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
             elif "index_" in queued:
-                is_remote = isinstance(videoid, str) and videoid.startswith("http")
+                is_remote = _needs_proxy(videoid)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
                 stream = (
                     MediaStream(
@@ -638,7 +649,7 @@ class Call:
                         image = await Platform.youtube.thumbnail(videoid, True)
                     except Exception:
                         image = None
-                is_remote = isinstance(queued, str) and queued.startswith("http")
+                is_remote = _needs_proxy(queued)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
                 if video:
                     stream = MediaStream(

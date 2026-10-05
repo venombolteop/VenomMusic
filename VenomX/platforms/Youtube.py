@@ -639,7 +639,10 @@ class YouTube:
         headers["Range"] = "bytes=0-1023"
         try:
             async with httpx.AsyncClient(
-                timeout=timeout, follow_redirects=True, headers=headers
+                timeout=timeout,
+                follow_redirects=True,
+                headers=headers,
+                proxy=PROXY or None,
             ) as client:
                 resp = await client.get(url)
             if resp.status_code in (200, 206):
