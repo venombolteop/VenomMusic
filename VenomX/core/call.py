@@ -67,6 +67,12 @@ _PROXY = (getattr(config, "PROXY_URL", None) or "").strip()
 _PROXY_FFMPEG = f"-http_proxy {_PROXY} " if _PROXY else ""
 
 
+# How long the assistant stays in the voice chat after the queue empties.
+# Leaving immediately means every next /play pays the full group-call
+# handshake (~15s: join + key exchange + confirm_call). Staying put makes the
+# next track a stream swap instead, which is sub-second.
+VC_IDLE_GRACE = int(getattr(config, "VC_IDLE_GRACE", 600) or 600)
+_idle_leave_tasks = {}
 def _needs_proxy(link) -> bool:
     """Only external remote URLs need the ffmpeg proxy.
 
@@ -181,7 +187,11 @@ class Call:
         video: Union[bool, str] = None,
         image: Union[bool, str] = None,
     ):
+        import time as _t
+        _j0 = _t.monotonic()
+        self._cancel_idle_leave(chat_id)
         assistant = await group_assistant(self, chat_id)
+        LOGGER(__name__).info("[Call] join_call: group_assistant %.1fs", _t.monotonic() - _j0)
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
@@ -350,7 +360,11 @@ class Call:
         video: Union[bool, str] = None,
         image: Union[bool, str] = None,
     ):
+        import time as _t
+        _j0 = _t.monotonic()
+        self._cancel_idle_leave(chat_id)
         assistant = await group_assistant(self, chat_id)
+        LOGGER(__name__).info("[Call] join_call: group_assistant %.1fs", _t.monotonic() - _j0)
         audio_stream_quality = await get_audio_bitrate(chat_id)
         video_stream_quality = await get_video_bitrate(chat_id)
         call_config = GroupCallConfig(auto_start=False)
@@ -382,12 +396,14 @@ class Call:
                 ffmpeg_parameters=ffmpeg_params,
             )
 
+        LOGGER(__name__).info("[Call] join_call: MediaStream built at %.1fs", _t.monotonic() - _j0)
         try:
             await assistant.play(
                 chat_id=chat_id,
                 stream=stream,
                 config=call_config,
             )
+            LOGGER(__name__).info("[Call] join_call: assistant.play done at %.1fs", _t.monotonic() - _j0)
         except Exception:
             await self.join_chat(chat_id)
             try:
@@ -414,6 +430,44 @@ class Call:
         if video:
             await add_active_video_chat(chat_id)
 
+    async def warm_join(self, chat_id):
+        """Resolve the peer and the active group call ahead of the real join.
+
+        Both round trips are Telegram-side, so doing them while the stream URL
+        is being resolved hides most of the handshake latency.
+        """
+        try:
+            assistant = await group_assistant(self, chat_id)
+            if chat_id in await assistant._binding.calls():
+                return
+            resolved = await assistant.resolve_chat_id(chat_id)
+            await assistant._app.get_input_call(resolved)
+            assistant._cache_user_peer.put(resolved, assistant._cache_local_peer)
+        except Exception as e:
+            LOGGER(__name__).debug("warm_join for %s skipped: %s", chat_id, e)
+
+    async def _delayed_leave(self, client, chat_id, delay=None):
+        await asyncio.sleep(delay if delay is not None else VC_IDLE_GRACE)
+        if db.get(chat_id):
+            return
+        try:
+            await client.leave_call(chat_id, close=False)
+            LOGGER(__name__).info("[Call] idle leave done for chat %s", chat_id)
+        except Exception as e:
+            LOGGER(__name__).error(f"Failed idle leave for chat {chat_id}: {e}")
+        _idle_leave_tasks.pop(chat_id, None)
+
+    def _cancel_idle_leave(self, chat_id):
+        task = _idle_leave_tasks.pop(chat_id, None)
+        if task and not task.done():
+            task.cancel()
+
+    def _schedule_idle_leave(self, client, chat_id):
+        self._cancel_idle_leave(chat_id)
+        _idle_leave_tasks[chat_id] = asyncio.create_task(
+            self._delayed_leave(client, chat_id)
+        )
+
     async def change_stream(self, client, chat_id):
         check = db.get(chat_id)
         popped = None
@@ -422,6 +476,10 @@ class Call:
         # raising (a stale stream_end can arrive while a new track is joining).
         if not check:
             await _clear_(chat_id)
+            # Leave for real: keeping the assistant in the call makes the next
+            # /play take py-tgcalls' set_stream_sources path, which switches the
+            # source without restarting ffmpeg, so the chat hears silence.
+            self._cancel_idle_leave(chat_id)
             try:
                 await client.leave_call(chat_id, close=False)
             except Exception as e:
