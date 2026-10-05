@@ -219,11 +219,16 @@ async def play_commnd(
                 )
         elif await Platform.spotify.valid(url):
             spotify = True
-            if not config.SPOTIFY_CLIENT_ID and not config.SPOTIFY_CLIENT_SECRET:
-                return await mystic.edit_text(
-                    "This Bot can't play spotify tracks and playlist, please contact my owner and ask him to add Spotify player."
-                )
-            if "track" in url:
+            if "/radio" in url:
+                try:
+                    details, plist_id = await Platform.spotify.radio(url)
+                except Exception:
+                    return await mystic.edit_text(_["play_3"])
+                streamtype = "playlist"
+                plist_type = "spradio"
+                img = config.SPOTIFY_ARTIST_IMG_URL
+                cap = _["play_12"].format(message.from_user.first_name)
+            elif "track" in url:
                 try:
                     details, track_id = await Platform.spotify.track(url)
                 except Exception:
