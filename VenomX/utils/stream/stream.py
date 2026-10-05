@@ -44,6 +44,48 @@ def _video_height() -> int:
     return allowed[-1] if allowed else 360
 
 
+_prefetch_tasks = {}
+# The media API permalink is stable and never expires, so it is safe to keep.
+_permalink_cache = {}
+
+
+def _cached_permalink(vidid, video):
+    return _permalink_cache.get((vidid, bool(video)))
+
+
+def _remember_permalink(vidid, video, url):
+    if url:
+        _permalink_cache[(vidid, bool(video))] = url
+        if len(_permalink_cache) > 512:
+            _permalink_cache.pop(next(iter(_permalink_cache)))
+
+
+def _prefetch_next(chat_id):
+    """Warm the permalink for the next queued track while this one plays.
+
+    Resolving takes ~4s; doing it now means the switch costs nothing.
+    """
+    queued = db.get(chat_id) or []
+    if len(queued) < 2:
+        return
+    nxt = queued[1]
+    vidid = nxt.get("vidid")
+    if not vidid or vidid == "telegram":
+        return
+    video = nxt.get("streamtype") == "video"
+    if _prefetch_tasks.get(chat_id) and not _prefetch_tasks[chat_id].done():
+        return
+
+    async def _warm():
+        try:
+            await _api_stream_url(vidid, bool(video))
+            slog.info("[%s] prefetched permalink for next track %s", _STREAM_LOG, vidid)
+        except Exception:
+            pass
+
+    _prefetch_tasks[chat_id] = asyncio.create_task(_warm())
+
+
 async def _api_stream_url(vidid, video):
     """Resolve a playable permalink through the local media API.
 
@@ -51,6 +93,10 @@ async def _api_stream_url(vidid, video):
     the caller keeps its existing download path.
     """
     global _api_session
+    cached = _cached_permalink(vidid, video)
+    if cached:
+        slog.info("[%s] permalink cache hit for %s", _STREAM_LOG, vidid)
+        return cached
     try:
         if _api_session is None or _api_session.closed:
             _api_session = aiohttp.ClientSession()
@@ -67,7 +113,9 @@ async def _api_stream_url(vidid, video):
             timeout=25,
         )
         if url:
-            return url.replace("https://api.tomatofist.com", _VENOM_API_URL)
+            url = url.replace("https://api.tomatofist.com", _VENOM_API_URL)
+            _remember_permalink(vidid, video, url)
+            return url
     except Exception as e:
         slog.warning("[%s] media API stream_url failed: %s: %s", _STREAM_LOG, type(e).__name__, e)
     return None
@@ -256,17 +304,22 @@ async def stream(
         if _FORCE_DOWNLOAD:
             instant = False
         slog.info(
-            "[%s] youtube branch: vidid=%s title=%s instant=%s (force_download=%s)",
-            _STREAM_LOG, vidid, title[:40], instant, _FORCE_DOWNLOAD,
+            "[%s] youtube branch: vidid=%s title=%s instant=%s (force_download=%s) age=%.1fs",
+            _STREAM_LOG, vidid, title[:40], instant, _FORCE_DOWNLOAD, _time.monotonic() - st0,
         )
         stream_link = None
         direct = None
         if instant:
+            _warm = asyncio.create_task(
+                Ayush.warm_join(chat_id)
+            ) if not getattr(config, "SEQUENTIAL_WARMUP", False) else None
             api_url = await _api_stream_url(vidid, bool(status))
+            if _warm is not None:
+                _warm.cancel()
             if api_url:
                 slog.info(
-                    "[%s] media API permalink ready for vidid=%s video=%s",
-                    _STREAM_LOG, vidid, bool(status),
+                    "[%s] media API permalink ready for vidid=%s video=%s in %.1fs",
+                    _STREAM_LOG, vidid, bool(status), _time.monotonic() - st0,
                 )
                 stream_link = api_url
                 direct = True
@@ -345,8 +398,14 @@ async def stream(
         else:
             if not forceplay:
                 db[chat_id] = []
+            _jt = _time.monotonic()
             await Ayush.join_call(
                 chat_id, original_chat_id, stream_link, video=status, image=thumbnail
+            )
+            _prefetch_next(chat_id)
+            slog.info(
+                "[%s] join_call took %.1fs (link_ready_age=%.1fs)",
+                _STREAM_LOG, _time.monotonic() - _jt, _time.monotonic() - st0,
             )
             await put_queue(
                 chat_id,
