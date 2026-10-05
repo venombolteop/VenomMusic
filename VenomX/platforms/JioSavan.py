@@ -1,10 +1,10 @@
-
 # All rights reserved.
 #
 
 import os
 
 import aiohttp
+import requests
 import yt_dlp
 
 from io import BytesIO
@@ -13,12 +13,28 @@ from PIL import Image
 from config import seconds_to_time
 from VenomX.utils.decorators import asyncify
 
+API = "https://www.jiosaavn.com/api.php"
+WEB_CALL = {
+    "__call": "webapi.get",
+    "_format": "json",
+    "_marker": "0",
+    "ctx": "web6dot0",
+}
+SEARCH_CALL = {
+    "__call": "autocomplete.get",
+    "_format": "json",
+    "_marker": "0",
+    "ctx": "web6dot0",
+    "type": "song",
+    "limit": 5,
+}
+
 
 class Saavn:
 
     @staticmethod
     async def valid(url: str) -> bool:
-        return "jiosaavn.com" in url
+        return "jiosaavn.com" in url or "saavn.com" in url
 
     @staticmethod
     async def is_song(url: str) -> bool:
@@ -33,6 +49,9 @@ class Saavn:
             url = url.split("#")[0]
         return url
 
+    def token(self, url: str) -> str:
+        return self.clean_url(url).rstrip("/").split("/")[-1]
+
     @asyncify
     def playlist(self, url, limit):
         clean_url = self.clean_url(url)
@@ -40,6 +59,7 @@ class Saavn:
             "extract_flat": True,
             "force_generic_extractor": True,
             "quiet": True,
+            "no_warnings": True,
         }
         song_info = []
         count = 0
@@ -63,37 +83,90 @@ class Saavn:
                 pass
         return song_info
 
+    @asyncify
+    def _song(self, token: str) -> dict:
+        params = dict(WEB_CALL, token=token, type="song")
+        response = requests.get(API, params=params, timeout=20)
+        response.raise_for_status()
+        data = response.json()
+        return self._pick_song(data, token)
+
+    @staticmethod
+    def _pick_song(data, token: str) -> dict:
+        if isinstance(data, list) and data:
+            return data[0]
+        if isinstance(data, dict):
+            songs = data.get("songs")
+            if isinstance(songs, list) and songs:
+                return songs[0]
+            if isinstance(songs, dict) and songs:
+                return list(songs.values())[0]
+            if token in data and isinstance(data[token], dict):
+                return data[token]
+            for value in data.values():
+                if isinstance(value, dict) and value.get("song"):
+                    return value
+        raise ValueError("Song not found")
+
+    async def _search(self, query: str) -> dict:
+        params = dict(SEARCH_CALL, query=query)
+        response = requests.get(API, params=params, timeout=20)
+        response.raise_for_status()
+        songs = (response.json().get("songs") or {}).get("data") or []
+        if not songs:
+            raise ValueError("No results found")
+        match = songs[0]
+        token = self.token(match.get("url") or "") or match.get("id")
+        if token:
+            try:
+                song = await self._song(token)
+                song.setdefault("perma_url", match.get("url"))
+                return song
+            except Exception:
+                return match
+        return match
+
+    @asyncify
+    def _media_url(self, encrypted: str, bitrate: str = "128") -> str:
+        response = requests.post(
+            f"{API}?__call=song.generateAuthToken&_format=json&bitrate={bitrate}",
+            data={"url": encrypted},
+            timeout=20,
+        )
+        response.raise_for_status()
+        auth_url = response.json().get("auth_url")
+        if not auth_url:
+            raise ValueError("Could not resolve media url")
+        return auth_url
+
     async def info(self, url):
         url = self.clean_url(url)
+        if "jiosaavn.com" in url or "saavn.com" in url:
+            info = await self._song(self.token(url))
+        else:
+            info = await self._search(url)
 
-        async with aiohttp.ClientSession() as session:
-            if "jiosaavn.com" in url:
-                api_url = "https://saavn.dev/api/songs"
-                params = {"link": url, "limit": 1}
-            else:
-                api_url = "https://saavn.dev/api/search/songs"
-                params = {"query": url, "limit": 1}
+        image = info.get("image")
+        if isinstance(image, list):
+            image = image[-1].get("url") if isinstance(image[-1], dict) else image[-1]
+        elif isinstance(image, dict):
+            image = image.get("url")
 
-            async with session.get(api_url, params=params) as response:
-                data = await response.json()
+        more_info = info.get("more_info")
+        more_info = more_info if isinstance(more_info, dict) else {}
+        song_id = info.get("id") or self.token(url)
+        thumb_path = await self._resize_thumb(image, song_id) if image else ""
+        encrypted = more_info.get("encrypted_media_url") or info.get("encrypted_media_url") or ""
 
-                if "jiosaavn.com" in url:
-                    info = data["data"][0]  # For Saavn URLs
-                else:
-                    info = data["data"]["results"][0]  # For search queries
-
-                thumb_url = info["image"][-1]["url"]
-                thumb_path = await self._resize_thumb(thumb_url, info["id"])
-
-                return {
-                    "title": info["name"],
-                    "duration_sec": info.get("duration", 0),
-                    "duration_min": seconds_to_time(info.get("duration", 0)),
-                    "thumb": thumb_path,
-                    "url": self.clean_url(info["url"]),
-                    "_download_url": info["downloadUrl"][-1]["url"],
-                    "_id": info["id"],
-                }
+        return {
+            "title": info.get("name") or info.get("song") or info.get("title"),
+            "duration_sec": int(info.get("duration") or 0),
+            "duration_min": seconds_to_time(int(info.get("duration") or 0)),
+            "thumb": thumb_path,
+            "url": more_info.get("perma_url") or info.get("perma_url") or info.get("url") or url,
+            "_download_url": await self._media_url(encrypted) if encrypted else "",
+            "_id": song_id,
+        }
 
     async def download(self, url):
         details = await self.info(url)
@@ -136,4 +209,4 @@ class Saavn:
 
         new_img.save(thumb_path, format="JPEG")
         return thumb_path
-        
+
