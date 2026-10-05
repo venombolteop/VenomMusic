@@ -129,6 +129,9 @@ PRIVATE_BOT_MODE = getenv("PRIVATE_BOT_MODE", "False")
 
 # Instant Play / Streaming Mode (default OFF: download first for smooth playback)
 INSTANT_PLAY = getenv("INSTANT_PLAY", "True")
+# Media API used for instant (no-download) playback: serves a stable stream permalink
+VENOM_API_URL = getenv("VENOM_API_URL", "http://127.0.0.1:3200")
+VENOM_API_KEY = getenv("VENOM_API_KEY", "")
 
 
 # Time sleep duration For Youtube Downloader
