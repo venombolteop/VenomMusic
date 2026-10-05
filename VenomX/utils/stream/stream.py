@@ -29,9 +29,6 @@ from VenomX.utils.pastebin import Ayushbin
 from VenomX.utils.stream.queue import put_queue, put_queue_index
 from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
 from VenomX.utils.notify import notify_owner
-from VenomX.core.venom_api import VenomApi
-
-_api_session = None
 slog = logging.getLogger("VenomX.utils.stream.stream")
 
 
@@ -86,13 +83,32 @@ def _prefetch_next(chat_id):
     _prefetch_tasks[chat_id] = asyncio.create_task(_warm())
 
 
+async def _verify_permalink(vidid, video, url):
+    try:
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=45)
+        ) as probe:
+            async with probe.get(url, headers={"Range": "bytes=0-1023"}) as resp:
+                if resp.status in (200, 206):
+                    slog.info("[%s] permalink ok: %s", _STREAM_LOG, vidid)
+                else:
+                    slog.warning(
+                        "[%s] permalink returned %s for %s",
+                        _STREAM_LOG, resp.status, vidid,
+                    )
+    except Exception as e:
+        slog.warning(
+            "[%s] permalink check failed for %s: %s: %s",
+            _STREAM_LOG, vidid, type(e).__name__, e,
+        )
+
+
 async def _api_stream_url(vidid, video):
     """Resolve a playable permalink through the local media API.
 
     Returns None when the API is unreachable or the id cannot be resolved, so
     the caller keeps its existing download path.
     """
-    global _api_session
     cached = _cached_permalink(vidid, video)
     if cached:
         slog.info("[%s] permalink cache hit for %s", _STREAM_LOG, vidid)
@@ -104,45 +120,13 @@ async def _api_stream_url(vidid, video):
     local_url = f"{_VENOM_API_URL.rstrip('/')}/stream/{vidid}"
     if video:
         local_url += f"?type=video&height={_video_height()}"
-    try:
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=8)
-        ) as probe:
-            async with probe.get(
-                local_url,
-                headers={"Range": "bytes=0-1023"},
-            ) as resp:
-                if resp.status in (200, 206):
-                    _remember_permalink(vidid, video, local_url)
-                    return local_url
-    except Exception as e:
-        slog.info(
-            "[%s] local permalink probe failed (%s: %s), asking the API",
-            _STREAM_LOG, type(e).__name__, e,
-        )
-
-    try:
-        if _api_session is None or _api_session.closed:
-            _api_session = aiohttp.ClientSession()
-        api = VenomApi(
-            base_url=_VENOM_API_URL, api_key=getattr(config, "VENOM_API_KEY", "") or None
-        )
-        api._session = _api_session
-        url = await asyncio.wait_for(
-            api.stream_url(
-                f"https://www.youtube.com/watch?v={vidid}",
-                kind="video" if video else "audio",
-                height=_video_height(),
-            ),
-            timeout=25,
-        )
-        if url:
-            url = url.replace("https://api.tomatofist.com", _VENOM_API_URL)
-            _remember_permalink(vidid, video, url)
-            return url
-    except Exception as e:
-        slog.warning("[%s] media API stream_url failed: %s: %s", _STREAM_LOG, type(e).__name__, e)
-    return None
+    # Checking it inline would mean waiting for the first bytes, and on a track
+    # the API has never fetched that is the whole cold-start cost — exactly the
+    # delay this path exists to remove. Hand the URL over and verify behind the
+    # playback instead.
+    _remember_permalink(vidid, video, local_url)
+    asyncio.create_task(_verify_permalink(vidid, video, local_url))
+    return local_url
 
 _STREAM_LOG = "Stream"
 
