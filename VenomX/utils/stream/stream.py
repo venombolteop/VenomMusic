@@ -97,6 +97,30 @@ async def _api_stream_url(vidid, video):
     if cached:
         slog.info("[%s] permalink cache hit for %s", _STREAM_LOG, vidid)
         return cached
+
+    # The API's permalink is always /stream/<id>, so build it here instead of
+    # asking: /v1/link spends ~4s extracting metadata only to return a title we
+    # already have. A short ranged GET proves the id is servable.
+    local_url = f"{_VENOM_API_URL.rstrip('/')}/stream/{vidid}"
+    if video:
+        local_url += f"?type=video&height={_video_height()}"
+    try:
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=8)
+        ) as probe:
+            async with probe.get(
+                local_url,
+                headers={"Range": "bytes=0-1023"},
+            ) as resp:
+                if resp.status in (200, 206):
+                    _remember_permalink(vidid, video, local_url)
+                    return local_url
+    except Exception as e:
+        slog.info(
+            "[%s] local permalink probe failed (%s: %s), asking the API",
+            _STREAM_LOG, type(e).__name__, e,
+        )
+
     try:
         if _api_session is None or _api_session.closed:
             _api_session = aiohttp.ClientSession()
