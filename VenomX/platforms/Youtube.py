@@ -10,6 +10,7 @@ import socket
 import sys
 import time
 
+import aiohttp
 import httpx
 
 from async_lru import alru_cache
@@ -18,6 +19,7 @@ from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
 from yt_dlp import YoutubeDL
 
+import config
 from VenomX.utils.decorators import asyncify
 from VenomX.utils.formatters import seconds_to_min, time_to_seconds
 from VenomX.utils.notify import notify_owner
@@ -762,6 +764,54 @@ class YouTube:
         _log("info", "playlist() OK in %.1fs got %d items", time.monotonic() - t0, len(result))
         return result
 
+    async def _api_search(self, query: str, t0: float):
+        """Resolve a search query through the media API (warm, ~0.5s).
+
+        Returns the same shape track() produces, or None to let the caller
+        fall back to the local VideosSearch path.
+        """
+        url = (getattr(config, "VENOM_API_URL", "") or "").strip()
+        if not url:
+            return None
+        try:
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=6)
+            ) as session:
+                async with session.post(
+                    f"{url.rstrip('/')}/v1/search",
+                    json={"q": query, "limit": 5},
+                    headers={"accept": "application/json"},
+                ) as resp:
+                    if resp.status != 200:
+                        return None
+                    payload = await resp.json()
+        except Exception as e:
+            _log("debug", "media API search failed: %s: %s", type(e).__name__, e)
+            return None
+        results = payload.get("results") or []
+        if not results:
+            return None
+        item = results[0]
+        vidid = item.get("id")
+        if not vidid:
+            return None
+        duration_sec = item.get("duration") or 0
+        track_details = {
+            "title": item.get("title") or vidid,
+            "link": item.get("url") or f"https://www.youtube.com/watch?v={vidid}",
+            "vidid": vidid,
+            "duration_min": seconds_to_min(duration_sec),
+            "thumb": (item.get("thumbnail") or f"https://i.ytimg.com/vi/{vidid}/hq720.jpg").split("?")[0],
+        }
+        _log(
+            "info",
+            "track() OK via media API in %.1fs title=%s vidid=%s",
+            time.monotonic() - t0,
+            track_details["title"][:40],
+            vidid,
+        )
+        return track_details, vidid
+
     @alru_cache(maxsize=256)
     async def track(self, link: str, videoid: bool | str = None):
         _log("info", "track() link=%s videoid=%s", link[:80], videoid)
@@ -773,6 +823,9 @@ class YouTube:
         if link.startswith("http://") or link.startswith("https://"):
             _log("info", "track() URL detected, delegating to _track()")
             return await self._track(link)
+        api_details = await self._api_search(link, t0)
+        if api_details:
+            return api_details
         try:
             _log("info", "track() search query, trying VideosSearch...")
             results = VideosSearch(link, limit=1, timeout=_YT_SEARCH_TIMEOUT)
