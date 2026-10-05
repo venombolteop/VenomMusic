@@ -598,6 +598,11 @@ async def play_playlists_cb(client, CallbackQuery, _):
             result, spotify_id = await Platform.spotify.artist(videoid)
         except Exception:
             return await mystic.edit_text(_["play_3"])
+    if ptype == "spradio":
+        try:
+            result, spotify_id = await Platform.spotify.radio(videoid)
+        except Exception:
+            return await mystic.edit_text(_["play_3"])
     if ptype == "apple":
         try:
             result, apple_id = await Platform.apple.playlist(videoid, True)
