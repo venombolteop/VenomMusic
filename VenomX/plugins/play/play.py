@@ -3,6 +3,7 @@
 #
 
 import random
+import re
 import string
 import time as _time
 
@@ -188,10 +189,11 @@ async def play_commnd(
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "yt"
-                if "&" in url:
-                    plist_id = (url.split("=")[1]).split("&")[0]
+                match = re.search(r"[?&]list=([\w-]+)", url)
+                if match:
+                    plist_id = match.group(1)
                 else:
-                    plist_id = url.split("=")[1]
+                    plist_id = url.split("/")[-1].split("?")[0]
                 img = config.PLAYLIST_IMG_URL
                 cap = _["play_10"]
             elif "https://youtu.be" in url:
@@ -222,7 +224,8 @@ async def play_commnd(
             if "/radio" in url:
                 try:
                     details, plist_id = await Platform.spotify.radio(url)
-                except Exception:
+                except Exception as e:
+                    LOGGER.warning(f"[PLAY] spotify radio failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spradio"
@@ -231,7 +234,8 @@ async def play_commnd(
             elif "track" in url:
                 try:
                     details, track_id = await Platform.spotify.track(url)
-                except Exception:
+                except Exception as e:
+                    LOGGER.warning(f"[PLAY] spotify track failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "youtube"
                 img = details["thumb"]
@@ -239,7 +243,8 @@ async def play_commnd(
             elif "playlist" in url:
                 try:
                     details, plist_id = await Platform.spotify.playlist(url)
-                except Exception:
+                except Exception as e:
+                    LOGGER.warning(f"[PLAY] spotify playlist failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spplay"
@@ -248,7 +253,8 @@ async def play_commnd(
             elif "album" in url:
                 try:
                     details, plist_id = await Platform.spotify.album(url)
-                except Exception:
+                except Exception as e:
+                    LOGGER.warning(f"[PLAY] spotify album failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spalbum"
@@ -257,7 +263,8 @@ async def play_commnd(
             elif "artist" in url:
                 try:
                     details, plist_id = await Platform.spotify.artist(url)
-                except Exception:
+                except Exception as e:
+                    LOGGER.warning(f"[PLAY] spotify artist failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spartist"
