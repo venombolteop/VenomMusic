@@ -9,6 +9,10 @@ it on where it was off does not affect the chats that had it. Chats that have
 never been told either way use the configured default, which is on.
 """
 
+import re
+from datetime import datetime
+from io import BytesIO
+
 from pyrogram import filters
 from pyrogram.enums import ButtonStyle, ChatMemberStatus
 from pyrogram.types import InlineKeyboardMarkup, Message
@@ -262,16 +266,41 @@ async def _lyrics_text(client, message: Message, query: str):
             )
         )
 
-    body = "\n".join(text for _, text in lines[:40])
-    if len(lines) > 40:
-        body += f"\n\n<i>…{len(lines) - 40} more lines</i>"
     title = (details.get("title") or query)[:60]
-    await status.edit_text(
-        "🎵 <b>{title}</b>\n\n{body}\n\n"
-        "<i>Play it with</i> <code>/play {title}</code>".format(
-            title=title, body=body
-        ),
-        link_preview_options=lyrics_display.no_preview(),
+
+    # As a file, with every line. A long song does not fit in a message, and
+    # cutting it at forty lines meant the chorus was often the part that went
+    # missing. The file also keeps the timestamps, so it opens in any player
+    # that follows along.
+    safe = re.sub(r'[\\/:*?"<>|]+', "_", title).strip() or "lyrics"
+    lrc = "\n".join(
+        "[{m:02d}:{s:02d}.{h:02d}]{text}".format(
+            m=int(t // 60),
+            s=int(t % 60),
+            h=int((t % 1) * 100),
+            text=text,
+        )
+        for t, text in lines
+    )
+    body_lrc = (
+        f"[ti:{title}]\n"
+        f"[length:{details.get('duration_min') or ''}]\n\n"
+        f"{lrc}\n"
+    )
+
+    buffer = BytesIO()
+    buffer.write(body_lrc.encode("utf-8"))
+    buffer.seek(0)
+
+    await status.delete()
+    await message.reply_document(
+        document=buffer,
+        file_name=f"{safe}.lrc",
+        caption=(
+            "🎵 <b>{title}</b>\n"
+            "<i>{count} timed lines</i>\n\n"
+            "<i>Play it with</i> <code>/play {title}</code>"
+        ).format(title=title, count=len(lines)),
     )
 
 
