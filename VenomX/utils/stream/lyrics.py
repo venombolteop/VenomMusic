@@ -98,6 +98,7 @@ async def start(client, chat_id, track_title, duration=None):
     stop(chat_id)
     lines = await fetch(track_title, duration)
     if not lines:
+        LOGGER(__name__).info("lyrics: none found for %r", track_title[:50])
         return None
     try:
         message = await client.send_message(chat_id, "🎵 …", disable_web_page_preview=True)
