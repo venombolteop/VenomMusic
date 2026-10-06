@@ -128,9 +128,9 @@ async def skip(cli, message: Message, _, chat_id):
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
     elif "vid_" in queued:
-        n, stream_link = await Platform.youtube.stream_url(
-            videoid, videoid=True, video=status
-        )
+        from VenomX.utils.stream.stream import _api_stream_url
+        stream_link = await _api_stream_url(videoid, bool(status))
+        n = 1 if stream_link else 0
         if n == 0:
             mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
             try:
