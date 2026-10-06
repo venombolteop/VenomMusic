@@ -662,18 +662,37 @@ class Call:
                 db[chat_id][0]["mystic"] = run
                 db[chat_id][0]["markup"] = "stream"
             elif "index_" in queued:
-                is_remote = _needs_proxy(videoid)
+                # A queued playlist item arrives as a downloaded file path.
+                # Streaming the permalink instead means the next track starts
+                # when the previous one ends rather than after another fetch.
+                play_source = videoid
+                if video is not None and not str(videoid).startswith("http"):
+                    try:
+                        from VenomX.utils.stream.stream import _api_stream_url
+                        permalink = await _api_stream_url(
+                            check[0].get("vidid"), bool(video)
+                        )
+                        if permalink and check[0].get("vidid") not in (
+                            None, "", "telegram"
+                        ):
+                            play_source = permalink
+                    except Exception as e:
+                        LOGGER(__name__).debug(
+                            "playlist permalink unavailable: %s: %s",
+                            type(e).__name__, e,
+                        )
+                is_remote = _needs_proxy(play_source)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
                 stream = (
                     MediaStream(
-                        videoid,
+                        play_source,
                         audio_parameters=audio_stream_quality,
                         video_parameters=video_stream_quality,
                         ffmpeg_parameters=ffmpeg_params,
                     )
                     if str(streamtype) == "video"
                     else MediaStream(
-                        videoid,
+                        play_source,
                         audio_parameters=audio_stream_quality,
                         video_flags=MediaStream.Flags.IGNORE,
                         ffmpeg_parameters=ffmpeg_params,
