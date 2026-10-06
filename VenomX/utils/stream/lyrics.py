@@ -91,15 +91,25 @@ async def fetch(track_title: str, duration: int | None = None):
     return lines
 
 
+_call_cache = {}
+_CALL_TTL = 600
+
+
 async def _group_call(client, chat_id):
     """The active group call for a chat, or None when none is running.
 
-    The call handle lives on the full channel, not on the chat: it is read off
-    `channels.GetFullChannel` the same way the client itself does when it
-    shows the call banner.
+    The handle lives on the full channel and does not change while a call
+    runs, so it is read once and kept. Asking for it per line is what turned
+    a synced display into a FLOOD_WAIT: two dozen GetFullChannel calls a song
+    is far past what an account may make, and once Telegram starts refusing,
+    no line goes out at all.
     """
     from pyrogram import raw
     from pyrogram.errors import RPCError
+
+    hit = _call_cache.get(chat_id)
+    if hit and hit[0] > time.time():
+        return hit[1]
 
     try:
         peer = await client.resolve_peer(chat_id)
@@ -107,9 +117,14 @@ async def _group_call(client, chat_id):
             raw.functions.channels.GetFullChannel(channel=peer)
         )
     except RPCError as e:
-        LOGGER(__name__).info("no call for %s: %s", chat_id, str(e)[:80])
+        if "FLOOD" in str(e).upper():
+            LOGGER(__name__).info("call lookup flood-limited for %s", chat_id)
+        elif "CHANNEL_INVALID" not in str(e).upper():
+            LOGGER(__name__).info("no call for %s: %s", chat_id, str(e)[:80])
         return None
     call = getattr(full.full_chat, "call", None)
+    if call is not None:
+        _call_cache[chat_id] = (time.time() + _CALL_TTL, call)
     return call
 
 
@@ -238,7 +253,8 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):
 
 
 async def start(client, chat_id, track_title, duration=None,
-                post_message: bool = True, use_title: bool = True):
+                post_message: bool = True, use_title: bool = True,
+                playback_started: float | None = None):
     """Drive the synced display for the track that just started.
 
     `use_title` writes each line into the voice chat header, which is the only
@@ -250,6 +266,11 @@ async def start(client, chat_id, track_title, duration=None,
     if not lines:
         LOGGER(__name__).info("lyrics: none found for %r", track_title[:50])
         return None
+    # `playback_started` is when the audio actually began, in the caller's
+    # monotonic clock. The lookup above took time, and counting from here
+    # instead leaves the whole display permanently that far behind the singing.
+    started_at = playback_started or time.monotonic()
+
     message = None
     if post_message:
         try:
@@ -261,13 +282,17 @@ async def start(client, chat_id, track_title, duration=None,
                 "could not post lyrics message: %s: %s", type(e).__name__, e
             )
     task = asyncio.create_task(
-        _run(chat_id, message, lines, time.monotonic(), client, use_title)
+        _run(chat_id, message, lines, started_at, client, use_title)
     )
     _timers[chat_id] = (task, message)
     LOGGER(__name__).info(
         "lyrics live in %s: %d lines for %r", chat_id, len(lines), track_title[:40]
     )
     return message
+
+
+def forget(chat_id):
+    _call_cache.pop(chat_id, None)
 
 
 def stop(chat_id):
