@@ -14,8 +14,13 @@ from pyrogram.enums import ButtonStyle, ChatMemberStatus
 from pyrogram.types import InlineKeyboardMarkup, Message
 
 from strings import command
-from VenomX import app, LOGGER
-from VenomX.utils.database import get_vc_lyrics, set_vc_lyrics
+from VenomX import Platform, app, LOGGER
+from VenomX.utils.database import (
+    get_lyrics_lang,
+    get_vc_lyrics,
+    set_lyrics_lang,
+    set_vc_lyrics,
+)
 from VenomX.utils.decorators.admins import AdminRightsCheck
 from VenomX.utils.premium import close_btn, custom_btn
 from VenomX.utils.stream import lyrics as lyrics_display
@@ -100,10 +105,15 @@ async def lyrics_off(client, message: Message):
 
 
 @app.on_message(
-    command("LYRICS_STATUS_COMMAND", prefixes=["/", "!", "%", ",", "@", "#"])
+    command(["LYRICS_STATUS_COMMAND", "LYRICS_TEXT_COMMAND"],
+            prefixes=["/", "!", "%", ",", "@", "#"])
     & filters.group
 )
 async def lyrics_status(client, message: Message):
+    """`/lyrics` on its own is the panel; `/lyrics <song>` looks one up."""
+    asked = " ".join(message.command[1:]).strip()
+    if asked:
+        return await _lyrics_text(client, message, asked)
     chat_id = message.chat.id
     on = await get_vc_lyrics(chat_id)
     await message.reply_text(
@@ -150,6 +160,118 @@ async def lyrics_toggle(client, CallbackQuery):
         "switching it does not touch any other chat.\n\n"
         "Status: <b>{state}</b>".format(state="on" if want_on else "off"),
         reply_markup=panel_markup(want_on),
+    )
+
+
+LANG_STATES = {
+    "auto": "whichever the song has",
+    "hindi": "हिन्दी",
+    "english": "English",
+}
+
+
+def lang_markup(current: str):
+    row = []
+    for code, label in (
+        ("auto", "Auto"),
+        ("hindi", "Hindi"),
+        ("english", "English"),
+    ):
+        row.append(
+            custom_btn(
+                f"{label} ✓" if code == current else label,
+                callback_data=f"lyricslang|{code}",
+                style=ButtonStyle.SUCCESS if code == current else ButtonStyle.PRIMARY,
+                emoji="✅" if code == current else None,
+            )
+        )
+    return InlineKeyboardMarkup([row, [close_btn("Close")]])
+
+
+@app.on_message(
+    command("LYRICS_LANG_COMMAND", prefixes=["/", "!", "%", ",", "@", "#"])
+    & filters.group
+)
+async def lyrics_lang(client, message: Message):
+    current = await get_lyrics_lang(message.chat.id)
+    await message.reply_text(
+        "🎵 <b>Lyrics language</b> for this chat\n\n"
+        "Which script the timed lines should be in. "
+        "<b>Auto</b> takes whichever the song has.\n\n"
+        "Current: <b>{state}</b>".format(
+            state=LANG_STATES.get(current, current)
+        ),
+        reply_markup=lang_markup(current),
+    )
+
+
+@app.on_callback_query(filters.regex(r"^lyricslang\|(auto|hindi|english)$"))
+async def lyrics_lang_cb(client, CallbackQuery):
+    await CallbackQuery.answer()
+    if not await _is_admin(CallbackQuery.message):
+        return await CallbackQuery.answer(
+            "Only an admin can change this.", show_alert=True
+        )
+    chat_id = CallbackQuery.message.chat.id
+    want = CallbackQuery.matches[0].group(1)
+    await set_lyrics_lang(chat_id, want)
+    lyrics_display.forget(chat_id)
+    LOGGER(_LOG).info("lyrics language for chat %s set to %s", chat_id, want)
+    return await CallbackQuery.edit_message_text(
+        "🎵 <b>Lyrics language</b> for this chat\n\n"
+        "Which script the timed lines should be in. "
+        "<b>Auto</b> takes whichever the song has.\n\n"
+        "Current: <b>{state}</b>".format(state=LANG_STATES.get(want, want)),
+        reply_markup=lang_markup(want),
+    )
+
+
+async def _lyrics_text(client, message: Message, query: str):
+    """The timed lines as a message anyone can read.
+
+    Independent of the voice chat: a lyric can be looked up without anything
+    playing, which is the whole point of asking for one by name.
+    """
+    if not query.strip():
+        await message.reply_text(
+            "🎵 <b>Usage</b>\n<code>/lyrics kesariya</code>"
+        )
+        return
+
+    status = await message.reply_text("🎵 <b>Searching lyrics…</b>")
+    try:
+        details, vidid = await Platform.youtube.track(query)
+    except Exception:
+        return await status.edit_text("❌ Could not find that song.")
+
+    seconds = None
+    try:
+        from VenomX.utils.formatters import time_to_seconds
+
+        seconds = time_to_seconds(details.get("duration_min") or "")
+    except Exception:
+        seconds = None
+
+    lines = await lyrics_display.fetch(
+        details.get("title") or query, seconds, chat_id=message.chat.id
+    )
+    if not lines:
+        return await status.edit_text(
+            "❌ No timed lyrics for <b>{title}</b>.".format(
+                title=(details.get("title") or query)[:40]
+            )
+        )
+
+    body = "\n".join(text for _, text in lines[:40])
+    if len(lines) > 40:
+        body += f"\n\n<i>…{len(lines) - 40} more lines</i>"
+    title = (details.get("title") or query)[:60]
+    await status.edit_text(
+        "🎵 <b>{title}</b>\n\n{body}\n\n"
+        "<i>Play it with</i> <code>/play {title}</code>".format(
+            title=title, body=body
+        ),
+        link_preview_options=lyrics_display.no_preview(),
     )
 
 
