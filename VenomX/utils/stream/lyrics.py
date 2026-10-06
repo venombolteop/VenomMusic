@@ -218,6 +218,12 @@ async def set_call_title(client, chat_id, text):
 
 NOTES = ("🎵", "🎶", "♫", "🎼", "🎧", "🔊")
 
+# Floor between two panel rewrites. A group-call message cannot be edited, so
+# replacing one is a send plus a delete, and a song of forty lines is eighty
+# requests — the account gets rate-limited and then nothing shows at all.
+def _min_refresh() -> float:
+    return float(getattr(config, "VC_LYRICS_MIN_SEC", 4) or 4)
+
 
 async def _run(chat_id, message, lines, started_at, client=None, title=True):  # noqa: C901
     """Show each line in the call's chat panel as the song reaches it.
@@ -244,6 +250,14 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):  #
             elif wait < -30:
                 continue
             if client is not None:
+                # Each line costs a send and a delete, and a fifty-line song is
+                # a hundred requests inside four minutes — enough to put the
+                # account in a flood wait, which stops the display entirely.
+                # The panel is therefore not rewritten faster than the gap
+                # allows, and a line is dropped rather than queued up.
+                left = (started_at + when) - time.monotonic()
+                if 0 < left < _min_refresh():
+                    continue
                 if shown:
                     await delete_call_message(client, chat_id, shown)
                     shown = None
@@ -286,7 +300,7 @@ async def _fill_gap(client, chat_id, wait, due_at, shown):
             mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
             index += 1
             shown = await send_call_message(client, chat_id, mark)
-            await asyncio.sleep(min(step, max(left - 0.4, 0.4)))
+            await asyncio.sleep(max(min(step, max(left - 0.4, 0.4)), _MIN_REFRESH))
     except asyncio.CancelledError:
         raise
     except Exception as e:

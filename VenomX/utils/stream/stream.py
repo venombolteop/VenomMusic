@@ -199,7 +199,14 @@ async def stream(
                 except Exception:
                     return None
 
-        for details in await asyncio.gather(*[_resolve(item) for item in entries]):
+        slog.info("[%s] playlist: resolving %d entries", _STREAM_LOG, len(entries))
+        _resolved = await asyncio.gather(*[_resolve(item) for item in entries])
+        slog.info(
+            "[%s] playlist: resolved %d/%d in %.1fs",
+            _STREAM_LOG, len([r for r in _resolved if r]), len(entries),
+            _time.monotonic() - st0,
+        )
+        for details in _resolved:
             if details is None:
                 continue
             try:
@@ -216,6 +223,8 @@ async def stream(
                 continue
             if duration_sec > config.DURATION_LIMIT:
                 continue
+            if count == 0:
+                slog.info("[%s] playlist: first item %r", _STREAM_LOG, title[:40])
             if await is_active_chat(chat_id):
                 await put_queue(
                     chat_id,
@@ -495,6 +504,8 @@ async def stream(
             duration_min = result["duration_min"]
             link = result["url"]
             thumb = result["thumb"]
+            if count == 0:
+                slog.info("[%s] playlist: first item %r", _STREAM_LOG, title[:40])
             if await is_active_chat(chat_id):
                 await put_queue(
                     chat_id,
