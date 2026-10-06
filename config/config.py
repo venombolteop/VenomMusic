@@ -142,6 +142,9 @@ VC_LYRICS_MESSAGE = getenv("VC_LYRICS_MESSAGE", "False")
 # than leaving it empty, which reads as a bot that stopped working.
 VC_LYRICS_NOTES = getenv("VC_LYRICS_NOTES", "True")
 VC_LYRICS_NOTES_SEC = getenv("VC_LYRICS_NOTES_SEC", "30")
+# A gap longer than this between two lyric lines is treated as an instrumental
+# break, and notes fill it rather than leaving the call panel empty.
+VC_LYRICS_GAP_SEC = getenv("VC_LYRICS_GAP_SEC", "8")
 VENOM_API_KEY = getenv("VENOM_API_KEY", "")
 
 

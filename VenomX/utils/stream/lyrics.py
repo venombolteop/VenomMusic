@@ -216,7 +216,10 @@ async def set_call_title(client, chat_id, text):
         return False
 
 
-async def _run(chat_id, message, lines, started_at, client=None, title=True):
+NOTES = ("🎵", "🎶", "♫", "🎼", "🎧", "🔊")
+
+
+async def _run(chat_id, message, lines, started_at, client=None, title=True):  # noqa: C901
     """Show each line in the call's chat panel as the song reaches it.
 
     A group-call message cannot be edited, so one is sent per line and the
@@ -224,11 +227,20 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):
     growing transcript, and the chat keeps no record of it.
     """
     shown = None
+    gap_after = max(float(getattr(config, "VC_LYRICS_GAP_SEC", 8) or 8), 3.0)
     try:
-        for when, text in lines:
+        for index, (when, text) in enumerate(lines):
             wait = when - (time.monotonic() - started_at)
             if wait > 0:
-                await asyncio.sleep(wait)
+                # A long stretch between two lines is an instrumental break, and
+                # an empty panel through it reads as the bot having dropped.
+                # Notes fill the gap so the panel keeps moving.
+                if wait > gap_after:
+                    shown = await _fill_gap(
+                        client, chat_id, wait, started_at + when, shown
+                    )
+                else:
+                    await asyncio.sleep(wait)
             elif wait < -30:
                 continue
             if client is not None:
@@ -252,7 +264,34 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):
             asyncio.create_task(delete_call_message(client, chat_id, shown))
 
 
-NOTES = ("🎵", "🎶", "♫", "🎼", "🎧", "🔊")
+async def _fill_gap(client, chat_id, wait, due_at, shown):
+    """Cover the silence between two lines with notes until the next one.
+
+    Returns the last message shown, so the caller can clear it when the lyric
+    line arrives.
+    """
+    if client is None:
+        await asyncio.sleep(wait)
+        return shown
+
+    step = max(float(getattr(config, "VC_LYRICS_GAP_SEC", 8) or 8), 3.0)
+    index = 0
+    try:
+        while True:
+            left = due_at - time.monotonic()
+            if left <= 0.4:
+                return shown
+            if shown:
+                await delete_call_message(client, chat_id, shown)
+            mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
+            index += 1
+            shown = await send_call_message(client, chat_id, mark)
+            await asyncio.sleep(min(step, max(left - 0.4, 0.4)))
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        LOGGER(__name__).info("gap fill stopped: %s: %s", type(e).__name__, e)
+    return shown
 
 
 async def _run_notes(client, chat_id, track_title, duration, playback_started):
