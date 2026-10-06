@@ -185,7 +185,9 @@ async def play_commnd(
                         config.PLAYLIST_FETCH_LIMIT,
                     )
                 except Exception as e:
-                    print(e)
+                    LOGGER(_PLAY_LOG).warning(
+                        "[PLAY] youtube playlist failed: %s: %s", type(e).__name__, e
+                    )
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "yt"
@@ -211,7 +213,9 @@ async def play_commnd(
                 try:
                     details, track_id = await Platform.youtube.track(url)
                 except Exception as e:
-                    print(e)
+                    LOGGER(_PLAY_LOG).warning(
+                        "[PLAY] youtube playlist failed: %s: %s", type(e).__name__, e
+                    )
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "youtube"
                 img = details["thumb"]
@@ -225,7 +229,7 @@ async def play_commnd(
                 try:
                     details, plist_id = await Platform.spotify.radio(url)
                 except Exception as e:
-                    LOGGER.warning(f"[PLAY] spotify radio failed: {type(e).__name__}: {e}")
+                    LOGGER(_PLAY_LOG).warning(f"[PLAY] spotify radio failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spradio"
@@ -235,7 +239,7 @@ async def play_commnd(
                 try:
                     details, track_id = await Platform.spotify.track(url)
                 except Exception as e:
-                    LOGGER.warning(f"[PLAY] spotify track failed: {type(e).__name__}: {e}")
+                    LOGGER(_PLAY_LOG).warning(f"[PLAY] spotify track failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "youtube"
                 img = details["thumb"]
@@ -244,7 +248,7 @@ async def play_commnd(
                 try:
                     details, plist_id = await Platform.spotify.playlist(url)
                 except Exception as e:
-                    LOGGER.warning(f"[PLAY] spotify playlist failed: {type(e).__name__}: {e}")
+                    LOGGER(_PLAY_LOG).warning(f"[PLAY] spotify playlist failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spplay"
@@ -254,7 +258,7 @@ async def play_commnd(
                 try:
                     details, plist_id = await Platform.spotify.album(url)
                 except Exception as e:
-                    LOGGER.warning(f"[PLAY] spotify album failed: {type(e).__name__}: {e}")
+                    LOGGER(_PLAY_LOG).warning(f"[PLAY] spotify album failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spalbum"
@@ -264,7 +268,7 @@ async def play_commnd(
                 try:
                     details, plist_id = await Platform.spotify.artist(url)
                 except Exception as e:
-                    LOGGER.warning(f"[PLAY] spotify artist failed: {type(e).__name__}: {e}")
+                    LOGGER(_PLAY_LOG).warning(f"[PLAY] spotify artist failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
                 streamtype = "playlist"
                 plist_type = "spartist"

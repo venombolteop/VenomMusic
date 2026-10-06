@@ -188,6 +188,11 @@ async def stream(
     if forceplay:
         await Ayush.force_stop_stream(chat_id)
     if streamtype == "playlist":
+        # A playlist is audio whatever the command was. /vplay used to carry a
+        # video flag into every entry, so a playlist asked for as video queued
+        # the whole list as video and the extra resolution bought nothing — the
+        # person hears a track, not a picture.
+        video = None
         msg = f"{_['playlist_16']}\n\n"
         count = 0
         # Resolving one track to its video id takes the better part of a
@@ -243,7 +248,7 @@ async def stream(
                     user_name,
                     vidid,
                     user_id,
-                    "video" if video else "audio",
+                    "audio",
                 )
                 _prefetch_next(chat_id)
                 position = len(db.get(chat_id)) - 1
