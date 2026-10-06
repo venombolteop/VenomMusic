@@ -38,7 +38,6 @@ from VenomX.utils.decorators import ActualAdminCB
 from VenomX.utils.decorators.language import languageCB
 from VenomX.utils.formatters import seconds_to_min
 from VenomX.utils.inline.play import (
-    livestream_markup,
     panel_markup_1,
     panel_markup_2,
     panel_markup_3,
@@ -493,18 +492,9 @@ async def play_music(client, CallbackQuery, _):
                 _["play_6"].format(config.DURATION_LIMIT_MIN, details["duration_min"])
             )
     else:
-        buttons = livestream_markup(
-            _,
-            track_id,
-            CallbackQuery.from_user.id,
-            mode,
-            "c" if cplay == "c" else "g",
-            "f" if fplay else "d",
-        )
-        return await mystic.edit_text(
-            _["play_15"],
-            reply_markup=InlineKeyboardMarkup(buttons),
-        )
+        # No prompt for an unknown-length track: it plays, which in a voice
+        # chat was the only answer the buttons ever led to anyway.
+        pass
     video = True if mode == "v" else None
     ffplay = True if fplay == "f" else None
     try:
