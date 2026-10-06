@@ -74,9 +74,15 @@ def _start_lyrics(chat_id, title, duration):
         assistant = None
     if assistant is None:
         return
+    use_title = getattr(config, "VC_LYRICS_TITLE", "True") in (True, "True", "true")
+    post_message = getattr(config, "VC_LYRICS_MESSAGE", "False") in (True, "True", "true")
+
     async def _show():
         try:
-            await lyrics_display.start(assistant, chat_id, title, seconds)
+            await lyrics_display.start(
+                assistant, chat_id, title, seconds,
+                post_message=post_message, use_title=use_title,
+            )
         except Exception as e:
             slog.warning(
                 "[%s] lyrics failed for %s: %s: %s",
