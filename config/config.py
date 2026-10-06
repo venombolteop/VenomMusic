@@ -133,6 +133,15 @@ INSTANT_PLAY = getenv("INSTANT_PLAY", "True")
 VENOM_API_URL = getenv("VENOM_API_URL", "http://127.0.0.1:3200")
 # Post time-synced lyrics in the voice chat, sent by the assistant account
 VC_LYRICS = getenv("VC_LYRICS", "False")
+# Inside a group voice chat the only surface a bot can write to is the call's
+# own title, so that is where the lines go. The chat message is opt-in: it is
+# edited in place, but in a busy group it is still a message.
+VC_LYRICS_TITLE = getenv("VC_LYRICS_TITLE", "True")
+VC_LYRICS_MESSAGE = getenv("VC_LYRICS_MESSAGE", "False")
+# On a track with no timed lyrics, keep a note moving in the call panel rather
+# than leaving it empty, which reads as a bot that stopped working.
+VC_LYRICS_NOTES = getenv("VC_LYRICS_NOTES", "True")
+VC_LYRICS_NOTES_SEC = getenv("VC_LYRICS_NOTES_SEC", "30")
 VENOM_API_KEY = getenv("VENOM_API_KEY", "")
 
 
