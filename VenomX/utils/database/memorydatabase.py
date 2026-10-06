@@ -23,6 +23,7 @@ notesdb = mongodb.notes
 filtersdb = mongodb.filters
 instantplaydb = mongodb.instantplay
 lyricsdb = mongodb.vc_lyrics
+lyricslangdb = mongodb.vc_lyrics_lang
 
 # Shifting to memory [ mongo sucks often]
 loop = {}
@@ -30,6 +31,7 @@ playtype = {}
 playmode = {}
 instantplay = {}
 lyrics_display = {}
+lyrics_lang = {}
 channelconnect = {}
 langm = {}
 pause = {}
@@ -313,6 +315,31 @@ async def get_vc_lyrics(chat_id: int) -> bool:
         lyrics_display[chat_id] = record["mode"]
         return record["mode"]
     return mode
+
+
+async def get_lyrics_lang(chat_id: int) -> str:
+    """Which script this chat wants: auto, hindi or english.
+
+    Per chat, like the on/off switch, and cached in memory alongside it.
+    """
+    lang = lyrics_lang.get(chat_id)
+    if lang is None:
+        record = await lyricslangdb.find_one({"chat_id": chat_id})
+        if not record:
+            return config.VC_LYRICS_LANG
+        lyrics_lang[chat_id] = record["mode"]
+        return record["mode"]
+    return lang
+
+
+async def set_lyrics_lang(chat_id: int, mode: str):
+    mode = (mode or "auto").lower()
+    if mode not in ("auto", "hindi", "english"):
+        mode = "auto"
+    lyrics_lang[chat_id] = mode
+    await lyricslangdb.update_one(
+        {"chat_id": chat_id}, {"$set": {"mode": mode}}, upsert=True
+    )
 
 
 async def set_vc_lyrics(chat_id: int, mode: bool):
