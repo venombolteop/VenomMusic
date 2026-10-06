@@ -252,6 +252,39 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):
             asyncio.create_task(delete_call_message(client, chat_id, shown))
 
 
+NOTES = ("🎵", "🎶", "♫", "🎼", "🎧", "🔊")
+
+
+async def _run_notes(client, chat_id, track_title, duration, playback_started):
+    """Stand in for lyrics on a track that has none.
+
+    An empty call panel reads as a bot that joined and stopped, which is worse
+    than no lyrics at all — so the panel keeps a note moving through it for as
+    long as the track plays. It is one short message at a time, the previous
+    one removed, and it stops when the track does.
+    """
+    shown = None
+    index = 0
+    step = max(float(getattr(config, "VC_LYRICS_NOTES_SEC", 30) or 30), 10.0)
+    try:
+        while True:
+            if shown:
+                await delete_call_message(client, chat_id, shown)
+            mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
+            index += 1
+            shown = await send_call_message(client, chat_id, mark)
+            await asyncio.sleep(step)
+            if duration and (time.monotonic() - playback_started) > float(duration) + 5:
+                break
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        LOGGER(__name__).info("notes display stopped: %s: %s", type(e).__name__, e)
+    finally:
+        if shown:
+            asyncio.create_task(delete_call_message(client, chat_id, shown))
+
+
 async def start(client, chat_id, track_title, duration=None,
                 post_message: bool = True, use_title: bool = True,
                 playback_started: float | None = None):
@@ -263,13 +296,19 @@ async def start(client, chat_id, track_title, duration=None,
     """
     stop(chat_id)
     lines = await fetch(track_title, duration)
+    started_at = playback_started or time.monotonic()
     if not lines:
         LOGGER(__name__).info("lyrics: none found for %r", track_title[:50])
+        if getattr(config, "VC_LYRICS_NOTES", "True") in (True, "True", "true"):
+            task = asyncio.create_task(
+                _run_notes(client, chat_id, track_title, duration, started_at)
+            )
+            _timers[chat_id] = (task, None)
+            return None
         return None
     # `playback_started` is when the audio actually began, in the caller's
     # monotonic clock. The lookup above took time, and counting from here
     # instead leaves the whole display permanently that far behind the singing.
-    started_at = playback_started or time.monotonic()
 
     message = None
     if post_message:
