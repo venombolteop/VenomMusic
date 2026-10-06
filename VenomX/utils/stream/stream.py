@@ -83,26 +83,6 @@ def _prefetch_next(chat_id):
     _prefetch_tasks[chat_id] = asyncio.create_task(_warm())
 
 
-async def _verify_permalink(vidid, video, url):
-    try:
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=45)
-        ) as probe:
-            async with probe.get(url, headers={"Range": "bytes=0-1023"}) as resp:
-                if resp.status in (200, 206):
-                    slog.info("[%s] permalink ok: %s", _STREAM_LOG, vidid)
-                else:
-                    slog.warning(
-                        "[%s] permalink returned %s for %s",
-                        _STREAM_LOG, resp.status, vidid,
-                    )
-    except Exception as e:
-        slog.warning(
-            "[%s] permalink check failed for %s: %s: %s",
-            _STREAM_LOG, vidid, type(e).__name__, e,
-        )
-
-
 async def _api_stream_url(vidid, video):
     """Resolve a playable permalink through the local media API.
 
@@ -125,7 +105,6 @@ async def _api_stream_url(vidid, video):
     # delay this path exists to remove. Hand the URL over and verify behind the
     # playback instead.
     _remember_permalink(vidid, video, local_url)
-    asyncio.create_task(_verify_permalink(vidid, video, local_url))
     return local_url
 
 _STREAM_LOG = "Stream"
