@@ -16,7 +16,18 @@ import time
 import aiohttp
 
 import config
+from pyrogram.types import LinkPreviewOptions
+
 from VenomX import LOGGER
+
+
+def no_preview():
+    """Send with the link preview off.
+
+    `disable_web_page_preview` is the old spelling and pyrogram now takes the
+    options object; the flag still works but is on its way out.
+    """
+    return LinkPreviewOptions(is_disabled=True)
 
 LRC_LINE = re.compile(r"\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]")
 
@@ -27,8 +38,8 @@ _lines_cache = {}
 _LINES_CACHE_MAX = 128
 
 
-def _cache_key(title: str, duration):
-    return ((title or "").strip().lower(), int(duration or 0))
+def _cache_key(title: str, duration, lang=None):
+    return ((title or "").strip().lower(), int(duration or 0), (lang or "auto").lower())
 
 
 def parse_lrc(raw: str):
@@ -52,13 +63,21 @@ def parse_lrc(raw: str):
     return entries
 
 
-async def fetch(track_title: str, duration: int | None = None):
+async def fetch(track_title: str, duration: int | None = None, lang: str | None = None,
+                chat_id: int | None = None):
     """Timed lines for a track, as [(seconds, line)].
 
-    The lookup, the title cleanup and the length matching all live in the
-    media API, so the answer arrives ready to play against.
+    The lookup, the title cleanup, the length matching and the language choice
+    all live in the media API, so the answer arrives ready to play against.
     """
-    key = _cache_key(track_title, duration)
+    if lang is None and chat_id is not None:
+        try:
+            from VenomX.utils.database import get_lyrics_lang
+
+            lang = await get_lyrics_lang(chat_id)
+        except Exception:
+            lang = None
+    key = _cache_key(track_title, duration, lang)
     if key in _lines_cache:
         return _lines_cache[key]
 
@@ -68,6 +87,8 @@ async def fetch(track_title: str, duration: int | None = None):
     payload = {"title": track_title}
     if duration:
         payload["duration"] = int(duration)
+    if lang and lang != "auto":
+        payload["lang"] = lang
     try:
         async with aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=20)
@@ -384,7 +405,7 @@ async def start(client, chat_id, track_title, duration=None,
             chat_id, type(e).__name__, e,
         )
         return None
-    lines = await fetch(track_title, duration)
+    lines = await fetch(track_title, duration, chat_id=chat_id)
     started_at = playback_started or time.monotonic()
     if not lines:
         LOGGER(__name__).info("lyrics: none found for %r", track_title[:50])
@@ -403,7 +424,7 @@ async def start(client, chat_id, track_title, duration=None,
     if post_message:
         try:
             message = await client.send_message(
-                chat_id, "🎵 …", disable_web_page_preview=True
+                chat_id, "🎵 …", link_preview_options=no_preview()
             )
         except Exception as e:
             LOGGER(__name__).debug(

@@ -149,6 +149,8 @@ VC_LYRICS_GAP_SEC = getenv("VC_LYRICS_GAP_SEC", "8")
 # cannot be cheaper than that, so this is what keeps a long song from walking
 # the account into a flood wait.
 VC_LYRICS_MIN_SEC = getenv("VC_LYRICS_MIN_SEC", "2")
+# Which script timed lyrics should be in: auto, hindi or english.
+VC_LYRICS_LANG = getenv("VC_LYRICS_LANG", "auto").lower()
 VENOM_API_KEY = getenv("VENOM_API_KEY", "")
 
 
