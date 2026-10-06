@@ -91,8 +91,124 @@ async def fetch(track_title: str, duration: int | None = None):
     return lines
 
 
-async def _run(chat_id, message, lines, started_at):
-    """Rewrite one message as the playback reaches each line."""
+async def _group_call(client, chat_id):
+    """The active group call for a chat, or None when none is running.
+
+    The call handle lives on the full channel, not on the chat: it is read off
+    `channels.GetFullChannel` the same way the client itself does when it
+    shows the call banner.
+    """
+    from pyrogram import raw
+    from pyrogram.errors import RPCError
+
+    try:
+        peer = await client.resolve_peer(chat_id)
+        full = await client.invoke(
+            raw.functions.channels.GetFullChannel(channel=peer)
+        )
+    except RPCError as e:
+        LOGGER(__name__).info("no call for %s: %s", chat_id, str(e)[:80])
+        return None
+    call = getattr(full.full_chat, "call", None)
+    return call
+
+
+async def send_call_message(client, chat_id, text):
+    """Post a message into the voice chat's own chat panel.
+
+    This is a group-call message, not a chat message: it is delivered to the
+    call itself and appears in the panel next to the participant list, so
+    nothing lands in the group conversation and there is nothing to delete
+    from it afterwards. Editing is not offered on these messages, so the
+    display deletes the previous line and sends the next one.
+    """
+    from pyrogram import raw
+    from pyrogram.errors import MessageIdInvalid, RPCError
+
+    try:
+        call = await _group_call(client, chat_id)
+        if call is None:
+            return None
+        sent = await client.invoke(
+            raw.functions.phone.SendGroupCallMessage(
+                call=call,
+                random_id=int(time.time() * 1000) % (2 ** 30),
+                message=raw.types.TextWithEntities(
+                    text=text, entities=[]
+                ),
+            )
+        )
+        for update in getattr(sent, "updates", []):
+            message = getattr(update, "message", None)
+            if message is not None:
+                return message.id
+        return 0
+    except MessageIdInvalid:
+        return None
+    except RPCError as e:
+        if "MESSAGE_TOO_LONG" in str(e).upper():
+            LOGGER(__name__).info("call message too long, skipped")
+        else:
+            LOGGER(__name__).info(
+                "call message not sent: %s", str(e)[:120]
+            )
+        return None
+    except Exception as e:
+        LOGGER(__name__).info(
+            "call message failed: %s: %s", type(e).__name__, str(e)[:100]
+        )
+        return None
+
+
+async def delete_call_message(client, chat_id, message_id):
+    if not message_id:
+        return
+    from pyrogram import raw
+
+    try:
+        call = await _group_call(client, chat_id)
+        if call is None:
+            return
+        await client.invoke(
+            raw.functions.phone.DeleteGroupCallMessages(
+                call=call, messages=[message_id]
+            )
+        )
+    except Exception:
+        pass
+
+
+async def set_call_title(client, chat_id, text):
+    """Rewrite the call header. Kept as a fallback for clients that render it."""
+    from pyrogram import raw
+
+    if not text:
+        return
+    try:
+        call = await _group_call(client, chat_id)
+        if call is None:
+            return False
+        await client.invoke(
+            raw.functions.phone.EditGroupCallTitle(
+                call=call, title=f"🎵 {text}"[:64]
+            )
+        )
+        return True
+    except Exception as e:
+        LOGGER(__name__).info(
+            "call title not set: %s: %s", type(e).__name__, str(e)[:100]
+        )
+        return False
+
+
+async def _run(chat_id, message, lines, started_at, client=None, title=True):
+    """Show each line in the call's chat panel as the song reaches it.
+
+    A group-call message cannot be edited, so one is sent per line and the
+    previous one deleted: the panel shows the line being sung rather than a
+    growing transcript, and the chat keeps no record of it.
+    """
+    shown = None
     try:
         for when, text in lines:
             wait = when - (time.monotonic() - started_at)
@@ -100,29 +216,53 @@ async def _run(chat_id, message, lines, started_at):
                 await asyncio.sleep(wait)
             elif wait < -30:
                 continue
-            try:
-                await message.edit_text(f"🎵 <b>{text}</b>", parse_mode=None)
-            except Exception:
-                break
+            if client is not None:
+                if shown:
+                    await delete_call_message(client, chat_id, shown)
+                    shown = None
+                shown = await send_call_message(client, chat_id, text)
+            if message is not None:
+                try:
+                    await message.edit_text(f"🎵 <b>{text}</b>", parse_mode=None)
+                except Exception:
+                    message = None
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        LOGGER(__name__).debug("lyrics display stopped: %s: %s", type(e).__name__, e)
+        LOGGER(__name__).info(
+            "lyrics display stopped: %s: %s", type(e).__name__, e
+        )
+    finally:
+        if client is not None and shown:
+            asyncio.create_task(delete_call_message(client, chat_id, shown))
 
 
-async def start(client, chat_id, track_title, duration=None):
-    """Post and drive a lyrics message for the track that just started."""
+async def start(client, chat_id, track_title, duration=None,
+                post_message: bool = True, use_title: bool = True):
+    """Drive the synced display for the track that just started.
+
+    `use_title` writes each line into the voice chat header, which is the only
+    surface inside the call itself; `post_message` additionally keeps one
+    editable message in the chat, which is what a reader in the chat wants.
+    """
     stop(chat_id)
     lines = await fetch(track_title, duration)
     if not lines:
         LOGGER(__name__).info("lyrics: none found for %r", track_title[:50])
         return None
-    try:
-        message = await client.send_message(chat_id, "🎵 …", disable_web_page_preview=True)
-    except Exception as e:
-        LOGGER(__name__).debug("could not post lyrics message: %s: %s", type(e).__name__, e)
-        return None
-    task = asyncio.create_task(_run(chat_id, message, lines, time.monotonic()))
+    message = None
+    if post_message:
+        try:
+            message = await client.send_message(
+                chat_id, "🎵 …", disable_web_page_preview=True
+            )
+        except Exception as e:
+            LOGGER(__name__).debug(
+                "could not post lyrics message: %s: %s", type(e).__name__, e
+            )
+    task = asyncio.create_task(
+        _run(chat_id, message, lines, time.monotonic(), client, use_title)
+    )
     _timers[chat_id] = (task, message)
     LOGGER(__name__).info(
         "lyrics live in %s: %d lines for %r", chat_id, len(lines), track_title[:40]
