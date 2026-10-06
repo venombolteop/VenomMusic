@@ -16,6 +16,7 @@ UA = (
     "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
 EMBED = "https://open.spotify.com/embed/{}/{}"
+PAGE = "https://open.spotify.com/{}/{}"
 NEXT_DATA = r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>'
 FETCH_TIMEOUT = 20
 CACHE_TTL = 900
@@ -60,21 +61,43 @@ class Spotify:
         cached = self._cache.get((kind, entity_id))
         if cached and cached[0] > time.time():
             return cached[1]
-        response = requests.get(
-            EMBED.format(kind, entity_id), headers={"User-Agent": UA}, timeout=FETCH_TIMEOUT
+
+        last = None
+        # The embed page is a normal web page and occasionally answers with
+        # something else: a consent interstitial, a truncated body, a 5xx. One
+        # retry with the plain page covers those, and a failure that survives
+        # both is reported rather than swallowed by the caller.
+        for url in (
+            EMBED.format(kind, entity_id),
+            PAGE.format(kind, entity_id),
+        ):
+            try:
+                response = requests.get(
+                    url, headers={"User-Agent": UA}, timeout=FETCH_TIMEOUT
+                )
+                response.raise_for_status()
+                match = re.search(NEXT_DATA, response.text, re.S)
+                if not match:
+                    last = ValueError(f"no payload in {url}")
+                    continue
+                payload = json.loads(match.group(1))
+                entity = (
+                    payload.get("props", {})
+                    .get("pageProps", {})
+                    .get("state", {})
+                    .get("data", {})
+                    .get("entity")
+                )
+                if not entity:
+                    last = ValueError(f"empty entity in {url}")
+                    continue
+                self._cache[(kind, entity_id)] = (time.time() + CACHE_TTL, entity)
+                return entity
+            except Exception as e:
+                last = e
+        raise ValueError(
+            f"Spotify {kind} {entity_id} not reachable: {type(last).__name__}: {last}"
         )
-        response.raise_for_status()
-        match = re.search(NEXT_DATA, response.text, re.S)
-        if not match:
-            raise ValueError(f"Spotify {kind} not found: {entity_id}")
-        payload = json.loads(match.group(1))
-        entity = (
-            payload.get("props", {}).get("pageProps", {}).get("state", {}).get("data", {}).get("entity")
-        )
-        if not entity:
-            raise ValueError(f"Spotify {kind} not found: {entity_id}")
-        self._cache[(kind, entity_id)] = (time.time() + CACHE_TTL, entity)
-        return entity
 
     async def _entity(self, link: str):
         kind, entity_id, radio = self._parse(link)
