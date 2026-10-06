@@ -534,7 +534,9 @@ async def play_commnd(
             return await mystic.edit_text(err)
         await mystic.delete()
         return await play_logs(
-            message, streamtype=streamtype, thumbnail=details.get("thumb")
+            message,
+            streamtype=streamtype,
+            thumbnail=details.get("thumb") if isinstance(details, dict) else None,
         )
     else:
         if plist_type:
