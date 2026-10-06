@@ -13,7 +13,7 @@ import aiohttp
 from pyrogram.types import InlineKeyboardMarkup
 
 import config
-from VenomX import Platform, app
+from VenomX import Platform, app, userbot
 from VenomX.core.call import Ayush
 from VenomX.misc import db
 from VenomX.utils.database import (
@@ -26,6 +26,7 @@ from VenomX.utils.exceptions import AssistantErr
 from VenomX.utils.inline.play import stream_markup, telegram_markup
 from VenomX.utils.inline.playlist import close_markup
 from VenomX.utils.pastebin import Ayushbin
+from VenomX.utils.stream import lyrics as lyrics_display
 from VenomX.utils.stream.queue import put_queue, put_queue_index
 from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
 from VenomX.utils.notify import notify_owner
@@ -55,6 +56,26 @@ def _remember_permalink(vidid, video, url):
         _permalink_cache[(vidid, bool(video))] = url
         if len(_permalink_cache) > 512:
             _permalink_cache.pop(next(iter(_permalink_cache)))
+
+
+def _start_lyrics(chat_id, title, duration):
+    """Show synced lyrics for the track that just started, posted by the assistant."""
+    if not getattr(config, "VC_LYRICS", "False") in (True, "True", "true"):
+        return
+    seconds = None
+    try:
+        seconds = time_to_seconds(duration)
+    except Exception:
+        seconds = None
+    try:
+        assistant = userbot.clients[0]
+    except Exception:
+        assistant = None
+    if assistant is None:
+        return
+    asyncio.create_task(
+        lyrics_display.start(assistant, chat_id, title, seconds)
+    )
 
 
 def _prefetch_next(chat_id):
@@ -397,6 +418,7 @@ async def stream(
             await Ayush.join_call(
                 chat_id, original_chat_id, stream_link, video=status, image=thumbnail
             )
+            _start_lyrics(chat_id, title, duration_min)
             _prefetch_next(chat_id)
             slog.info(
                 "[%s] join_call took %.1fs (link_ready_age=%.1fs)",
