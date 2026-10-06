@@ -182,8 +182,25 @@ async def stream(
     if streamtype == "playlist":
         msg = f"{_['playlist_16']}\n\n"
         count = 0
-        for search in result:
-            if int(count) == config.PLAYLIST_FETCH_LIMIT:
+        # Resolving one track to its video id takes the better part of a
+        # second, and a playlist has hundreds of them: done one after another a
+        # fifty-track list spends most of a minute in silence before the first
+        # note. They are looked up together instead, a handful at a time so the
+        # search backend is not hammered, and the results keep their order.
+        entries = list(result)[: config.PLAYLIST_FETCH_LIMIT * 2]
+        semaphore = asyncio.Semaphore(8)
+
+        async def _resolve(search):
+            async with semaphore:
+                try:
+                    return await Platform.youtube.details(
+                        search, False if spotify else True
+                    )
+                except Exception:
+                    return None
+
+        for details in await asyncio.gather(*[_resolve(item) for item in entries]):
+            if details is None:
                 continue
             try:
                 (
@@ -192,7 +209,7 @@ async def stream(
                     duration_sec,
                     thumbnail,
                     vidid,
-                ) = await Platform.youtube.details(search, False if spotify else True)
+                ) = details
             except Exception:
                 continue
             if str(duration_min) == "None":
