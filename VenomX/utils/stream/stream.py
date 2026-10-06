@@ -191,14 +191,21 @@ async def stream(
                 )
                 if instant:
                     n = 0
-                    try:
-                        n, stream_link = await Platform.youtube.stream_url(
-                            vidid, videoid=True, video=status
+                    stream_link = await _api_stream_url(vidid, bool(status))
+                    if stream_link:
+                        n = 1
+                        direct = True
+                        slog.info(
+                            "[%s] playlist first-track permalink %s", _STREAM_LOG, vidid
                         )
-                        slog.info("[%s] playlist stream_url() returned n=%s", _STREAM_LOG, n)
-                    except Exception as e:
-                        slog.error("[%s] playlist stream_url() EXCEPTION: %s", _STREAM_LOG, e)
-                        n = 0
+                    else:
+                        try:
+                            n, stream_link = await Platform.youtube.stream_url(
+                                vidid, videoid=True, video=status
+                            )
+                            slog.info("[%s] playlist stream_url() returned n=%s", _STREAM_LOG, n)
+                        except Exception as e:
+                            slog.error("[%s] playlist stream_url() EXCEPTION: %s", _STREAM_LOG, e)
                     if n == 0:
                         try:
                             stream_link, direct = await Platform.youtube.download(

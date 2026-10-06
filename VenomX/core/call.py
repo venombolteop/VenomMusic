@@ -589,9 +589,13 @@ class Call:
             elif "vid_" in queued:
                 video = True if str(streamtype) == "video" else False
                 mystic = await app.send_message(original_chat_id, _["call_8"])
-                n, stream_link = await Platform.youtube.stream_url(
-                    videoid, videoid=True, video=video
-                )
+                # Same fast path stream() uses: the media API permalink streams
+                # without a download. The yt-dlp direct URL below is IP-bound to
+                # the proxy and answers 403, so it only ever fell through to a
+                # full download of the next track.
+                from VenomX.utils.stream.stream import _api_stream_url
+                stream_link = await _api_stream_url(videoid, video)
+                n = 1 if stream_link else 0
                 if n == 0:
                     try:
                         stream_link, direct = await Platform.youtube.download(
