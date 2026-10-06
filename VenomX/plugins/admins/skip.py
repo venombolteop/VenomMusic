@@ -9,7 +9,7 @@ from pyrogram.types import InlineKeyboardMarkup, Message
 import config
 from config import BANNED_USERS
 from strings import command
-from VenomX import Platform, app
+from VenomX import LOGGER, Platform, app
 from VenomX.core.call import Ayush
 from VenomX.misc import db
 from VenomX.utils.database import get_instant_play, get_loop
@@ -128,8 +128,13 @@ async def skip(cli, message: Message, _, chat_id):
         db[chat_id][0]["mystic"] = run
         db[chat_id][0]["markup"] = "tg"
     elif "vid_" in queued:
+        import time as _t
+        _sk0 = _t.monotonic()
         from VenomX.utils.stream.stream import _api_stream_url
         stream_link = await _api_stream_url(videoid, bool(status))
+        LOGGER("Skip").info(
+            "[SKIP] link ready in %.2fs for %s", _t.monotonic() - _sk0, videoid
+        )
         n = 1 if stream_link else 0
         if n == 0:
             mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
@@ -146,6 +151,9 @@ async def skip(cli, message: Message, _, chat_id):
             mystic = None
         try:
             await Ayush.skip_stream(chat_id, stream_link, video=status)
+            LOGGER("Skip").info(
+                "[SKIP] stream switched in %.2fs total", _t.monotonic() - _sk0
+            )
         except Exception:
             if mystic:
                 return await mystic.edit_text(_["call_7"])
