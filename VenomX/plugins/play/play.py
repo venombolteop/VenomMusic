@@ -463,8 +463,10 @@ async def play_commnd(
                 pass
             return await mystic.edit_text(_["play_3"])
         streamtype = "youtube"
-    if str(playmode) == "Direct" and not plist_type:
-        if details["duration_min"]:
+    if str(playmode) == "Direct":
+        if plist_type:
+            pass
+        elif details["duration_min"]:
             duration_sec = time_to_seconds(details["duration_min"])
             if duration_sec > config.DURATION_LIMIT:
                 return await mystic.edit_text(
@@ -485,8 +487,9 @@ async def play_commnd(
             )
         try:
             LOGGER(_PLAY_LOG).info(
-                "[PLAY] stream() call starting (Direct mode) vidid=%s",
-                details.get("vidid", "?"),
+                "[PLAY] stream() call starting (Direct mode) %s",
+                ("vidid=" + str(details.get("vidid"))) if isinstance(details, dict)
+                else f"playlist={plist_type} entries={len(details)}",
             )
             stream_t0 = _time.monotonic()
             await stream(
