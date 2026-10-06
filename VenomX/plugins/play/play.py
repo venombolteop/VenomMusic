@@ -2,6 +2,7 @@
 # All rights reserved.
 #
 
+import asyncio
 import random
 import re
 import string
@@ -20,7 +21,6 @@ from VenomX.utils.database import is_video_allowed
 from VenomX.utils.decorators.play import PlayWrapper
 from VenomX.utils.formatters import formats
 from VenomX.utils.inline.play import (
-    livestream_markup,
     playlist_markup,
     slider_markup,
     track_markup,
@@ -55,7 +55,6 @@ async def play_commnd(
 ):
     t0 = _time.monotonic()
     query_text = message.text or ""
-    LOGGER(_PLAY_LOG).info("[PLAY] dispatch: url=%s", (url or "")[:60])
     LOGGER(_PLAY_LOG).info(
         "[PLAY] command received from user=%s chat=%s text=%s",
         message.from_user.id if message.from_user else "?",
@@ -225,7 +224,6 @@ async def play_commnd(
                     details["duration_min"],
                 )
         elif await Platform.spotify.valid(url):
-            LOGGER(_PLAY_LOG).info("[PLAY] spotify branch: %s", url[:60])
             spotify = True
             if "/radio" in url:
                 try:
@@ -248,7 +246,9 @@ async def play_commnd(
                 cap = _["play_11"].format(details["title"], details["duration_min"])
             elif "playlist" in url:
                 try:
-                    details, plist_id = await Platform.spotify.playlist(url)
+                    details, plist_id = await asyncio.wait_for(
+                        Platform.spotify.playlist(url), timeout=45
+                    )
                 except Exception as e:
                     LOGGER(_PLAY_LOG).warning(f"[PLAY] spotify playlist failed: {type(e).__name__}: {e}")
                     return await mystic.edit_text(_["play_3"])
@@ -474,17 +474,14 @@ async def play_commnd(
                     )
                 )
         else:
-            buttons = livestream_markup(
-                _,
-                track_id,
-                user_id,
-                "v" if video else "a",
-                "c" if channel else "g",
-                "f" if fplay else "d",
-            )
-            return await mystic.edit_text(
-                _["play_15"],
-                reply_markup=InlineKeyboardMarkup(buttons),
+            # A track whose length is unknown — a live stream, a broadcast —
+            # used to stop and ask whether to play it, with buttons to choose
+            # audio or video. The answer was always the same in a voice chat,
+            # and the prompt was one more thing between the command and the
+            # music, so it plays straight away now.
+            LOGGER(_PLAY_LOG).info(
+                "[PLAY] unknown duration for %s, playing directly",
+                details.get("vidid", "?"),
             )
         try:
             LOGGER(_PLAY_LOG).info(
