@@ -548,11 +548,13 @@ async def play_commnd(
                 "f" if fplay else "d",
             )
             await mystic.delete()
-            await message.reply_photo(
-                photo=img,
-                caption=cap,
-                reply_markup=InlineKeyboardMarkup(buttons),
-                has_spoiler=True,
+            # No playlist confirmation message. It named the source and the
+            # person who asked, said nothing the queue does not already show,
+            # and sat in the chat as a screen between the command and the
+            # music — which reads as the bot waiting for something.
+            LOGGER(_PLAY_LOG).info(
+                "[PLAY] playlist queued: type=%s entries=%s",
+                plist_type, len(details) if hasattr(details, "__len__") else "?",
             )
             return await play_logs(
                 message,
