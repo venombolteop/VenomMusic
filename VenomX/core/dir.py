@@ -8,6 +8,7 @@ import time
 from os import listdir, mkdir
 
 from config import TEMP_DB_FOLDER
+from VenomX.logging import SESSION_LOG_NAME
 
 
 def dirr():
@@ -43,8 +44,29 @@ def dirr():
 
     # Clean stale downloads older than 1 hour on startup
     _clean_downloads(downloads_folder)
+    _prune_session_logs(10)
 
     logging.info("Directories Updated.")
+    logging.info("Session log: %s", SESSION_LOG_NAME)
+
+
+def _prune_session_logs(keep: int):
+    """Keep the newest few session logs; a restart every test run adds one each
+    time, and nothing reads the old ones."""
+    import os as _os
+
+    folder = "logs"
+    if not _os.path.isdir(folder):
+        return
+    logs = sorted(
+        f for f in _os.listdir(folder)
+        if f.startswith("session-") and f.endswith(".log")
+    )
+    for name in (logs[:-keep] if len(logs) > keep else []):
+        try:
+            _os.remove(_os.path.join(folder, name))
+        except Exception:
+            pass
 
 
 def _clean_downloads(folder):

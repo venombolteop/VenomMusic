@@ -22,3 +22,4 @@ smart_emoji_db.json
 .venv/
 .venv.old/
 venv/
+logs/
