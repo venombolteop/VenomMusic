@@ -225,6 +225,37 @@ def _min_refresh() -> float:
     return float(getattr(config, "VC_LYRICS_MIN_SEC", 4) or 4)
 
 
+# A safety rail, not a display setting. Every line is one request to Telegram,
+# and an account that leans on it hard gets rate-limited — after which the
+# panel, the session and the play commands all stop until the wait expires.
+# This caps the burst per minute and per track so a long queue cannot walk
+# into that.
+_BURST_PER_MINUTE = 12
+_MAX_PER_TRACK = 45
+_sent_times = {}
+_sent_this_track = {}
+
+
+def _budget_left(chat_id: int) -> bool:
+    now = time.monotonic()
+    history = [t for t in _sent_times.get(chat_id, []) if now - t < 60]
+    _sent_times[chat_id] = history
+    if len(history) >= _BURST_PER_MINUTE:
+        return False
+    if _sent_this_track.get(chat_id, 0) >= _MAX_PER_TRACK:
+        return False
+    return True
+
+
+def _count_sent(chat_id: int):
+    _sent_times.setdefault(chat_id, []).append(time.monotonic())
+    _sent_this_track[chat_id] = _sent_this_track.get(chat_id, 0) + 1
+
+
+def new_track(chat_id: int):
+    _sent_this_track[chat_id] = 0
+
+
 async def _run(chat_id, message, lines, started_at, client=None, title=True):  # noqa: C901
     """Show each line in the call's chat panel as the song reaches it.
 
@@ -255,6 +286,9 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):  #
                 left = (started_at + when) - time.monotonic()
                 if 0 < left < _min_refresh():
                     continue
+                if not _budget_left(chat_id):
+                    continue
+                _count_sent(chat_id)
                 await send_call_message(client, chat_id, text)
             if message is not None:
                 try:
@@ -284,9 +318,11 @@ async def _fill_gap(client, chat_id, wait, due_at):
             left = due_at - time.monotonic()
             if left <= 0.4:
                 return
-            mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
-            index += 1
-            await send_call_message(client, chat_id, mark)
+            if _budget_left(chat_id):
+                _count_sent(chat_id)
+                mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
+                index += 1
+                await send_call_message(client, chat_id, mark)
             await asyncio.sleep(max(min(step, max(left - 0.4, 0.4)), _min_refresh()))
     except asyncio.CancelledError:
         raise
@@ -306,9 +342,11 @@ async def _run_notes(client, chat_id, track_title, duration, playback_started):
     step = max(float(getattr(config, "VC_LYRICS_NOTES_SEC", 30) or 30), 10.0)
     try:
         while True:
-            mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
-            index += 1
-            await send_call_message(client, chat_id, mark)
+            if _budget_left(chat_id):
+                _count_sent(chat_id)
+                mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
+                index += 1
+                await send_call_message(client, chat_id, mark)
             await asyncio.sleep(step)
             if duration and (time.monotonic() - playback_started) > float(duration) + 5:
                 break
@@ -326,8 +364,26 @@ async def start(client, chat_id, track_title, duration=None,
     `use_title` writes each line into the voice chat header, which is the only
     surface inside the call itself; `post_message` additionally keeps one
     editable message in the chat, which is what a reader in the chat wants.
+
+    The per-chat switch is read here as well as by the caller, so every path
+    that shows something in the panel goes through the same gate: turning it
+    off in a chat stops the lines, the gap notes and the chat message, and
+    only in that chat.
     """
     stop(chat_id)
+    new_track(chat_id)
+    try:
+        from VenomX.utils.database import get_vc_lyrics
+
+        if not await get_vc_lyrics(chat_id):
+            LOGGER(__name__).info("lyrics off for chat %s, nothing posted", chat_id)
+            return None
+    except Exception as e:
+        LOGGER(__name__).info(
+            "lyrics setting unreadable for %s: %s: %s",
+            chat_id, type(e).__name__, e,
+        )
+        return None
     lines = await fetch(track_title, duration)
     started_at = playback_started or time.monotonic()
     if not lines:

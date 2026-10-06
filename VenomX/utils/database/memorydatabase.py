@@ -22,12 +22,14 @@ autoenddb = mongodb.autoend
 notesdb = mongodb.notes
 filtersdb = mongodb.filters
 instantplaydb = mongodb.instantplay
+lyricsdb = mongodb.vc_lyrics
 
 # Shifting to memory [ mongo sucks often]
 loop = {}
 playtype = {}
 playmode = {}
 instantplay = {}
+lyrics_display = {}
 channelconnect = {}
 langm = {}
 pause = {}
@@ -295,6 +297,29 @@ async def get_instant_play(chat_id: int) -> bool:
         instantplay[chat_id] = mode["mode"]
         return mode["mode"]
     return mode
+
+
+async def get_vc_lyrics(chat_id: int) -> bool:
+    """Whether the synced panel runs in this chat.
+
+    Per chat, so switching it off in one group leaves every other group alone.
+    A chat with no record gets the configured default, which is on.
+    """
+    mode = lyrics_display.get(chat_id)
+    if mode is None:
+        record = await lyricsdb.find_one({"chat_id": chat_id})
+        if not record:
+            return config.VC_LYRICS in (True, "True", "true")
+        lyrics_display[chat_id] = record["mode"]
+        return record["mode"]
+    return mode
+
+
+async def set_vc_lyrics(chat_id: int, mode: bool):
+    lyrics_display[chat_id] = mode
+    await lyricsdb.update_one(
+        {"chat_id": chat_id}, {"$set": {"mode": mode}}, upsert=True
+    )
 
 
 async def set_instant_play(chat_id: int, mode: bool):

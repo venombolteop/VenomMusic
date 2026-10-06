@@ -18,6 +18,7 @@ from VenomX.core.call import Ayush
 from VenomX.misc import db
 from VenomX.utils.database import (
     add_active_video_chat,
+    get_vc_lyrics,
     is_active_chat,
     is_video_allowed,
     get_instant_play,
@@ -59,9 +60,16 @@ def _remember_permalink(vidid, video, url):
             _permalink_cache.pop(next(iter(_permalink_cache)))
 
 
-def _start_lyrics(chat_id, title, duration, playback_started=None):
+async def _start_lyrics(chat_id, title, duration, playback_started=None):
     """Show synced lyrics for the track that just started, posted by the assistant."""
-    if not getattr(config, "VC_LYRICS", "False") in (True, "True", "true"):
+    try:
+        if not await get_vc_lyrics(chat_id):
+            return
+    except Exception as e:
+        slog.warning(
+            "[%s] lyrics setting unreadable for %s: %s: %s",
+            _STREAM_LOG, chat_id, type(e).__name__, e,
+        )
         return
     seconds = None
     try:
@@ -459,8 +467,10 @@ async def stream(
             await Ayush.join_call(
                 chat_id, original_chat_id, stream_link, video=status, image=thumbnail
             )
-            _start_lyrics(chat_id, title, duration_min,
-                          playback_started=_time.monotonic())
+            asyncio.create_task(
+                _start_lyrics(chat_id, title, duration_min,
+                              playback_started=_time.monotonic())
+            )
             _prefetch_next(chat_id)
             slog.info(
                 "[%s] join_call took %.1fs (link_ready_age=%.1fs)",
