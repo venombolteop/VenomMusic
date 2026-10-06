@@ -132,7 +132,7 @@ INSTANT_PLAY = getenv("INSTANT_PLAY", "True")
 # Media API used for instant (no-download) playback: serves a stable stream permalink
 VENOM_API_URL = getenv("VENOM_API_URL", "http://127.0.0.1:3200")
 # Post time-synced lyrics in the voice chat, sent by the assistant account
-VC_LYRICS = getenv("VC_LYRICS", "False")
+VC_LYRICS = getenv("VC_LYRICS", "True")
 # Inside a group voice chat the only surface a bot can write to is the call's
 # own title, so that is where the lines go. The chat message is opt-in: it is
 # edited in place, but in a busy group it is still a message.
