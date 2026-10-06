@@ -23,6 +23,7 @@ from VenomX.utils.database import (
     get_instant_play,
 )
 from VenomX.utils.exceptions import AssistantErr
+from VenomX.utils.formatters import time_to_seconds
 from VenomX.utils.inline.play import stream_markup, telegram_markup
 from VenomX.utils.inline.playlist import close_markup
 from VenomX.utils.pastebin import Ayushbin
@@ -73,9 +74,16 @@ def _start_lyrics(chat_id, title, duration):
         assistant = None
     if assistant is None:
         return
-    asyncio.create_task(
-        lyrics_display.start(assistant, chat_id, title, seconds)
-    )
+    async def _show():
+        try:
+            await lyrics_display.start(assistant, chat_id, title, seconds)
+        except Exception as e:
+            slog.warning(
+                "[%s] lyrics failed for %s: %s: %s",
+                _STREAM_LOG, title[:40], type(e).__name__, e,
+            )
+
+    asyncio.create_task(_show())
 
 
 def _prefetch_next(chat_id):
