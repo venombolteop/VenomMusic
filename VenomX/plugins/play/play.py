@@ -55,6 +55,7 @@ async def play_commnd(
 ):
     t0 = _time.monotonic()
     query_text = message.text or ""
+    LOGGER(_PLAY_LOG).info("[PLAY] dispatch: url=%s", (url or "")[:60])
     LOGGER(_PLAY_LOG).info(
         "[PLAY] command received from user=%s chat=%s text=%s",
         message.from_user.id if message.from_user else "?",
@@ -224,6 +225,7 @@ async def play_commnd(
                     details["duration_min"],
                 )
         elif await Platform.spotify.valid(url):
+            LOGGER(_PLAY_LOG).info("[PLAY] spotify branch: %s", url[:60])
             spotify = True
             if "/radio" in url:
                 try:

@@ -1,6 +1,7 @@
 # All rights reserved.
 #
 
+import asyncio
 import json
 import random
 import re
@@ -101,7 +102,12 @@ class Spotify:
 
     async def _entity(self, link: str):
         kind, entity_id, radio = self._parse(link)
-        entity = await self._fetch_entity(kind, entity_id)
+        # A hard ceiling: without one a stuck worker turns into a handler that
+        # never returns and the user only sees the "searching" message, which
+        # is the same failure this resolver was written to end.
+        entity = await asyncio.wait_for(
+            self._fetch_entity(kind, entity_id), timeout=FETCH_TIMEOUT + 10
+        )
         return kind, entity_id, radio, entity
 
     @staticmethod
