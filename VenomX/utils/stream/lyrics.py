@@ -228,11 +228,12 @@ def _min_refresh() -> float:
 async def _run(chat_id, message, lines, started_at, client=None, title=True):  # noqa: C901
     """Show each line in the call's chat panel as the song reaches it.
 
-    A group-call message cannot be edited, so one is sent per line and the
-    previous one deleted: the panel shows the line being sung rather than a
-    growing transcript, and the chat keeps no record of it.
+    One message per line, kept rather than replaced: these messages cannot be
+    edited, so removing the previous line costs a second request per line and
+    a long song then walks the account into a flood wait. Letting them stack
+    costs one request each and reads as a running transcript of the call,
+    which is what a synced display should look like anyway.
     """
-    shown = None
     gap_after = max(float(getattr(config, "VC_LYRICS_GAP_SEC", 8) or 8), 3.0)
     try:
         for index, (when, text) in enumerate(lines):
@@ -242,26 +243,19 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):  #
                 # an empty panel through it reads as the bot having dropped.
                 # Notes fill the gap so the panel keeps moving.
                 if wait > gap_after:
-                    shown = await _fill_gap(
-                        client, chat_id, wait, started_at + when, shown
-                    )
+                    await _fill_gap(client, chat_id, wait, started_at + when)
                 else:
                     await asyncio.sleep(wait)
             elif wait < -30:
                 continue
             if client is not None:
-                # Each line costs a send and a delete, and a fifty-line song is
-                # a hundred requests inside four minutes — enough to put the
-                # account in a flood wait, which stops the display entirely.
-                # The panel is therefore not rewritten faster than the gap
-                # allows, and a line is dropped rather than queued up.
+                # One request per line. The floor is a safety margin, not a
+                # display setting: lines closer together than this are skipped
+                # so a burst cannot outrun the account's rate limit.
                 left = (started_at + when) - time.monotonic()
                 if 0 < left < _min_refresh():
                     continue
-                if shown:
-                    await delete_call_message(client, chat_id, shown)
-                    shown = None
-                shown = await send_call_message(client, chat_id, text)
+                await send_call_message(client, chat_id, text)
             if message is not None:
                 try:
                     await message.edit_text(f"🎵 <b>{text}</b>", parse_mode=None)
@@ -274,19 +268,14 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):  #
             "lyrics display stopped: %s: %s", type(e).__name__, e
         )
     finally:
-        if client is not None and shown:
-            asyncio.create_task(delete_call_message(client, chat_id, shown))
+        pass
 
 
-async def _fill_gap(client, chat_id, wait, due_at, shown):
-    """Cover the silence between two lines with notes until the next one.
-
-    Returns the last message shown, so the caller can clear it when the lyric
-    line arrives.
-    """
+async def _fill_gap(client, chat_id, wait, due_at):
+    """Cover the silence between two lines with notes until the next one."""
     if client is None:
         await asyncio.sleep(wait)
-        return shown
+        return
 
     step = max(float(getattr(config, "VC_LYRICS_GAP_SEC", 8) or 8), 3.0)
     index = 0
@@ -294,38 +283,32 @@ async def _fill_gap(client, chat_id, wait, due_at, shown):
         while True:
             left = due_at - time.monotonic()
             if left <= 0.4:
-                return shown
-            if shown:
-                await delete_call_message(client, chat_id, shown)
+                return
             mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
             index += 1
-            shown = await send_call_message(client, chat_id, mark)
-            await asyncio.sleep(max(min(step, max(left - 0.4, 0.4)), _MIN_REFRESH))
+            await send_call_message(client, chat_id, mark)
+            await asyncio.sleep(max(min(step, max(left - 0.4, 0.4)), _min_refresh()))
     except asyncio.CancelledError:
         raise
     except Exception as e:
         LOGGER(__name__).info("gap fill stopped: %s: %s", type(e).__name__, e)
-    return shown
 
 
 async def _run_notes(client, chat_id, track_title, duration, playback_started):
     """Stand in for lyrics on a track that has none.
 
     An empty call panel reads as a bot that joined and stopped, which is worse
-    than no lyrics at all — so the panel keeps a note moving through it for as
-    long as the track plays. It is one short message at a time, the previous
-    one removed, and it stops when the track does.
+    than no lyrics at all — so the panel keeps a note appearing for as long as
+    the track plays, and stops when the track does. Notes are sent, not
+    replaced: removing the previous one costs another request for no gain.
     """
-    shown = None
     index = 0
     step = max(float(getattr(config, "VC_LYRICS_NOTES_SEC", 30) or 30), 10.0)
     try:
         while True:
-            if shown:
-                await delete_call_message(client, chat_id, shown)
             mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
             index += 1
-            shown = await send_call_message(client, chat_id, mark)
+            await send_call_message(client, chat_id, mark)
             await asyncio.sleep(step)
             if duration and (time.monotonic() - playback_started) > float(duration) + 5:
                 break
@@ -333,9 +316,6 @@ async def _run_notes(client, chat_id, track_title, duration, playback_started):
         raise
     except Exception as e:
         LOGGER(__name__).info("notes display stopped: %s: %s", type(e).__name__, e)
-    finally:
-        if shown:
-            asyncio.create_task(delete_call_message(client, chat_id, shown))
 
 
 async def start(client, chat_id, track_title, duration=None,
@@ -381,6 +361,11 @@ async def start(client, chat_id, track_title, duration=None,
         "lyrics live in %s: %d lines for %r", chat_id, len(lines), track_title[:40]
     )
     return message
+
+
+async def clear_panel(client, chat_id):
+    """Remove this session's panel messages. Only used on an explicit reset."""
+    return await delete_call_message(client, chat_id, None)
 
 
 def forget(chat_id):
