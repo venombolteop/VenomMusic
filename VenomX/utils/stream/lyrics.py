@@ -21,6 +21,14 @@ from VenomX import LOGGER
 LRC_LINE = re.compile(r"\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]")
 
 _timers = {}
+# Timed lines for a track do not change, and a queue replays the same songs.
+# The API caches too, but a hit there still costs a round trip from here.
+_lines_cache = {}
+_LINES_CACHE_MAX = 128
+
+
+def _cache_key(title: str, duration):
+    return ((title or "").strip().lower(), int(duration or 0))
 
 
 def parse_lrc(raw: str):
@@ -50,6 +58,10 @@ async def fetch(track_title: str, duration: int | None = None):
     The lookup, the title cleanup and the length matching all live in the
     media API, so the answer arrives ready to play against.
     """
+    key = _cache_key(track_title, duration)
+    if key in _lines_cache:
+        return _lines_cache[key]
+
     base = (getattr(config, "VENOM_API_URL", "") or "").strip()
     if not base:
         return []
@@ -66,12 +78,17 @@ async def fetch(track_title: str, duration: int | None = None):
                 headers={"accept": "application/json"},
             ) as resp:
                 if resp.status != 200:
+                    _lines_cache[key] = []
                     return []
                 data = await resp.json()
     except Exception as e:
         LOGGER(__name__).debug("lyrics lookup failed: %s: %s", type(e).__name__, e)
         return []
-    return [(item["time"], item["text"]) for item in (data.get("lines") or [])]
+    lines = [(item["time"], item["text"]) for item in (data.get("lines") or [])]
+    if len(_lines_cache) >= _LINES_CACHE_MAX:
+        _lines_cache.clear()
+    _lines_cache[key] = lines
+    return lines
 
 
 async def _run(chat_id, message, lines, started_at):
