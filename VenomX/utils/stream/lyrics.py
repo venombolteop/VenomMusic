@@ -63,6 +63,60 @@ def parse_lrc(raw: str):
     return entries
 
 
+# Group-call text is capped by the protocol, and the cap covers the whole
+# rendered message — title, timestamp and line together. A long verse line used to
+# push it over, the call raised MESSAGE_TOO_LONG, and the line was dropped: the
+# panel silently skipped whatever the singer was on, twelve times in one session
+# according to the log. Cutting the line to fit shows a shortened one, which beats
+# showing none at all.
+_CALL_TEXT_LIMIT = 900
+
+
+def _fit_for_call(text: str) -> str:
+    """Trim a panel message so the protocol will accept it."""
+    text = text or ""
+    if len(text) <= _CALL_TEXT_LIMIT:
+        return text
+    return text[:_CALL_TEXT_LIMIT - 3].rstrip() + "..."
+
+
+def _correct_for_extra_audio(lines, wanted_duration, record_duration):
+    """Shift timings when the track is longer than the record they came from.
+
+    The API matches on length and accepts a record up to about 25 seconds out,
+    because refusing one leaves a popular song with no lyrics at all. The trouble
+    is what that does to timing. If the audio is 18 seconds longer than the lyric
+    record — the ordinary "Full Video" upload with a sting before the first line
+    — then every line fires 18 seconds after it is actually sung. Following along
+    becomes impossible, which is the one thing synced lyrics exist for.
+
+    The record's own length comes back in the response and was being dropped, so
+    nothing downstream could detect this. It is used now: where the track is
+    longer than the record, timings move forward by the difference, assuming the
+    extra is at the front. That assumption is usually right, and being a few
+    seconds out when it is not beats being eighteen seconds out every time.
+
+    Only ever shifts later. A record longer than the track just has trailing
+    lines that never arrive, which costs nothing, whereas shifting backwards would
+    open a song in the middle of its own lyrics.
+    """
+    if not lines or not wanted_duration or not record_duration:
+        return lines
+    try:
+        lead = int(wanted_duration) - int(record_duration)
+    except (TypeError, ValueError):
+        return lines
+    # Under a couple of seconds there is nothing to gain, and past the cap the
+    # extra is as likely to be an outro or a different edit as a lead-in — where a
+    # large wrong shift is as broken as no shift at all.
+    cap = float(getattr(config, "VC_LYRICS_MAX_LEAD", 25) or 25)
+    if lead < 2 or lead > cap:
+        return lines
+    LOGGER(__name__).debug("shifting lyrics %.1fs: track is %ss, record is %ss",
+                           lead, wanted_duration, record_duration)
+    return [(when + lead, text) for when, text in lines]
+
+
 async def fetch(track_title: str, duration: int | None = None, lang: str | None = None,
                 chat_id: int | None = None):
     """Timed lines for a track, as [(seconds, line)].
@@ -106,6 +160,7 @@ async def fetch(track_title: str, duration: int | None = None, lang: str | None 
         LOGGER(__name__).debug("lyrics lookup failed: %s: %s", type(e).__name__, e)
         return []
     lines = [(item["time"], item["text"]) for item in (data.get("lines") or [])]
+    lines = _correct_for_extra_audio(lines, duration, data.get("duration"))
     if len(_lines_cache) >= _LINES_CACHE_MAX:
         _lines_cache.clear()
     _lines_cache[key] = lines
@@ -170,7 +225,7 @@ async def send_call_message(client, chat_id, text):
                 call=call,
                 random_id=int(time.time() * 1000) % (2 ** 30),
                 message=raw.types.TextWithEntities(
-                    text=text, entities=[]
+                    text=_fit_for_call(text), entities=[]
                 ),
             )
         )
