@@ -63,24 +63,22 @@ async def get_assistant(chat_id: int) -> str:
     if not assistant:
         dbassistant = await db.find_one({"chat_id": chat_id})
         if not dbassistant:
-            userbot = await set_assistant(chat_id)
-            return userbot
+            assistant = await set_assistant(chat_id)
         else:
             got_assis = dbassistant["assistant"]
             if got_assis in assistants:
                 assistantdict[chat_id] = got_assis
-                userbot = await get_client(got_assis)
-                return userbot
+                assistant = got_assis
             else:
-                userbot = await set_assistant(chat_id)
-                return userbot
+                assistant = await set_assistant(chat_id)
     else:
-        if assistant in assistants:
-            userbot = await get_client(assistant)
-            return userbot
-        else:
-            userbot = await set_assistant(chat_id)
-            return userbot
+        if assistant not in assistants:
+            assistant = await set_assistant(chat_id)
+    # set_assistant returns the assistant number; every caller here wants the
+    # client behind it. Returning the number made join_chat call a method on an
+    # int, and the AttributeError it raised was reported as "could not invite
+    # the assistant", which is a different problem entirely.
+    return await get_client(assistant)
 
 
 async def set_calls_assistant(chat_id):
