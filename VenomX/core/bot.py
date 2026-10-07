@@ -24,18 +24,24 @@ import config
 from ..logging import LOGGER
 
 
-def _venomcalls_version() -> str:
-    """The bot's own version, read rather than written into the banner.
+def _package_version(distribution: str) -> str:
+    """An installed package's version, read rather than written into the banner.
 
-    Falls back to "unknown" instead of a plausible-looking guess: this line is
-    where you look when something behaves as the wrong version, and being wrong
-    there costs more than the line being unhelpful.
+    The banner line is labelled py-tgcalls, so it reports py-tgcalls. It once
+    reported the bot's own version instead — a different thing wearing this
+    label, and wrong in the way that reads as authoritative, because the banner
+    has always been where you look when something behaves as the wrong version.
+
+    Falls back to "unknown" rather than a plausible-looking guess. Being
+    confidently wrong on this line costs more than it being unhelpful.
     """
     try:
-        from VenomX import __version__
-        return str(__version__)
+        from importlib.metadata import version
+        return str(version(distribution))
     except Exception:
         return "unknown"
+
+
 
 
 class AyuBot(Client):
@@ -64,7 +70,7 @@ class AyuBot(Client):
             # text. "3.x" and a pinned "v2.3.3" are both claims nobody re-checks,
             # which is how a Python 3.11 host ends up advertising 3.x.
             python_version = "%d.%d.%d" % sys.version_info[:3]
-            venomcalls_version = _venomcalls_version()
+            tgcalls_version = _package_version("py-tgcalls")
             start_msg = f"""
 ╔══════════════════════╗
   🎵 **{self.mention}** 🎵
@@ -79,7 +85,7 @@ class AyuBot(Client):
 │ 📡 **ʜᴜɴᴛᴇʀ :** {config.OWNER_ID[0]}
 │ 🌐 **ᴘʟᴀᴛғᴏʀᴍ :** ᴄᴜᴏᴜᴅ ʟɪɴᴜx
 │ 🐍 **ᴘʏᴛʜᴏɴ :** {python_version}
-│ ⚙️ **ᴘʏᴛɢᴄᴀʟʟs :** v{venomcalls_version}
+│ ⚙️ **ᴘʏᴛɢᴄᴀʟʟs :** v{tgcalls_version}
 └──────────────────────┘
 
 🚀 **ʀᴇᴀᴅʏ ᴛᴏ ᴘʟᴀʏ ᴍᴜsɪᴄ**
