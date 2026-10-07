@@ -6,12 +6,15 @@
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardMarkup, Message
 
+import asyncio
+
 import config
 from config import BANNED_USERS
 from strings import command
 from VenomX import LOGGER, Platform, app
 from VenomX.core.call import Ayush
 from VenomX.misc import db
+from VenomX.utils.stream import lyrics as lyrics_display
 from VenomX.utils.database import get_instant_play, get_loop
 from VenomX.utils.decorators import AdminRightsCheck
 from VenomX.utils.inline.play import stream_markup, telegram_markup
@@ -21,6 +24,22 @@ from VenomX.utils.thumbnails import gen_thumb
 
 @app.on_message(command("SKIP_COMMAND") & filters.group & ~BANNED_USERS)
 @AdminRightsCheck
+async def _start_lyrics_for_skip(chat_id, title, duration):
+    """Start synced lyrics for the track a skip just switched to.
+
+    Skipping moved the audio on without telling the lyrics display at all, so
+    skipping through a queue produced no lyrics whatsoever. This goes through the
+    same helper the play path uses, which already does the per-chat setting check,
+    the assistant client lookup and the error handling — a skip should not be the
+    one path where any of that is missing.
+    """
+    from VenomX.utils.stream.stream import _start_lyrics
+    try:
+        await _start_lyrics(chat_id, title, duration)
+    except Exception as e:
+        LOGGER(__name__).debug("skip: lyrics failed: %s: %s", type(e).__name__, e)
+
+
 async def skip(cli, message: Message, _, chat_id):
     if not len(message.command) < 2:
         loop = await get_loop(chat_id)
@@ -112,6 +131,9 @@ async def skip(cli, message: Message, _, chat_id):
             return await message.reply_text(_["admin_11"].format(title))
         try:
             await Ayush.skip_stream(chat_id, link, video=status)
+            asyncio.create_task(
+                _start_lyrics_for_skip(chat_id, title, check[0]["dur"])
+            )
         except Exception:
             return await message.reply_text(_["call_7"])
         button = telegram_markup(_, chat_id)
@@ -151,6 +173,9 @@ async def skip(cli, message: Message, _, chat_id):
             mystic = None
         try:
             await Ayush.skip_stream(chat_id, stream_link, video=status)
+            asyncio.create_task(
+                _start_lyrics_for_skip(chat_id, title, check[0]["dur"])
+            )
             LOGGER("Skip").info(
                 "[SKIP] stream switched in %.2fs total", _t.monotonic() - _sk0
             )
