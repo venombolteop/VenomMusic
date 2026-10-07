@@ -83,7 +83,7 @@ class AyuBot(Client):
 │ 🧑 **ɴᴀᴍᴇ :** {self.name}
 │ 🔗 **ᴜsᴇʀɴᴀᴍᴇ :** @{self.username}
 │ 📡 **ʜᴜɴᴛᴇʀ :** {config.OWNER_ID[0]}
-│ 🌐 **ᴘʟᴀᴛғᴏʀᴍ :** ᴄᴜᴏᴜᴅ ʟɪɴᴜx
+│ 🌐 **ᴘʟᴀᴛғᴏʀᴍ :** ᴄʟᴏᴜᴅ ʟɪɴᴜx
 │ 🐍 **ᴘʏᴛʜᴏɴ :** {python_version}
 │ ⚙️ **ᴘʏᴛɢᴄᴀʟʟs :** v{tgcalls_version}
 └──────────────────────┘
