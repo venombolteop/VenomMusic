@@ -35,3 +35,8 @@ from .platforms import PlaTForms
 
 Platform = PlaTForms()
 HELPABLE = {}
+
+# Single source for the version. The startup banner reads this rather than
+# carrying its own copy, so a hardcoded "v2.3.3" in the banner cannot outlive the
+# release it described.
+__version__ = "2.3.3"

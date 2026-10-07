@@ -24,6 +24,20 @@ import config
 from ..logging import LOGGER
 
 
+def _venomcalls_version() -> str:
+    """The bot's own version, read rather than written into the banner.
+
+    Falls back to "unknown" instead of a plausible-looking guess: this line is
+    where you look when something behaves as the wrong version, and being wrong
+    there costs more than the line being unhelpful.
+    """
+    try:
+        from VenomX import __version__
+        return str(__version__)
+    except Exception:
+        return "unknown"
+
+
 class AyuBot(Client):
     def __init__(self):
         LOGGER(__name__).info(f"Starting Bot")
@@ -44,6 +58,13 @@ class AyuBot(Client):
         self.mention = self.me.mention
 
         try:
+            # Reported, not asserted. The point of a startup banner is to be the
+            # one place you look when something later behaves as the wrong
+            # version, so both are read from the host rather than written into the
+            # text. "3.x" and a pinned "v2.3.3" are both claims nobody re-checks,
+            # which is how a Python 3.11 host ends up advertising 3.x.
+            python_version = "%d.%d.%d" % sys.version_info[:3]
+            venomcalls_version = _venomcalls_version()
             start_msg = f"""
 ╔══════════════════════╗
   🎵 **{self.mention}** 🎵
@@ -56,9 +77,9 @@ class AyuBot(Client):
 │ 🧑 **ɴᴀᴍᴇ :** {self.name}
 │ 🔗 **ᴜsᴇʀɴᴀᴍᴇ :** @{self.username}
 │ 📡 **ʜᴜɴᴛᴇʀ :** {config.OWNER_ID[0]}
-│ 🌐 **ᴘʟᴀᴛғᴏʀᴍ :** 🐧 ʟɪɴᴜx
-│ 🐍 **ᴘʏᴛʜᴏɴ :** 3.x
-│ ⚙️ **ᴘʏᴛɢᴄᴀʟʟs :** v2.3.3
+│ 🌐 **ᴘʟᴀᴛғᴏʀᴍ :** ᴄᴜᴏᴜᴅ ʟɪɴᴜx
+│ 🐍 **ᴘʏᴛʜᴏɴ :** {python_version}
+│ ⚙️ **ᴘʏᴛɢᴄᴀʟʟs :** v{venomcalls_version}
 └──────────────────────┘
 
 🚀 **ʀᴇᴀᴅʏ ᴛᴏ ᴘʟᴀʏ ᴍᴜsɪᴄ**
