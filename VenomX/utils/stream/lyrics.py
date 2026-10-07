@@ -237,7 +237,19 @@ async def send_call_message(client, chat_id, text):
     except MessageIdInvalid:
         return None
     except RPCError as e:
-        if "MESSAGE_TOO_LONG" in str(e).upper():
+        message = str(e).upper()
+        if "GROUPCALL_JOIN_MISSING" in message:
+            # The cached handle belongs to a call that has since ended. A music
+            # bot starts a new one as soon as a track finishes, well inside the
+            # cache's ten-minute lifetime, and the stale handle then fails every
+            # send until it expires — the panel going quiet for the rest of the
+            # song. Dropping it here lets the next line re-resolve the live call,
+            # so the display recovers on its own without a restart.
+            _call_cache.pop(chat_id, None)
+            LOGGER(__name__).info(
+                "call had changed; stale handle dropped, next line re-resolves"
+            )
+        elif "MESSAGE_TOO_LONG" in message:
             LOGGER(__name__).info("call message too long, skipped")
         else:
             LOGGER(__name__).info(
