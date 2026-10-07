@@ -316,6 +316,13 @@ async def stream(
                 await Ayush.join_call(
                     chat_id, original_chat_id, stream_link, video=status, image=thumbnail
                 )
+                # The playlist path joins the call but never told the lyrics
+                # display anything, so a track started from a playlist produced no
+                # lyrics at all — the same silence a broken endpoint produces, with
+                # nothing in the log to tell the two apart.
+                asyncio.create_task(
+                    _start_lyrics(chat_id, title, duration_sec)
+                )
                 slog.info("[%s] join_call done for vidid=%s", _STREAM_LOG, vidid)
                 await put_queue(
                     chat_id,
@@ -547,6 +554,9 @@ async def stream(
                 if not forceplay:
                     db[chat_id] = []
                 await Ayush.join_call(chat_id, original_chat_id, file_path, video=None)
+                asyncio.create_task(
+                    _start_lyrics(chat_id, title, result["duration_sec"])
+                )
                 await put_queue(
                     chat_id,
                     original_chat_id,
