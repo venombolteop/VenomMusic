@@ -521,7 +521,7 @@ async def play_commnd(
                 await notify_owner(
                     "Play.stream",
                     e,
-                    f"vidid={details.get('vidid', '?')} user={user_id} chat={message.chat.id} type={ex_type}",
+                    f"vidid={details.get('vidid', '?') if isinstance(details, dict) else '?'} user={user_id} chat={message.chat.id} type={ex_type}",
                 )
             except Exception:
                 pass
