@@ -118,7 +118,7 @@ def _correct_for_extra_audio(lines, wanted_duration, record_duration):
 
 
 async def fetch(track_title: str, duration: int | None = None, lang: str | None = None,
-                chat_id: int | None = None):
+                chat_id: int | None = None, artist: str | None = None):
     """Timed lines for a track, as [(seconds, line)].
 
     The lookup, the title cleanup, the length matching and the language choice
@@ -131,7 +131,7 @@ async def fetch(track_title: str, duration: int | None = None, lang: str | None 
             lang = await get_lyrics_lang(chat_id)
         except Exception:
             lang = None
-    key = _cache_key(track_title, duration, lang)
+    key = _cache_key(track_title, duration, lang) + (artist or "",)
     if key in _lines_cache:
         return _lines_cache[key]
 
@@ -139,6 +139,12 @@ async def fetch(track_title: str, duration: int | None = None, lang: str | None 
     if not base:
         return []
     payload = {"title": track_title}
+    if artist:
+        # The API prefers artist over title when both are present. Title-only
+        # lookups rely on guessing the artist out of the title, which collapses
+        # on tracks whose name contains the performer ("Kesariya - Arijit Singh")
+        # and on cover versions.
+        payload["artist"] = artist
     if duration:
         payload["duration"] = int(duration)
     if lang and lang != "auto":
@@ -153,7 +159,20 @@ async def fetch(track_title: str, duration: int | None = None, lang: str | None 
                 headers={"accept": "application/json"},
             ) as resp:
                 if resp.status != 200:
-                    _lines_cache[key] = []
+                    # 404 is a real answer: this track has no lyrics. Cache it,
+                    # or repeat lookups hit the API for nothing.
+                    #
+                    # Anything else — 429 rate limit, 502, a timeout — is a
+                    # transient upstream problem and must NOT be cached. Caching
+                    # it made one blip turn a song with perfectly good lyrics
+                    # into a permanent empty result for the life of the process.
+                    if resp.status == 404:
+                        _lines_cache[key] = []
+                    else:
+                        LOGGER(__name__).debug(
+                            "lyrics lookup HTTP %s (not cached): %s",
+                            resp.status, track_title[:40],
+                        )
                     return []
                 data = await resp.json()
     except Exception as e:

@@ -23,3 +23,7 @@ smart_emoji_db.json
 .venv.old/
 venv/
 logs/
+
+# env backups and local error dumps
+.env.bak-*
+unknown_errors.txt
