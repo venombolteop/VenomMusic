@@ -256,8 +256,12 @@ async def _lyrics_text(client, message: Message, query: str):
     except Exception:
         seconds = None
 
+    # The performer comes from the same lookup the title came from, so it is
+    # free. Passing it lets the API disambiguate instead of guessing.
+    _artist = details.get("uploader") or details.get("channel") or None
     lines = await lyrics_display.fetch(
-        details.get("title") or query, seconds, chat_id=message.chat.id
+        details.get("title") or query, seconds, chat_id=message.chat.id,
+        artist=_artist,
     )
     if not lines:
         return await status.edit_text(
