@@ -6,7 +6,7 @@
 
 <br>
 
-<a href="https://github.com/venombolteop/VenomMusic"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1000&color=7DFF00&center=true&vCenter=true&multiline=true&repeat=true&width=740&height=78&lines=Instant+Play+%E2%9A%A1+%C2%B7+4K+Video+Calls+%F0%9F%8E%AC+%C2%B7+Premium+Emoji+UI+%F0%9F%92%8E;PO-Token-Hardened+YouTube+Pipeline+%F0%9F%9B%A1%EF%B8%8F;Multi-Assistant+Fleet+%F0%9F%91%A5+%C2%B7+WARP+Proxy+Routing+%F0%9F%8C%90;Non-Stop+Playback+%E2%80%94+No+Waiting+%2C+Just+Play+%F0%9F%8E%A7" alt="Typing SVG"/></a>
+<a href="https://github.com/venombolteop/VenomMusic"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1000&color=7DFF00&center=true&vCenter=true&multiline=true&repeat=true&width=740&height=78&lines=Instant+Play+%E2%9A%A1+%C2%B7+4K+Video+Calls+%F0%9F%8E%AC+%C2%B7+Premium+Emoji+UI+%F0%9F%92%8E;Multi-Assistant+Fleet+%F0%9F%91%A5;Non-Stop+Playback+%E2%80%94+No+Waiting+%2C+Just+Play+%F0%9F%8E%A7" alt="Typing SVG"/></a>
 
 
 *A power-packed, feature-rich group voice-chat music bot built for **non-stop playback** — crystal-clear audio, full video streams, premium emoji UI and a battle-tested YouTube pipeline.*
@@ -32,7 +32,6 @@
 <br>
 
 <a href="https://dashboard.heroku.com/new?template=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/%E2%98%81%EF%B8%8F%20Deploy%20On%20Heroku-6567a5?style=flat-square&logo=heroku&logoColor=white" height="34"></a>
-<a href="https://render.com/deploy?repo=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Deploy%20On%20Render-46e3b7?style=flat-square&logo=render&logoColor=black" height="34"></a>
 <a href="#-deploy-with-docker"><img src="https://img.shields.io/badge/%F0%9F%90%B3%20Deploy%20With%20Docker-2496ed?style=flat-square&logo=docker&logoColor=white" height="34"></a>
 <a href="#-deploy-on-a-vps--local-host"><img src="https://img.shields.io/badge/%F0%9F%96%A5%EF%B8%8F%20Deploy%20On%20VPS-4c1?style=flat-square&logo=gnu-bash&logoColor=white" height="34"></a>
 
@@ -48,12 +47,8 @@
 - [Supported Platforms](#-supported-platforms)
 - [Commands](#-commands)
 - [Deployment](#-deployment)
-  - [Heroku](#-deploy-on-heroku) · [Render](#-deploy-on-render) · [Docker](#-deploy-with-docker) · [VPS + systemd](#-deploy-on-a-vps--local-host)
+  - [Heroku](#-deploy-on-heroku) · [Docker](#-deploy-with-docker) · [VPS + systemd](#-deploy-on-a-vps--local-host)
 - [Environment Variables](#-environment-variables)
-- **Advanced Guides**
-  - [Proxy Setup — Cloudflare WARP](#-proxy-setup-optional--cloudflare-warp-free)
-  - [PO Token Browser Setup](#-po-token-browser-setup-optional--fixes-youtube-sign-in-to-confirm-youre-not-a-bot)
-  - [YouTube Cookies](#-youtube-cookies-optional-but-recommended)
 - [Troubleshooting & FAQ](#-troubleshooting--faq)
 - [Project Structure](#-project-structure)
 - [Repo Showcase](#-repo-showcase)
@@ -73,23 +68,12 @@ No half-measures: when YouTube blocks one extraction path, Venom silently falls 
 |:---|:---|
 | ⚡ **Instant Play** | Direct-stream URLs start in seconds — download only as a last resort |
 | 🎬 **Audio + Video** | Songs or full music videos, up to 4K, straight into the VC |
-| 👥 **Assistant Fleet** | Load-balanced userbots dodge FloodWaits and join limits automatically |
+| 👥 **Assistant Fleet** | Load-balanced userbots handle join limits automatically |
 | 💎 **Premium Emoji UI** | Custom-emoji buttons, progress bars and animated player cards |
 | 🔁 **Full Player Control** | Skip · loop · shuffle · seek · pause · resume · autoend |
 | 🌐 **Multilingual** | English · Hindi · Arabic · Turkish · Sorani Kurdish |
 | 🛡️ **Moderation Suite** | Global bans, chat blacklists, sudoers, broadcast, maintenance mode |
 | 🗄️ **MongoDB Persistence** | Queues, playlists, settings and stats survive every restart |
-
-### ⚔️ How Venom Stacks Up
-
-| Capability | ⚡ Venom Music | Typical Yukki fork | Plain pytgcalls bot |
-|:-----------|:--------------:|:------------------:|:-------------------:|
-| PO Token minting (bot-check bypass) | ✅ built-in | ❌ | ❌ |
-| Multi-layer extraction fallbacks | ✅ 4 layers | ⚠️ partial | ❌ |
-| Proxy-aware download-first switching | ✅ automatic | ❌ | ❌ |
-| Premium custom-emoji player UI | ✅ | ❌ | ❌ |
-| Assistant fleet load-balancing | ✅ | ⚠️ partial | ❌ |
-| 5 languages out of the box | ✅ | ⚠️ varies | ❌ |
 
 <br>
 
@@ -108,9 +92,6 @@ flowchart TD
     E -->|"fallback / instant off"| DL["⬇️ Full Download<br/>yt-dlp + aria2c"]
     SU --> FF
     DL --> FF
-    YT["🛡️ PO Token Provider<br/>(headless Chrome mints tokens)<br/>+ cookies + multi-client"] -.->|unblocks| SU
-    YT -.->|unblocks| DL
-    PX["🌐 WARP Proxy<br/>PROXY_URL"] -.->|routes all YouTube traffic| YT
     FF["🎚️ FFmpeg<br/>buffer-tuned decode"] --> NT["📡 ntgcalls bridge"]
     NT --> TG["🎙️ Telegram Group Call"]
     TG --> Q["♻️ Queue Engine<br/>on stream_end → next track"]
@@ -119,10 +100,9 @@ flowchart TD
 **The playback pipeline in detail:**
 
 1. **Command layer** — `/play` resolves the query via fast search APIs and validates duration limits.
-2. **Extraction layer** — `yt-dlp` fetches a direct media URL (`stream_url()`, ~2–7 s). When YouTube's bot-check intervenes, the **WPC PO Token provider** spins up headless Chromium to mint fresh tokens, cookies authenticate the session, and the `tv/mweb/web` client trio plus progressive itag-18 provide SABR-proof fallbacks.
-3. **Network layer** — all YouTube traffic is routed through `PROXY_URL` when configured; under a proxy the bot auto-switches to *download-first* mode because googlevideo URLs are IP-bound.
-4. **Transport layer** — FFmpeg decodes with tuned buffer parameters and feeds raw frames into `ntgcalls`, which bridges them into Telegram's group call via the assistant account.
-5. **Queue engine** — a `stream_end` event pops the next track from MongoDB-backed queues, so playback continues hands-free until the queue is empty.
+2. **Extraction layer** — `yt-dlp` fetches a direct media URL (`stream_url()`, ~2–7 s). Cookies authenticate the session, and the `tv/mweb/web` client trio plus progressive itag-18 provide fallbacks.
+3. **Transport layer** — FFmpeg decodes with tuned buffer parameters and feeds raw frames into `ntgcalls`, which bridges them into Telegram's group call via the assistant account.
+4. **Queue engine** — a `stream_end` event pops the next track from MongoDB-backed queues, so playback continues hands-free until the queue is empty.
 
 ---
 
@@ -137,18 +117,6 @@ flowchart TD
 - **Force play** to cut the current track immediately
 - **Auto-end** empty calls and **auto-leave** idle assistants (configurable timers)
 - **Channel play** — linked-channel groups get their own playback flow
-
-</details>
-
-<details>
-<summary><b>🛡️ YouTube Hardening Pipeline</b></summary>
-
-- **PO Token minting** via [`yt-dlp-getpot-wpc`](https://github.com/coletdjnz/yt-dlp-getpot-wpc) — headless browser defeats *"Sign in to confirm you're not a bot"*
-- **Netscape cookie support** — drop any exported `cookies.txt` into `cookies/`
-- **Multi-client strategy** — `tv` → `mweb` → `web` clients, then progressive itag 18
-- **JS runtime fallbacks** — node → bun → deno → default extractor chains
-- **Proxy-aware everywhere** — yt-dlp, aria2c and ffmpeg probes all honor `PROXY_URL`
-- **Stale-file cleanup** — corrupted/partial downloads (<10 KB) auto-purge and re-fetch
 
 </details>
 
@@ -179,7 +147,7 @@ flowchart TD
 
 | Platform | Audio | Video | Playlists | Notes |
 |:---------|:-----:|:-----:|:---------:|:------|
-| ▶️ **YouTube** | ✅ | ✅ | ✅ | Search, links, Shorts; PO-Token hardened |
+| ▶️ **YouTube** | ✅ | ✅ | ✅ | Search, links, Shorts |
 | 🟢 **Spotify** | ✅ | ⛔ | ✅ | Metadata resolved → streamed via YouTube |
 | 🍎 **Apple Music** | ✅ | ⛔ | ✅ | Same resolution pipeline |
 | 🟣 **JioSaavn** | ✅ | ⛔ | ✅ | Native high-quality downloads |
@@ -302,12 +270,6 @@ bash start
 
 One click → fill vars → deploy. Worker dyno included via `heroku.yml`.
 
-### 🌐 Deploy on Render
-
-<a href="https://render.com/deploy?repo=https://github.com/venombolteop/VenomMusic"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20Deploy%20On%20Render-46e3b7?style=for-the-badge&logo=render&logoColor=black" width="230" height="40"></a>
-
-Uses `render.yaml` blueprint — fill env vars in the dashboard.
-
 ### 🐳 Deploy with Docker
 
 ```bash
@@ -414,8 +376,6 @@ sudo systemctl restart venommusic        # apply .env/code changes
 
 | Variable | Description |
 |:---------|:------------|
-| `PROXY_URL` | HTTP/SOCKS5 proxy for all YouTube traffic — e.g. `http://127.0.0.1:40000`. See [WARP guide](#-proxy-setup-optional--cloudflare-warp-free) |
-| `WPC_BROWSER_PATH` | Chrome/Chromium binary path for the PO Token provider. Auto-detected if unset — see [browser setup](#-po-token-browser-setup-optional--fixes-youtube-sign-in-to-confirm-youre-not-a-bot) |
 
 ### Integrations & Misc
 
@@ -433,189 +393,10 @@ sudo systemctl restart venommusic        # apply .env/code changes
 
 ---
 
-## 🌐 Proxy Setup (Optional) — Cloudflare WARP (Free)
 
-Route YouTube / yt-dlp traffic through a local HTTP proxy — ideal when YouTube rate-limits or geo-blocks your VPS IP.
 
-> **TL;DR:** Install WARP → `warp-cli mode proxy` → connect → put `http://127.0.0.1:40000` into `.env` as `PROXY_URL`.
-
-<details>
-<summary><b>📖 Full step-by-step WARP guide</b></summary>
-
-### 1) Install Cloudflare WARP (Debian/Ubuntu)
-
-```bash
-curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
-sudo apt-get update && sudo apt-get install -y cloudflare-warp
-```
-
-### 2) Register + enable proxy mode
-
-```bash
-sudo warp-cli --accept-tos registration new   # one-time registration
-sudo warp-cli mode proxy                      # local HTTP proxy mode
-sudo warp-cli proxy port 40000                # optional: change port
-sudo warp-cli connect                         # connect
-warp-cli status                               # must show Connected + WarpProxy
-```
-
-### 3) Verify the listener
-
-```bash
-ss -tlnp | grep 40000                                   # confirm listening
-curl -x http://127.0.0.1:40000 https://api.ipify.org    # show exit IP via proxy
-```
-
-Expected:
-```text
-LISTEN 127.0.0.1:40000
-Mode: WarpProxy on port 40000
-```
-
-### 4) Add to `.env`
-
-```env
-PROXY_URL=http://127.0.0.1:40000
-```
-
-Then restart the bot. **Under a proxy the bot automatically switches to download-first mode** — googlevideo URLs are bound to the proxy's exit IP, so ffmpeg plays the locally downloaded file instead of the remote URL.
-
-</details>
-
-### Useful WARP commands
-
-| Command | Purpose |
-|:--------|:--------|
-| `warp-cli status` / `settings` | Connection status / mode + port |
-| `warp-cli connect` / `disconnect` | Toggle tunnel |
-| `warp-cli mode proxy` | Enable local HTTP proxy |
-| `warp-cli proxy port 40000` | Set listen port |
-| `curl -x http://127.0.0.1:40000 https://ifconfig.me` | Show proxy exit IP |
-
-### SOCKS5 alternative
-
-```env
-PROXY_URL=socks5://127.0.0.1:1080
-```
-
-> ⚠️ Proxy is **env-only** (`PROXY_URL`) — the bot never touches your running proxy config.
-
----
-
-## 🤖 PO Token Browser Setup (Optional) — fixes YouTube "Sign in to confirm you're not a bot"
-
-YouTube sometimes blocks datacenter IPs with:
-
-```text
-ERROR: [youtube] <video_id>: Sign in to confirm you're not a bot.
-```
-
-VenomMusic ships with the **[`yt-dlp-getpot-wpc`](https://github.com/coletdjnz/yt-dlp-getpot-wpc)** PO Token provider (already in `requirements.txt`). It launches a real browser in the background to mint PO Tokens that bypass this check. All you must supply is a Chrome/Chromium binary.
-
-### 1️⃣ Install a browser — pick ONE option
-
-<details open>
-<summary><b>Option A — Playwright Chromium</b> <i>(works everywhere, no root)</i></summary>
-
-```bash
-python3 -m playwright install chromium
-```
-
-Binary lands at:
-```text
-~/.cache/ms-playwright/chromium-<version>/chrome-linux/chrome
-```
-</details>
-
-<details>
-<summary><b>Option B — apt</b> <i>(Debian/Ubuntu, needs root)</i></summary>
-
-```bash
-sudo apt install -y chromium-browser   # Ubuntu (snap-backed)
-sudo apt install -y chromium           # Debian
-```
-</details>
-
-<details>
-<summary><b>Option C — snap</b></summary>
-
-```bash
-sudo snap install chromium
-```
-
-Binary: `/snap/bin/chromium` → real path `/snap/chromium/current/usr/lib/chromium-browser/chrome`.
-</details>
-
-<details>
-<summary><b>Option D — Google Chrome (.deb)</b></summary>
-
-```bash
-wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-sudo apt install -y ./google-chrome-stable_current_amd64.deb
-```
-</details>
-
-### 2️⃣ Get the browser path
-
-```bash
-# Package-manager / snap installs:
-which chromium chromium-browser google-chrome google-chrome-stable
-
-# Playwright install:
-ls -1 ~/.cache/ms-playwright/chromium-*/chrome-linux/chrome | tail -1
-
-# Last resort — find it anywhere:
-find / -type f \( -name "chrome" -o -name "chromium" \) -perm -u+x 2>/dev/null
-```
-
-### 3️⃣ Set it in `.env`
-
-```env
-WPC_BROWSER_PATH=/home/ubuntu/.cache/ms-playwright/chromium-1228/chrome-linux/chrome
-```
-
-Then restart the bot (`sudo systemctl restart venommusic` — or however you run yours).
-
-### Notes
-
-- 🔍 **Auto-detection:** with `WPC_BROWSER_PATH` unset, the bot checks `PATH` (`chromium-browser`, `chromium`, `google-chrome`, `google-chrome-stable`) then the Playwright cache. Set it explicitly only if detection fails.
-- 🪫 **Graceful fallback:** no browser found ⇒ PO Token provider disabled; playback continues via cookies + multi-client yt-dlp fallbacks.
-- 🧪 **Verify:** run a `/play` and watch `bot.log` — success looks like `stream_url() got direct URL ...` with zero `Sign in to confirm` errors.
-- ⚠️ Runs the browser with `no_sandbox` internally (required on servers/root containers). Keep the browser updated — stale builds can fail token minting.
-
----
-
-## 🍪 YouTube Cookies (Optional but Recommended)
-
-Cookies unlock age-gated content and reduce bot-check frequency.
-
-1. Install the **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)** extension (Chrome/Firefox).
-2. Log in to [youtube.com](https://youtube.com) — ideally with a throwaway Google account.
-3. While on youtube.com, export cookies via the extension.
-4. Place the file at `cookies/cookies.txt` (must start with `# Netscape HTTP Cookie File`).
-5. Restart the bot — logs will confirm `using cookie file: .../cookies/cookies.txt`.
-
-> 🔒 Use a **dedicated account**, never your main Google login.
-
-<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" alt="divider"/>
 
 ## 🔧 Troubleshooting & FAQ
-
-<details>
-<summary><b>❌ "Sign in to confirm you're not a bot" during /play</b></summary>
-
-YouTube is bot-checking your server IP. Fix stack (apply in order):
-1. Add fresh cookies → [guide](#-youtube-cookies-optional-but-recommended)
-2. Install a browser for PO Tokens → [guide](#-po-token-browser-setup-optional--fixes-youtube-sign-in-to-confirm-youre-not-a-bot)
-3. Route through WARP proxy → [guide](#-proxy-setup-optional--cloudflare-warp-free)
-</details>
-
-<details>
-<summary><b>🔇 Assistant joins the VC but there's no sound</b></summary>
-
-Usually caused by playing a **direct googlevideo URL that is IP-bound** to another exit point (e.g. fetched through a proxy). With `PROXY_URL` set, Venom auto-forces download-first playback which sidesteps this entirely. Also verify: assistant isn't muted in Telegram, and device output isn't routed elsewhere.
-</details>
 
 <details>
 <summary><b>🚪 Assistant doesn't join the voice chat</b></summary>
@@ -630,12 +411,6 @@ Usually caused by playing a **direct googlevideo URL that is IP-bound** to anoth
 <summary><b>⚠️ FloodWait errors</b></summary>
 
 Add **more assistant accounts** (`STRING_SESSIONS=A,B,C`). The fleet load-balances joins across accounts automatically.
-</details>
-
-<details>
-<summary><b>🐢 Downloads are slow / stall</b></summary>
-
-The pipeline already uses `aria2c` with 16 connections. If your host throttles media traffic, enable the WARP proxy — it frequently improves googlevideo throughput.
 </details>
 
 <details>
