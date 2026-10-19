@@ -58,11 +58,7 @@
 
 ## ☠️ About Venom Music
 
-**Venom Music** is a next-generation voice-chat music player for Telegram groups. It streams audio & video directly into group calls using a fleet of **assistant accounts** (userbot sessions), backed by a hardened YouTube extraction pipeline:
-
-> 🧲 **PO Token minting** · 🍪 **Cookie auth** · 🌐 **WARP proxy routing** · ♻️ **Multi-layer fallbacks**
-
-No half-measures: when YouTube blocks one extraction path, Venom silently falls through four more until the music plays.
+**Venom Music** is a next-generation voice-chat music player for Telegram groups. It streams audio & video directly into group calls using a fleet of **assistant accounts** (userbot sessions).
 
 | | |
 |:---|:---|
