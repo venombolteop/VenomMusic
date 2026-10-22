@@ -286,7 +286,8 @@ def _protect_custom_emojis(html: str):
         stash.append(m.group(0))
         return f"\x00EMOJI{len(stash) - 1}\x00"
 
-    return re.sub(r"<tg-emoji\b[^>]*>.*?</tg-emoji>", _keep, html, flags=re.DOTALL)
+    protected = re.sub(r"<tg-emoji\b[^>]*>.*?</tg-emoji>", _keep, html, flags=re.DOTALL)
+    return protected, stash
 
 
 def _restore_custom_emojis(html: str, stash) -> str:
