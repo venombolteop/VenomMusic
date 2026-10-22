@@ -45,11 +45,32 @@ from VenomX.utils.inline.play import (
     stream_markup,
     telegram_markup,
 )
+from VenomX.utils.rich_panels import show_main, show_menu
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.stream.stream import stream
 from VenomX.utils.thumbnails import gen_thumb
 
+from VenomX.utils.rich_panels import (
+    refresh_after_toggle,
+    replace_panel,
+    show_main,
+    show_menu,
+    spawn_now_playing,
+)
+
 wrong = {}
+
+
+async def _rich_status_edit(CallbackQuery: CallbackQuery, txt: str, chat_id: int):
+    """Status line on a panel — rich edit first, pyrogram fallback."""
+    if await replace_panel(
+        chat_id, CallbackQuery.message.id, txt.replace("**", "")
+    ):
+        return
+    try:
+        await CallbackQuery.edit_message_text(txt)
+    except Exception:
+        pass
 
 
 @app.on_callback_query(filters.regex("PanelMarkup") & ~BANNED_USERS)
@@ -60,6 +81,12 @@ async def markup_panel(client, CallbackQuery: CallbackQuery, _):
     callback_request = callback_data.split(None, 1)[1]
     videoid, chat_id = callback_request.split("|")
     chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
+    if await show_menu(_, chat_id, mid, videoid, 0):
+        if chat_id not in wrong:
+            wrong[chat_id] = {}
+        wrong[chat_id][mid] = False
+        return
     buttons = panel_markup_1(_, videoid, chat_id)
     try:
         await CallbackQuery.edit_message_reply_markup(
@@ -84,6 +111,12 @@ async def main_markup_(client, CallbackQuery, _):
     else:
         buttons = stream_markup(_, videoid, chat_id)
     chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
+    if await show_main(chat_id, mid, videoid):
+        if chat_id not in wrong:
+            wrong[chat_id] = {}
+        wrong[chat_id][mid] = True
+        return
     try:
         await CallbackQuery.edit_message_reply_markup(
             reply_markup=InlineKeyboardMarkup(buttons)
@@ -104,6 +137,12 @@ async def pages_markup(client, CallbackQuery, _):
     state, pages, videoid, chat = callback_request.split("|")
     chat_id = int(chat)
     pages = int(pages)
+    mid = CallbackQuery.message.id
+    if await show_menu(
+        _, chat_id, mid, videoid,
+        (pages + 1) % 3 if state == "Forw" else (pages - 1) % 3,
+    ):
+        return
     if state == "Forw":
         if pages == 0:
             buttons = panel_markup_2(_, videoid, chat_id)
@@ -199,6 +238,27 @@ async def admin_callback(client, CallbackQuery, _):
         await set_loop(chat_id, 3)
         await CallbackQuery.message.reply_text(_["admin_25"].format(mention, 3))
 
+    elif command == "Pp":
+        playing = db.get(chat_id)
+        raw = CallbackQuery.message
+        paused = True
+        if await is_music_playing(chat_id):
+            await CallbackQuery.answer()
+            await music_off(chat_id)
+            await Ayush.pause_stream(chat_id)
+            await raw.reply_text(
+                _["admin_2"].format(mention), disable_web_page_preview=True
+            )
+        else:
+            await CallbackQuery.answer()
+            await music_on(chat_id)
+            await Ayush.resume_stream(chat_id)
+            await raw.reply_text(
+                _["admin_4"].format(mention), disable_web_page_preview=True
+            )
+            paused = False
+        if playing and playing[0].get("markup") == "rich" and playing[0].get("rich_mid") == raw.id:
+            await refresh_after_toggle(chat_id, raw.id, paused)
     elif command == "Shuffle":
         check = db.get(chat_id)
         if not check:
@@ -227,7 +287,7 @@ async def admin_callback(client, CallbackQuery, _):
                 if popped:
                     await auto_clean(popped)
                 if not check:
-                    await CallbackQuery.edit_message_text(txt)
+                    await _rich_status_edit(CallbackQuery, txt, chat_id)
                     await CallbackQuery.message.reply_text(
                         _["admin_10"].format(mention), disable_web_page_preview=True
                     )
@@ -236,7 +296,7 @@ async def admin_callback(client, CallbackQuery, _):
                     except Exception:
                         return
             except Exception:
-                await CallbackQuery.edit_message_text(txt)
+                await _rich_status_edit(CallbackQuery, txt, chat_id)
                 await CallbackQuery.message.reply_text(
                     _["admin_10"].format(mention), disable_web_page_preview=True
                 )
@@ -263,20 +323,9 @@ async def admin_callback(client, CallbackQuery, _):
                 await Ayush.skip_stream(chat_id, link, video=status)
             except Exception:
                 return await CallbackQuery.message.reply_text(_["call_7"])
-            button = telegram_markup(_, chat_id)
             img = await gen_thumb(videoid)
-            run = await CallbackQuery.message.reply_photo(
-                photo=img,
-                caption=_["stream_1"].format(
-                    user,
-                    f"https://t.me/{app.username}?start=info_{videoid}",
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-                has_spoiler=True,
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
-            await CallbackQuery.edit_message_text(txt)
+            await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=img)
+            await _rich_status_edit(CallbackQuery, txt, chat_id)
         elif "vid_" in queued:
             n, stream_link = await Platform.youtube.stream_url(
                 videoid, videoid=True, video=status
@@ -302,22 +351,9 @@ async def admin_callback(client, CallbackQuery, _):
                 if mystic:
                     return await mystic.edit_text(_["call_7"])
                 return await CallbackQuery.message.reply_text(_["call_7"])
-            button = stream_markup(_, videoid, chat_id)
             img = await gen_thumb(videoid)
-            run = await CallbackQuery.message.reply_photo(
-                photo=img,
-                caption=_["stream_1"].format(
-                    title[:27],
-                    f"https://t.me/{app.username}?start=info_{videoid}",
-                    duration_min,
-                    user,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-                has_spoiler=True,
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
-            await CallbackQuery.edit_message_text(txt)
+            await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=img)
+            await _rich_status_edit(CallbackQuery, txt, chat_id)
             if mystic:
                 await mystic.delete()
         elif "index_" in queued:
@@ -325,82 +361,33 @@ async def admin_callback(client, CallbackQuery, _):
                 await Ayush.skip_stream(chat_id, videoid, video=status)
             except Exception:
                 return await CallbackQuery.message.reply_text(_["call_7"])
-            button = telegram_markup(_, chat_id)
-            run = await CallbackQuery.message.reply_photo(
-                photo=STREAM_IMG_URL,
-                caption=_["stream_2"].format(user),
-                reply_markup=InlineKeyboardMarkup(button),
-                has_spoiler=True,
-            )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
-            await CallbackQuery.edit_message_text(txt)
+            await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=STREAM_IMG_URL)
+            await _rich_status_edit(CallbackQuery, txt, chat_id)
         else:
             try:
                 await Ayush.skip_stream(chat_id, queued, video=status)
             except Exception:
                 return await CallbackQuery.message.reply_text(_["call_7"])
             if videoid == "telegram":
-                button = telegram_markup(_, chat_id)
-                run = await CallbackQuery.message.reply_photo(
-                    photo=(
-                        TELEGRAM_AUDIO_URL
-                        if str(streamtype) == "audio"
-                        else TELEGRAM_VIDEO_URL
-                    ),
-                    caption=_["stream_1"].format(
-                        title, SUPPORT_GROUP, check[0]["dur"], user
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
-                    has_spoiler=True,
+                thumb = (
+                    TELEGRAM_AUDIO_URL
+                    if str(streamtype) == "audio"
+                    else TELEGRAM_VIDEO_URL
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
             elif videoid == "soundcloud":
-                button = telegram_markup(_, chat_id)
-                run = await CallbackQuery.message.reply_photo(
-                    photo=(
-                        SOUNDCLOUD_IMG_URL
-                        if str(streamtype) == "audio"
-                        else TELEGRAM_VIDEO_URL
-                    ),
-                    caption=_["stream_1"].format(
-                        title, SUPPORT_GROUP, check[0]["dur"], user
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
-                    has_spoiler=True,
+                thumb = (
+                    SOUNDCLOUD_IMG_URL
+                    if str(streamtype) == "audio"
+                    else TELEGRAM_VIDEO_URL
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
             elif "saavn" in videoid:
                 url = check[0]["url"]
                 details = await Platform.saavn.info(url)
-                button = telegram_markup(_, chat_id)
-                run = await CallbackQuery.message.reply_photo(
-                    photo=details["thumb"],
-                    caption=_["stream_1"].format(title, url, check[0]["dur"], user),
-                    reply_markup=InlineKeyboardMarkup(button),
-                    has_spoiler=True,
-                )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
+                thumb = details["thumb"]
             else:
-                button = stream_markup(_, videoid, chat_id)
-                img = await gen_thumb(videoid)
-                run = await CallbackQuery.message.reply_photo(
-                    photo=img,
-                    caption=_["stream_1"].format(
-                        title[:27],
-                        f"https://t.me/{app.username}?start=info_{videoid}",
-                        duration_min,
-                        user,
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
-                    has_spoiler=True,
-                )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "stream"
-            await CallbackQuery.edit_message_text(txt)
+                thumb = await gen_thumb(videoid)
+            await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=thumb)
+            await _rich_status_edit(CallbackQuery, txt, chat_id)
     else:
         playing = db.get(chat_id)
         if not playing:

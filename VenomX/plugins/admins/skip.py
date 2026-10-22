@@ -14,16 +14,14 @@ from strings import command
 from VenomX import LOGGER, Platform, app
 from VenomX.core.call import Ayush
 from VenomX.misc import db
+from VenomX.utils.rich_panels import spawn_now_playing
 from VenomX.utils.stream import lyrics as lyrics_display
 from VenomX.utils.database import get_instant_play, get_loop
 from VenomX.utils.decorators import AdminRightsCheck
-from VenomX.utils.inline.play import stream_markup, telegram_markup
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
 
 
-@app.on_message(command("SKIP_COMMAND") & filters.group & ~BANNED_USERS)
-@AdminRightsCheck
 async def _start_lyrics_for_skip(chat_id, title, duration):
     """Start synced lyrics for the track a skip just switched to.
 
@@ -40,6 +38,8 @@ async def _start_lyrics_for_skip(chat_id, title, duration):
         LOGGER(__name__).debug("skip: lyrics failed: %s: %s", type(e).__name__, e)
 
 
+@app.on_message(command("SKIP_COMMAND") & filters.group & ~BANNED_USERS)
+@AdminRightsCheck
 async def skip(cli, message: Message, _, chat_id):
     if not len(message.command) < 2:
         loop = await get_loop(chat_id)
@@ -136,19 +136,10 @@ async def skip(cli, message: Message, _, chat_id):
             )
         except Exception:
             return await message.reply_text(_["call_7"])
-        button = telegram_markup(_, chat_id)
-        img = await gen_thumb(videoid)
-        run = await message.reply_photo(
-            photo=img,
-            caption=_["stream_1"].format(
-                user,
-                f"https://t.me/{app.username}?start=info_{videoid}",
-            ),
-            reply_markup=InlineKeyboardMarkup(button),
-            has_spoiler=True,
+        mid_np = await spawn_now_playing(
+            _, chat_id, None, title, duration_min, user,
+            thumb=await gen_thumb(videoid),
         )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "tg"
     elif "vid_" in queued:
         import time as _t
         _sk0 = _t.monotonic()
@@ -183,21 +174,10 @@ async def skip(cli, message: Message, _, chat_id):
             if mystic:
                 return await mystic.edit_text(_["call_7"])
             return await message.reply_text(_["call_7"])
-        button = stream_markup(_, videoid, chat_id)
-        img = await gen_thumb(videoid)
-        run = await message.reply_photo(
-            photo=img,
-            caption=_["stream_1"].format(
-                title[:27],
-                f"https://t.me/{app.username}?start=info_{videoid}",
-                duration_min,
-                user,
-            ),
-            reply_markup=InlineKeyboardMarkup(button),
-            has_spoiler=True,
+        mid_np = await spawn_now_playing(
+            _, chat_id, videoid, title, duration_min, user,
+            thumb=await gen_thumb(videoid),
         )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "stream"
         if mystic:
             await mystic.delete()
     elif "index_" in queued:
@@ -205,77 +185,38 @@ async def skip(cli, message: Message, _, chat_id):
             await Ayush.skip_stream(chat_id, videoid, video=status)
         except Exception:
             return await message.reply_text(_["call_7"])
-        button = telegram_markup(_, chat_id)
-        run = await message.reply_photo(
-            photo=config.STREAM_IMG_URL,
-            caption=_["stream_2"].format(user),
-            reply_markup=InlineKeyboardMarkup(button),
-            has_spoiler=True,
+        mid_np = await spawn_now_playing(
+            _, chat_id, None, title, duration_min, user,
+            thumb=config.STREAM_IMG_URL,
         )
-        db[chat_id][0]["mystic"] = run
-        db[chat_id][0]["markup"] = "tg"
     else:
         try:
             await Ayush.skip_stream(chat_id, queued, video=status)
         except Exception:
             return await message.reply_text(_["call_7"])
         if videoid == "telegram":
-            button = telegram_markup(_, chat_id)
-            run = await message.reply_photo(
-                photo=(
+            mid_np = await spawn_now_playing(
+                _, chat_id, None, title, check[0]["dur"], user,
+                thumb=(
                     config.TELEGRAM_AUDIO_URL
                     if str(streamtype) == "audio"
                     else config.TELEGRAM_VIDEO_URL
                 ),
-                caption=_["stream_1"].format(
-                    title, config.SUPPORT_GROUP, check[0]["dur"], user
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-                has_spoiler=True,
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
         elif videoid == "soundcloud":
-            button = telegram_markup(_, chat_id)
-            run = await message.reply_photo(
-                photo=(
-                    config.SOUNDCLOUD_IMG_URL
-                    if str(streamtype) == "audio"
-                    else config.TELEGRAM_VIDEO_URL
-                ),
-                caption=_["stream_1"].format(
-                    title, config.SUPPORT_GROUP, check[0]["dur"], user
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-                has_spoiler=True,
+            mid_np = await spawn_now_playing(
+                _, chat_id, None, title, check[0]["dur"], user,
+                thumb=config.SOUNDCLOUD_IMG_URL,
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
         elif "saavn" in videoid:
-            button = telegram_markup(_, chat_id)
             url = check[0]["url"]
             details = await Platform.saavn.info(url)
-            run = await message.reply_photo(
-                photo=details["thumb"] or config.TELEGRAM_AUDIO_URL,
-                caption=_["stream_1"].format(title, url, check[0]["dur"], user),
-                reply_markup=InlineKeyboardMarkup(button),
-                has_spoiler=True,
+            mid_np = await spawn_now_playing(
+                _, chat_id, None, title, check[0]["dur"], user,
+                thumb=details["thumb"] or config.TELEGRAM_AUDIO_URL,
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
         else:
-            button = stream_markup(_, videoid, chat_id)
-            img = await gen_thumb(videoid)
-            run = await message.reply_photo(
-                photo=img,
-                caption=_["stream_1"].format(
-                    title[:27],
-                    f"https://t.me/{app.username}?start=info_{videoid}",
-                    duration_min,
-                    user,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
-                has_spoiler=True,
+            mid_np = await spawn_now_playing(
+                _, chat_id, videoid, title, duration_min, user,
+                thumb=await gen_thumb(videoid),
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"

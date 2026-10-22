@@ -1,13 +1,21 @@
 
 # All rights reserved.
 #
+# Bot added/left logger — rich-message cards (Bot API 10.3).
+#
 
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import Message
 
 from config import LOG, LOGGER_ID
 from VenomX import app
 from VenomX.utils.database import delete_served_chat, get_assistant, is_on_off
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_url_button,
+    rich_button_row,
+    send_rich,
+)
 
 
 @app.on_message(filters.new_chat_members)
@@ -15,6 +23,7 @@ async def on_bot_added(_, message):
     try:
         if not await is_on_off(LOG):
             return
+
         userbot = await get_assistant(message.chat.id)
         chat = message.chat
         for members in message.new_chat_members:
@@ -23,26 +32,25 @@ async def on_bot_added(_, message):
                 username = (
                     message.chat.username if message.chat.username else "ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ"
                 )
-                msg = (
-                    f"**Music bot added in new Group #New_Group**\n\n"
-                    f"**Chat Name:** {message.chat.title}\n"
-                    f"**Chat Id:** {message.chat.id}\n"
-                    f"**Chat Username:** @{username}\n"
-                    f"**Chat Member Count:** {count}\n"
-                    f"**Added By:** {message.from_user.mention}"
+                adder = message.from_user
+                adder_name = rich_esc((adder.first_name if adder else "Unknown") or "Unknown")
+                adder_id = adder.id if adder else 0
+                body = (
+                    f"<p>{pemoji('🧮')} <b>#New_Group</b></p>"
+                    + f"<p>{pemoji('🚀')} ᴄʜᴀᴛ ɴᴀᴍᴇ: <b>{rich_esc(message.chat.title)}</b></p>"
+                    + f"<p>{pemoji('🔗')} ᴄʜᴀᴛ ɪᴅ: <code>{message.chat.id}</code></p>"
+                    + f"<p>{pemoji('👥')} ᴄʜᴀᴛ ᴜꜱᴇʀɴᴀᴍᴇ: @{rich_esc(username)}</p>"
+                    + f"<p>{pemoji('🎧')} ᴍᴇᴍʙᴇʀꜱ: {count}</p>"
+                    + f"<p>{pemoji('✨')} ᴀᴅᴅᴇᴅ ʙʏ: {adder_name}</p>"
                 )
-                await app.send_message(
+                await send_rich(
                     LOGGER_ID,
-                    text=msg,
-                    reply_markup=InlineKeyboardMarkup(
-                        [
-                            [
-                                InlineKeyboardButton(
-                                    text=f"Added by: {message.from_user.first_name}",
-                                    user_id=message.from_user.id,
-                                )
-                            ]
-                        ]
+                    body
+                    + rich_button_row(
+                        rich_url_button(
+                            f"{pemoji('✨')} ᴀᴅᴅᴇᴅ ʙʏ: {adder_name}",
+                            f"tg://user?id={adder_id}",
+                        )
                     ),
                 )
                 if message.chat.username:
@@ -60,34 +68,31 @@ async def on_bot_kicked(_, message: Message):
 
         left_chat_member = message.left_chat_member
         if left_chat_member and left_chat_member.id == app.id:
-            remove_by = (
-                message.from_user.mention if message.from_user else "𝐔ɴᴋɴᴏᴡɴ 𝐔sᴇʀ"
+            remover = message.from_user
+            remove_by = rich_esc(
+                remover.first_name if remover else "𝐔ɴᴋɴᴏᴡɴ 𝐔ꜱᴇʀ"
             )
-            title = message.chat.title
+            title = rich_esc(message.chat.title or "unknown")
             username = (
-                f"@{message.chat.username}" if message.chat.username else "ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ"
+                f"@{rich_esc(message.chat.username)}" if message.chat.username else "ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ"
             )
             chat_id = message.chat.id
+            remover_id = remover.id if remover else 0
             left = (
-                f"Bot was Removed in {title} #Left_group\n"
-                f"**Chat Name**: {title}\n"
-                f"**Chat Id**: {chat_id}\n"
-                f"**Chat Username**: {username}\n"
-                f"**Removed By**: {remove_by}"
+                f"<p>{pemoji('⚠')} <b>#Left_group</b></p>"
+                f"<p>{pemoji('🚀')} ᴄʜᴀᴛ ɴᴀᴍᴇ: <b>{title}</b></p>"
+                f"<p>{pemoji('🔗')} ᴄʜᴀᴛ ɪᴅ: <code>{chat_id}</code></p>"
+                f"<p>{pemoji('👥')} ᴄʜᴀᴛ ᴜꜱᴇʀɴᴀᴍᴇ: {username}</p>"
+                f"<p>{pemoji('✨')} ʀᴇᴍᴏᴠᴇᴅ ʙʏ: {remove_by}</p>"
             )
-
-            await app.send_message(
+            await send_rich(
                 LOGGER_ID,
-                text=left,
-                reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                text=f"Removed By: {message.from_user.first_name}",
-                                user_id=message.from_user.id,
-                            )
-                        ]
-                    ]
+                left
+                + rich_button_row(
+                    rich_url_button(
+                        f"{pemoji('✨')} ʀᴇᴍᴏᴠᴇᴅ ʙʏ: {remove_by}",
+                        f"tg://user?id={remover_id}",
+                    )
                 ),
             )
             await delete_served_chat(chat_id)

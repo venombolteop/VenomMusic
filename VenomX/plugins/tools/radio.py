@@ -36,7 +36,7 @@ RADIO_STATION = {
     "Capital FM": "http://media-ice.musicradio.com/CapitalMP3?.mp3&listening-from-radio-garden=1616312105154",
     "English": "https://hls-01-regions.emgsound.ru/11_msk/playlist.m3u8",
     "Mirchi": "http://peridot.streamguys.com:7150/Mirchi",
-    "Radio Today": "http://stream.zenolive.com/8wv4d8g4344tv",
+    "Today FM": "http://stream.zenolive.com/8wv4d8g4344tv",
     "YouTube": "https://www.youtube.com/live/eu191hR_LEc?si=T-9QYD548jd0Mogp",
     "Zee News": "https://www.youtube.com/live/TPcmrPrygDc?si=hiHBkIidgurQAd1P",
     "Aaj Tak": "https://www.youtube.com/live/Nq2wYlWFucg?si=usY4UYiSBInKA0S1",
@@ -46,7 +46,7 @@ valid_stations = "\n".join([f"`{name}`" for name in sorted(RADIO_STATION.keys())
 
 
 @app.on_message(
-    filters.command(["radioplayforce", "radio", "cradio"])
+    filters.command(["streamstation", "radioplayforce", "radio", "cradio"])
     & filters.group
     & ~BANNED_USERS
 )
@@ -180,9 +180,9 @@ async def radio(client, message: Message):
         return await play_logs(message, streamtype="M3u8 or Index Link")
     else:
         await message.reply(
-            f"ɢɪᴠᴇ ᴍᴇ ᴀ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ ᴛᴏ ᴘʟᴀʏ ʀᴀᴅɪᴏ\nʙᴇʟᴏᴡ ᴀʀᴇ sᴏᴍᴇ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ:\n{valid_stations}"
+            f"ɢɪᴠᴇ ᴍᴇ ᴀ ꜱᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ ᴛᴏ ᴘʟᴀʏ ꜱᴛʀᴇᴀᴍ\nʙᴇʟᴏᴡ ᴀʀᴇ sᴏᴍᴇ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ:\n{valid_stations}"
         )
 
 
 __MODULE__ = "Rᴀᴅɪᴏ"
-__HELP__ = f"\n/radio [sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ] - ᴛᴏ ᴘʟᴀʏ **ʀᴀᴅɪᴏ ɪɴ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ**\n\nʙᴇʟᴏᴡ ᴀʀᴇ sᴏᴍᴇ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ:\n{valid_stations}"
+__HELP__ = f"\n/streamstation [ꜱᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ] - ᴛᴏ ᴘʟᴀʏ **ꜱᴛᴀᴛɪᴏɴ ɪɴ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ**\n\nʙᴇʟᴏᴡ ᴀʀᴇ sᴏᴍᴇ sᴛᴀᴛɪᴏɴ ɴᴀᴍᴇ:\n{valid_stations}"

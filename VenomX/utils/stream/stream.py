@@ -25,9 +25,14 @@ from VenomX.utils.database import (
 )
 from VenomX.utils.exceptions import AssistantErr
 from VenomX.utils.formatters import time_to_seconds
-from VenomX.utils.inline.play import stream_markup, telegram_markup
 from VenomX.utils.inline.playlist import close_markup
 from VenomX.utils.pastebin import Ayushbin
+from VenomX.utils.rich_panels import (
+    notice_card,
+    refresh_panel,
+    replace_panel,
+    spawn_now_playing,
+)
 from VenomX.utils.stream import lyrics as lyrics_display
 from VenomX.utils.stream.queue import put_queue, put_queue_index
 from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
@@ -243,7 +248,7 @@ async def stream(
             if duration_sec > config.DURATION_LIMIT:
                 continue
             if count == 0:
-                slog.info("[%s] playlist: first item %r", _STREAM_LOG, title[:40])
+                pass
             if await is_active_chat(chat_id):
                 await put_queue(
                     chat_id,
@@ -327,7 +332,7 @@ async def stream(
                 # lyrics at all — the same silence a broken endpoint produces, with
                 # nothing in the log to tell the two apart.
                 asyncio.create_task(
-                    _start_lyrics(chat_id, title, duration_sec)
+                    _start_lyrics(chat_id, title, duration_min)
                 )
                 slog.info("[%s] join_call done for vidid=%s", _STREAM_LOG, vidid)
                 await put_queue(
@@ -343,20 +348,10 @@ async def stream(
                     forceplay=forceplay,
                 )
                 img = await gen_thumb(vidid)
-                button = stream_markup(_, vidid, chat_id)
-                run = await app.send_photo(
-                    original_chat_id,
-                    photo=img,
-                    caption=_["stream_1"].format(
-                        title[:27],
-                        f"https://t.me/{app.username}?start=info_{vidid}",
-                        duration_min,
-                        user_name,
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
+                mid_np = await spawn_now_playing(
+                    _, chat_id, vidid, title, duration_min, user_name,
+                    thumb=img,
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "stream"
         if count == 0:
             return
         else:
@@ -366,14 +361,11 @@ async def stream(
                 car = os.linesep.join(msg.split(os.linesep)[:17])
             else:
                 car = msg
-            carbon = await Platform.carbon.generate(car, randint(100, 10000000))
-            upl = close_markup(_)
-            return await app.send_photo(
-                original_chat_id,
-                photo=carbon,
-                caption=_["playlist_18"].format(link, position),
-                reply_markup=upl,
+            mid_np = await notice_card(
+                _, original_chat_id, "ᴘʟᴀʏʟɪꜱᴛ ꜱᴜᴍᴍᴀʀʏ",
+                _["playlist_18"].format(link, position),
             )
+            return
 
     elif streamtype == "youtube":
         link = result["link"]
@@ -469,14 +461,10 @@ async def stream(
                 "video" if video else "audio",
             )
             position = len(db.get(chat_id)) - 1
-            qimg = await gen_qthumb(vidid)
-            run = await app.send_photo(
-                original_chat_id,
-                photo=qimg,
-                caption=_["queue_4"].format(
-                    position, title[:27], duration_min, user_name
-                ),
-                reply_markup=close_markup(_),
+            mid_np = await notice_card(
+                _, original_chat_id, "Qᴜᴇᴜᴇ",
+                _["queue_4"].format(position, title[:27], duration_min, user_name),
+                thumb=await gen_qthumb(vidid),
             )
         else:
             if not forceplay:
@@ -506,21 +494,10 @@ async def stream(
                 "video" if video else "audio",
                 forceplay=forceplay,
             )
-            img = await gen_thumb(vidid)
-            button = stream_markup(_, vidid, chat_id)
-            run = await app.send_photo(
-                original_chat_id,
-                photo=img,
-                caption=_["stream_1"].format(
-                    title[:27],
-                    f"https://t.me/{app.username}?start=info_{vidid}",
-                    duration_min,
-                    user_name,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
+            mid_np = await spawn_now_playing(
+                _, chat_id, vidid, title, duration_min, user_name,
+                thumb=await gen_thumb(vidid),
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "stream"
         slog.info("[%s] youtube branch completed in %.1fs for vidid=%s", _STREAM_LOG, _time.monotonic() - st0, vidid)
 
     elif "saavn" in streamtype:
@@ -532,8 +509,6 @@ async def stream(
             duration_min = result["duration_min"]
             link = result["url"]
             thumb = result["thumb"]
-            if count == 0:
-                slog.info("[%s] playlist: first item %r", _STREAM_LOG, title[:40])
             if await is_active_chat(chat_id):
                 await put_queue(
                     chat_id,
@@ -548,20 +523,17 @@ async def stream(
                     url=link,
                 )
                 position = len(db.get(chat_id)) - 1
-                await app.send_photo(
-                    original_chat_id,
-                    photo=thumb or "https://envs.sh/Ii_.jpg",
-                    caption=_["queue_4"].format(
-                        position, title[:30], duration_min, user_name
-                    ),
-                    reply_markup=close_markup(_),
+                mid_np = await notice_card(
+                    _, original_chat_id, "Qᴜᴇᴜᴇ",
+                    _["queue_4"].format(position, title[:30], duration_min, user_name),
+                    thumb=thumb,
                 )
             else:
                 if not forceplay:
                     db[chat_id] = []
                 await Ayush.join_call(chat_id, original_chat_id, file_path, video=None)
                 asyncio.create_task(
-                    _start_lyrics(chat_id, title, result["duration_sec"])
+                    _start_lyrics(chat_id, title, duration_min)
                 )
                 await put_queue(
                     chat_id,
@@ -576,17 +548,10 @@ async def stream(
                     forceplay=forceplay,
                     url=link,
                 )
-                button = telegram_markup(_, chat_id)
-                run = await app.send_photo(
-                    original_chat_id,
-                    photo=thumb,
-                    caption=_["stream_1"].format(
-                        title, config.SUPPORT_GROUP, duration_min, user_name
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
+                mid_np = await spawn_now_playing(
+                    _, chat_id, None, title, duration_min, user_name,
+                    thumb=thumb,
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
 
         elif streamtype == "saavn_playlist":
             msg = f"{_['playlist_16']}\n\n"
@@ -641,17 +606,10 @@ async def stream(
                         forceplay=forceplay,
                         url=link,
                     )
-                    button = telegram_markup(_, chat_id)
-                    run = await app.send_photo(
-                        original_chat_id,
-                        photo=thumb,
-                        caption=_["stream_1"].format(
-                            title, link, duration_min, user_name
-                        ),
-                        reply_markup=InlineKeyboardMarkup(button),
+                    mid_np = await spawn_now_playing(
+                        _, chat_id, None, title, duration_min, user_name,
+                        thumb=thumb,
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "tg"
             if count == 0:
                 return
             else:
@@ -661,14 +619,11 @@ async def stream(
                     car = os.linesep.join(msg.split(os.linesep)[:17])
                 else:
                     car = msg
-                carbon = await Platform.carbon.generate(car, randint(100, 10000000))
-                upl = close_markup(_)
-                return await app.send_photo(
-                    original_chat_id,
-                    photo=carbon,
-                    caption=_["playlist_18"].format(link, position),
-                    reply_markup=upl,
+                mid_np = await notice_card(
+                    _, original_chat_id, "ᴘʟᴀʏʟɪꜱᴛ ꜱᴜᴍᴍᴀʀʏ",
+                    _["playlist_18"].format(link, position),
                 )
+                return
 
     elif streamtype == "soundcloud":
         file_path = result["filepath"]
@@ -708,17 +663,10 @@ async def stream(
                 "audio",
                 forceplay=forceplay,
             )
-            button = telegram_markup(_, chat_id)
-            run = await app.send_photo(
-                original_chat_id,
-                photo=config.SOUNCLOUD_IMG_URL,
-                caption=_["stream_1"].format(
-                    title, config.SUPPORT_GROUP, duration_min, user_name
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
+            mid_np = await spawn_now_playing(
+                _, chat_id, None, title, duration_min, user_name,
+                thumb=config.SOUNCLOUD_IMG_URL,
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
     elif streamtype == "telegram":
         file_path = result["path"]
         link = result["link"]
@@ -761,15 +709,10 @@ async def stream(
             )
             if video:
                 await add_active_video_chat(chat_id)
-            button = telegram_markup(_, chat_id)
-            run = await app.send_photo(
-                original_chat_id,
-                photo=config.TELEGRAM_VIDEO_URL if video else config.TELEGRAM_AUDIO_URL,
-                caption=_["stream_1"].format(title, link, duration_min, user_name),
-                reply_markup=InlineKeyboardMarkup(button),
+            mid_np = await spawn_now_playing(
+                _, chat_id, None, title, duration_min, user_name,
+                thumb=config.TELEGRAM_VIDEO_URL if video else config.TELEGRAM_AUDIO_URL,
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
     elif streamtype == "live":
         link = result["link"]
         vidid = result["vidid"]
@@ -823,20 +766,10 @@ async def stream(
                 forceplay=forceplay,
             )
             img = await gen_thumb(vidid)
-            button = telegram_markup(_, chat_id)
-            run = await app.send_photo(
-                original_chat_id,
-                photo=img,
-                caption=_["stream_1"].format(
-                    title[:27],
-                    f"https://t.me/{app.username}?start=info_{vidid}",
-                    duration_min,
-                    user_name,
-                ),
-                reply_markup=InlineKeyboardMarkup(button),
+            mid_np = await spawn_now_playing(
+                _, chat_id, vidid, title, duration_min, user_name,
+                thumb=img,
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
     elif streamtype == "index":
         link = result
         title = "Index or M3u8 Link"
@@ -877,13 +810,8 @@ async def stream(
                 "video" if video else "audio",
                 forceplay=forceplay,
             )
-            button = telegram_markup(_, chat_id)
-            run = await app.send_photo(
-                original_chat_id,
-                photo=config.STREAM_IMG_URL,
-                caption=_["stream_2"].format(user_name),
-                reply_markup=InlineKeyboardMarkup(button),
+            mid_np = await spawn_now_playing(
+                _, chat_id, None, title, duration_min, user_name,
+                thumb=config.STREAM_IMG_URL,
             )
-            db[chat_id][0]["mystic"] = run
-            db[chat_id][0]["markup"] = "tg"
             await mystic.delete()

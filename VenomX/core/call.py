@@ -40,7 +40,7 @@ from VenomX.utils.database import (
     set_loop,
 )
 from VenomX.utils.exceptions import AssistantErr
-from VenomX.utils.inline.play import stream_markup, telegram_markup
+from VenomX.utils.rich_panels import spawn_now_playing
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
 
@@ -571,21 +571,10 @@ class Call:
                         original_chat_id,
                         text=_["call_7"],
                     )
-                img = await gen_thumb(videoid)
-                button = telegram_markup(_, chat_id)
-                run = await app.send_photo(
-                    original_chat_id,
-                    photo=img,
-                    caption=_["stream_1"].format(
-                        title[:27],
-                        f"https://t.me/{app.username}?start=info_{videoid}",
-                        check[0]["dur"],
-                        user,
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
+                mid_np = await spawn_now_playing(
+                    _, chat_id, None, title, check[0]["dur"], user,
+                    thumb=await gen_thumb(videoid),
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
             elif "vid_" in queued:
                 video = True if str(streamtype) == "video" else False
                 mystic = await app.send_message(original_chat_id, _["call_8"])
@@ -640,27 +629,16 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
-                    return app.send_message(
+                    return await app.send_message(
                         original_chat_id,
                         text=_["call_7"],
                     )
-                img = await gen_thumb(videoid)
-                button = stream_markup(_, videoid, chat_id)
-                if instant or 'mystic' in locals():
+                if 'mystic' in locals():
                     await mystic.delete()
-                run = await app.send_photo(
-                    original_chat_id,
-                    photo=img,
-                    caption=_["stream_1"].format(
-                        title[:27],
-                        f"https://t.me/{app.username}?start=info_{videoid}",
-                        check[0]["dur"],
-                        user,
-                    ),
-                    reply_markup=InlineKeyboardMarkup(button),
+                mid_np = await spawn_now_playing(
+                    _, chat_id, videoid, title, check[0]["dur"], user,
+                    thumb=await gen_thumb(videoid),
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "stream"
             elif "index_" in queued:
                 # A queued playlist item arrives as a downloaded file path.
                 # Streaming the permalink instead means the next track starts
@@ -705,15 +683,10 @@ class Call:
                         original_chat_id,
                         text=_["call_7"],
                     )
-                button = telegram_markup(_, chat_id)
-                run = await app.send_photo(
-                    original_chat_id,
-                    photo=config.STREAM_IMG_URL,
-                    caption=_["stream_2"].format(user),
-                    reply_markup=InlineKeyboardMarkup(button),
+                mid_np = await spawn_now_playing(
+                    _, chat_id, None, title, check[0]["dur"], user,
+                    thumb=config.STREAM_IMG_URL,
                 )
-                db[chat_id][0]["mystic"] = run
-                db[chat_id][0]["markup"] = "tg"
             else:
                 url = check[0].get("url")
                 if videoid == "telegram":
@@ -763,60 +736,31 @@ class Call:
                         text=_["call_7"],
                     )
                 if videoid == "telegram":
-                    button = telegram_markup(_, chat_id)
-                    run = await app.send_photo(
-                        original_chat_id,
-                        photo=(
+                    mid_np = await spawn_now_playing(
+                        _, chat_id, None, title, check[0]["dur"], user,
+                        thumb=(
                             config.TELEGRAM_AUDIO_URL
                             if str(streamtype) == "audio"
                             else config.TELEGRAM_VIDEO_URL
                         ),
-                        caption=_["stream_1"].format(
-                            title, config.SUPPORT_GROUP, check[0]["dur"], user
-                        ),
-                        reply_markup=InlineKeyboardMarkup(button),
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "tg"
                 elif videoid == "soundcloud":
-                    button = telegram_markup(_, chat_id)
-                    run = await app.send_photo(
-                        original_chat_id,
-                        photo=config.SOUNCLOUD_IMG_URL,
-                        caption=_["stream_1"].format(
-                            title, config.SUPPORT_GROUP, check[0]["dur"], user
-                        ),
-                        reply_markup=InlineKeyboardMarkup(button),
+                    mid_np = await spawn_now_playing(
+                        _, chat_id, None, title, check[0]["dur"], user,
+                        thumb=config.SOUNCLOUD_IMG_URL,
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "tg"
                 elif "saavn" in videoid:
-                    button = telegram_markup(_, chat_id)
-                    run = await app.send_photo(
-                        original_chat_id,
-                        photo=image,
-                        caption=_["stream_1"].format(title, url, check[0]["dur"], user),
-                        reply_markup=InlineKeyboardMarkup(button),
+                    mid_np = await spawn_now_playing(
+                        _, chat_id, None, title, check[0]["dur"], user,
+                        thumb=image,
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "tg"
 
                 else:
                     img = await gen_thumb(videoid)
-                    button = stream_markup(_, videoid, chat_id)
-                    run = await app.send_photo(
-                        original_chat_id,
-                        photo=img,
-                        caption=_["stream_1"].format(
-                            title[:27],
-                            f"https://t.me/{app.username}?start=info_{videoid}",
-                            check[0]["dur"],
-                            user,
-                        ),
-                        reply_markup=InlineKeyboardMarkup(button),
+                    mid_np = await spawn_now_playing(
+                        _, chat_id, videoid, title, check[0]["dur"], user,
+                        thumb=img,
                     )
-                    db[chat_id][0]["mystic"] = run
-                    db[chat_id][0]["markup"] = "stream"
 
     async def ping(self):
         pings = []

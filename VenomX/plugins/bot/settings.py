@@ -1,14 +1,13 @@
 
 # All rights reserved.
 #
+# Settings module — rich-message panels (Bot API 10.3) + Venom branding.
+#
+
 from pyrogram import filters
 from pyrogram.enums import ChatType
 from pyrogram.errors import MessageNotModified
-from pyrogram.types import (
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    Message,
-)
+from pyrogram.types import CallbackQuery, Message
 
 from config import BANNED_USERS, CLEANMODE_DELETE_MINS, OWNER_ID
 from strings import command
@@ -48,17 +47,30 @@ from VenomX.utils.inline.settings import (
     video_quality_markup,
 )
 from VenomX.utils.inline.start import private_panel
-from VenomX.utils.premium import back_btn, close_btn
+from VenomX.utils.rich_msg import (
+    edit_rich,
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    send_rich,
+)
+
+
+def _settings_head(_, chat_title, chat_id):
+    return (
+        rich_heading(f'{pemoji("⚙")} ᴠᴇɴᴏᴍ ꜱᴇᴛᴛɪɴɢꜱ ᴄᴇɴᴛᴇʀ', level=4)
+        + f"<p>{rich_esc(_['setting_1'].format(chat_title, chat_id))}</p>"
+    )
 
 
 @app.on_message(command("SETTINGS_COMMAND") & filters.group & ~BANNED_USERS)
 @language
 async def settings_mar(client, message: Message, _):
-    buttons = setting_markup(_)
-    await message.reply_text(
-        _["setting_1"].format(message.chat.title, message.chat.id),
-        reply_markup=InlineKeyboardMarkup(buttons),
-    )
+    body = _settings_head(_, message.chat.title, message.chat.id)
+    body += setting_markup(_)
+    await send_rich(message.chat.id, body)
 
 
 @app.on_callback_query(filters.regex("settings_helper") & ~BANNED_USERS)
@@ -68,13 +80,12 @@ async def settings_cb(client, CallbackQuery, _):
         await CallbackQuery.answer(_["set_cb_8"])
     except Exception:
         pass
-    buttons = setting_markup(_)
-    return await CallbackQuery.edit_message_text(
-        _["setting_1"].format(
-            CallbackQuery.message.chat.title,
-            CallbackQuery.message.chat.id,
-        ),
-        reply_markup=InlineKeyboardMarkup(buttons),
+    body = _settings_head(
+        _, CallbackQuery.message.chat.title, CallbackQuery.message.chat.id
+    )
+    body += setting_markup(_)
+    return await edit_rich(
+        CallbackQuery.message.chat.id, CallbackQuery.message.id, body
     )
 
 
@@ -92,19 +103,25 @@ async def settings_back_markup(client, CallbackQuery: CallbackQuery, _):
             OWNER = OWNER_ID[0]
         except Exception:
             OWNER = None
-        buttons = private_panel(_, app.username, OWNER)
+        body = rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ᴍᴜꜱɪᴄ ʜᴜʙ', level=4)
+        body += f"<p>{rich_esc(_['start_1'].format(app.mention))}</p>"
+        body += private_panel(_, app.username, OWNER)
         try:
-            await CallbackQuery.edit_message_text(
-                _["start_1"].format(app.mention),
-                reply_markup=InlineKeyboardMarkup(buttons),
+            await edit_rich(
+                CallbackQuery.message.chat.id, CallbackQuery.message.id, body
             )
         except MessageNotModified:
             pass
     else:
-        buttons = setting_markup(_)
+        body = _settings_head(
+            _,
+            CallbackQuery.message.chat.title,
+            CallbackQuery.message.chat.id,
+        )
+        body += setting_markup(_)
         try:
-            await CallbackQuery.edit_message_reply_markup(
-                reply_markup=InlineKeyboardMarkup(buttons)
+            await edit_rich(
+                CallbackQuery.message.chat.id, CallbackQuery.message.id, body
             )
         except MessageNotModified:
             pass
@@ -112,6 +129,7 @@ async def settings_back_markup(client, CallbackQuery: CallbackQuery, _):
 
 ## Audio and Video Quality
 async def gen_buttons_aud(_, aud):
+    buttons = audio_quality_markup(_)
     if aud == "STUDIO":
         buttons = audio_quality_markup(_, STUDIO=True)
     elif aud == "HIGH":
@@ -124,6 +142,7 @@ async def gen_buttons_aud(_, aud):
 
 
 async def gen_buttons_vid(_, aud):
+    buttons = video_quality_markup(_)
     if aud == "UHD_4K":
         buttons = video_quality_markup(_, UHD_4K=True)
     elif aud == "QHD_2K":
@@ -151,6 +170,8 @@ async def gen_buttons_vid(_, aud):
 @languageCB
 async def without_Admin_rights(client, CallbackQuery, _):
     command = CallbackQuery.matches[0].group(1)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
     if command == "SEARCHANSWER":
         try:
             return await CallbackQuery.answer(_["setting_3"], show_alert=True)
@@ -189,11 +210,12 @@ async def without_Admin_rights(client, CallbackQuery, _):
             await CallbackQuery.answer(_["set_cb_4"], show_alert=True)
         except Exception:
             pass
-        instant = await get_instant_play(CallbackQuery.message.chat.id)
-        buttons = instantplay_markup(_, instant)
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
+        instant = await get_instant_play(chat_id)
+        body = (
+            rich_heading(f'{pemoji("⚡")} ɪɴꜱᴛᴀɴᴛ ᴘʟᴀʏ ꜱᴡɪᴛᴄʜ', level=4)
+            + instantplay_markup(_, instant)
         )
+        return await edit_rich(chat_id, mid, body)
     if command == "INSTANTPLAYANSWER":
         try:
             return await CallbackQuery.answer(_["setting_4"], show_alert=True)
@@ -206,61 +228,79 @@ async def without_Admin_rights(client, CallbackQuery, _):
             pass
         sta = None
         cle = None
-        if await is_cleanmode_on(CallbackQuery.message.chat.id):
+        if await is_cleanmode_on(chat_id):
             cle = True
-        if await is_commanddelete_on(CallbackQuery.message.chat.id):
+        if await is_commanddelete_on(chat_id):
             sta = True
         buttons = cleanmode_settings_markup(_, status=cle, dels=sta)
+        body = (
+            rich_heading(f'{pemoji("🧹")} ᴄʟᴇᴀɴ-ᴍᴏᴅᴇ ᴄᴏɴᴛʀᴏʟꜱ', level=4)
+            + buttons
+        )
 
     if command == "AQ":
         try:
             await CallbackQuery.answer(_["set_cb_1"], show_alert=True)
         except Exception:
             pass
-        aud = await get_aud_bit_name(CallbackQuery.message.chat.id)
+        aud = await get_aud_bit_name(chat_id)
         buttons = await gen_buttons_aud(_, aud)
+        body = (
+            rich_heading(f'{pemoji("🎚")} ᴀᴜᴅɪᴏ qᴜᴀʟɪᴛʏ ᴢᴏɴᴇ', level=4)
+            + buttons
+        )
     if command == "VQ":
         try:
             await CallbackQuery.answer(_["set_cb_2"], show_alert=True)
         except Exception:
             pass
-        aud = await get_vid_bit_name(CallbackQuery.message.chat.id)
+        aud = await get_vid_bit_name(chat_id)
         buttons = await gen_buttons_vid(_, aud)
+        body = (
+            rich_heading(f'{pemoji("🎥")} ᴠɪᴅᴇᴏ qᴜᴀʟɪᴛʏ ᴢᴏɴᴇ', level=4)
+            + buttons
+        )
     if command == "PM":
         try:
             await CallbackQuery.answer(_["set_cb_4"], show_alert=True)
         except Exception:
             pass
-        playmode = await get_playmode(CallbackQuery.message.chat.id)
+        playmode = await get_playmode(chat_id)
         if playmode == "Direct":
             Direct = True
         else:
             Direct = None
-        is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
+        is_non_admin = await is_nonadmin_chat(chat_id)
         if not is_non_admin:
             Group = True
         else:
             Group = None
-        playty = await get_playtype(CallbackQuery.message.chat.id)
+        playty = await get_playtype(chat_id)
         if playty == "Everyone":
             Playtype = None
         else:
             Playtype = True
         buttons = playmode_users_markup(_, Direct, Group, Playtype)
+        body = (
+            rich_heading(f'{pemoji("🎮")} ᴘʟᴀʏ-ᴍᴏᴅᴇ ᴄᴏɴᴛʀᴏʟꜱ', level=4)
+            + buttons
+        )
     if command == "AU":
         try:
             await CallbackQuery.answer(_["set_cb_3"], show_alert=True)
         except Exception:
             pass
-        is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
+        is_non_admin = await is_nonadmin_chat(chat_id)
         if not is_non_admin:
             buttons = auth_users_markup(_, True)
         else:
             buttons = auth_users_markup(_)
-    try:
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
+        body = (
+            rich_heading(f'{pemoji("🔒")} ᴀᴜᴛʜ-ᴜꜱᴇʀ ᴡɪᴢᴀʀᴅ', level=4)
+            + buttons
         )
+    try:
+        return await edit_rich(chat_id, mid, body)
     except MessageNotModified:
         return
 
@@ -277,44 +317,51 @@ async def without_Admin_rights(client, CallbackQuery, _):
 @ActualAdminCB
 async def aud_vid_cb(client, CallbackQuery, _):
     command = CallbackQuery.matches[0].group(1)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
     try:
         await CallbackQuery.answer(_["set_cb_6"], show_alert=True)
     except Exception:
         pass
+    audio = command in ["LOW", "MEDIUM", "HIGH", "STUDIO"]
     if command == "LOW":
-        await save_audio_bitrate(CallbackQuery.message.chat.id, "LOW")
+        await save_audio_bitrate(chat_id, "LOW")
         buttons = audio_quality_markup(_, LOW=True)
     if command == "MEDIUM":
-        await save_audio_bitrate(CallbackQuery.message.chat.id, "MEDIUM")
+        await save_audio_bitrate(chat_id, "MEDIUM")
         buttons = audio_quality_markup(_, MEDIUM=True)
     if command == "HIGH":
-        await save_audio_bitrate(CallbackQuery.message.chat.id, "HIGH")
+        await save_audio_bitrate(chat_id, "HIGH")
         buttons = audio_quality_markup(_, HIGH=True)
     if command == "STUDIO":
-        await save_audio_bitrate(CallbackQuery.message.chat.id, "STUDIO")
+        await save_audio_bitrate(chat_id, "STUDIO")
         buttons = audio_quality_markup(_, STUDIO=True)
     if command == "SD_360p":
-        await save_video_bitrate(CallbackQuery.message.chat.id, "SD_360p")
+        await save_video_bitrate(chat_id, "SD_360p")
         buttons = video_quality_markup(_, SD_360p=True)
     if command == "SD_480p":
-        await save_video_bitrate(CallbackQuery.message.chat.id, "SD_480p")
+        await save_video_bitrate(chat_id, "SD_480p")
         buttons = video_quality_markup(_, SD_480p=True)
     if command == "HD_720p":
-        await save_video_bitrate(CallbackQuery.message.chat.id, "HD_720p")
+        await save_video_bitrate(chat_id, "HD_720p")
         buttons = video_quality_markup(_, HD_720p=True)
     if command == "FHD_1080p":
-        await save_video_bitrate(CallbackQuery.message.chat.id, "FHD_1080p")
+        await save_video_bitrate(chat_id, "FHD_1080p")
         buttons = video_quality_markup(_, FHD_1080p=True)
     if command == "QHD_2K":
-        await save_video_bitrate(CallbackQuery.message.chat.id, "QHD_2K")
+        await save_video_bitrate(chat_id, "QHD_2K")
         buttons = video_quality_markup(_, QHD_2K=True)
     if command == "UHD_4K":
-        await save_video_bitrate(CallbackQuery.message.chat.id, "UHD_4K")
+        await save_video_bitrate(chat_id, "UHD_4K")
         buttons = video_quality_markup(_, UHD_4K=True)
+    head = (
+        f'{pemoji("🎚")} ᴀᴜᴅɪᴏ qᴜᴀʟɪᴛʏ ᴢᴏɴᴇ'
+        if audio
+        else f'{pemoji("🎥")} ᴠɪᴅᴇᴏ qᴜᴀʟɪᴛʏ ᴢᴏɴᴇ'
+    )
+    body = rich_heading(head, level=4) + buttons
     try:
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        return await edit_rich(chat_id, mid, body)
     except MessageNotModified:
         return
 
@@ -325,39 +372,45 @@ async def aud_vid_cb(client, CallbackQuery, _):
 @ActualAdminCB
 async def cleanmode_mark(client, CallbackQuery, _):
     command = CallbackQuery.matches[0].group(1)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
     try:
         await CallbackQuery.answer(_["set_cb_6"], show_alert=True)
     except Exception:
         pass
     if command == "CLEANMODE":
         sta = None
-        if await is_commanddelete_on(CallbackQuery.message.chat.id):
+        if await is_commanddelete_on(chat_id):
             sta = True
         cle = None
-        if await is_cleanmode_on(CallbackQuery.message.chat.id):
-            await cleanmode_off(CallbackQuery.message.chat.id)
+        if await is_cleanmode_on(chat_id):
+            await cleanmode_off(chat_id)
         else:
-            await cleanmode_on(CallbackQuery.message.chat.id)
+            await cleanmode_on(chat_id)
             cle = True
         buttons = cleanmode_settings_markup(_, status=cle, dels=sta)
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
+        body = (
+            rich_heading(f'{pemoji("🧹")} ᴄʟᴇᴀɴ-ᴍᴏᴅᴇ ᴄᴏɴᴛʀᴏʟꜱ', level=4)
+            + buttons
         )
+        return await edit_rich(chat_id, mid, body)
     if command == "COMMANDELMODE":
         cle = None
         sta = None
-        if await is_cleanmode_on(CallbackQuery.message.chat.id):
+        if await is_cleanmode_on(chat_id):
             cle = True
-        if await is_commanddelete_on(CallbackQuery.message.chat.id):
-            await commanddelete_off(CallbackQuery.message.chat.id)
+        if await is_commanddelete_on(chat_id):
+            await commanddelete_off(chat_id)
         else:
-            await commanddelete_on(CallbackQuery.message.chat.id)
+            await commanddelete_on(chat_id)
             sta = True
         buttons = cleanmode_settings_markup(_, status=cle, dels=sta)
+    body = (
+        rich_heading(f'{pemoji("🧨")} ᴄᴏᴍᴍᴀɴᴅ ᴄʟᴇᴀɴ ꜱᴇᴛᴜᴘ', level=4)
+        + buttons
+    )
     try:
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        return await edit_rich(chat_id, mid, body)
     except MessageNotModified:
         return
 
@@ -370,20 +423,22 @@ async def cleanmode_mark(client, CallbackQuery, _):
 @ActualAdminCB
 async def playmode_ans(client, CallbackQuery, _):
     command = CallbackQuery.matches[0].group(1)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
     if command == "CHANNELMODECHANGE":
-        is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
+        is_non_admin = await is_nonadmin_chat(chat_id)
         if not is_non_admin:
-            await add_nonadmin_chat(CallbackQuery.message.chat.id)
+            await add_nonadmin_chat(chat_id)
             Group = None
         else:
-            await remove_nonadmin_chat(CallbackQuery.message.chat.id)
+            await remove_nonadmin_chat(chat_id)
             Group = True
-        playmode = await get_playmode(CallbackQuery.message.chat.id)
+        playmode = await get_playmode(chat_id)
         if playmode == "Direct":
             Direct = True
         else:
             Direct = None
-        playty = await get_playtype(CallbackQuery.message.chat.id)
+        playty = await get_playtype(chat_id)
         if playty == "Everyone":
             Playtype = None
         else:
@@ -394,19 +449,19 @@ async def playmode_ans(client, CallbackQuery, _):
             await CallbackQuery.answer(_["set_cb_6"], show_alert=True)
         except Exception:
             pass
-        playmode = await get_playmode(CallbackQuery.message.chat.id)
+        playmode = await get_playmode(chat_id)
         if playmode == "Direct":
-            await set_playmode(CallbackQuery.message.chat.id, "Inline")
+            await set_playmode(chat_id, "Inline")
             Direct = None
         else:
-            await set_playmode(CallbackQuery.message.chat.id, "Direct")
+            await set_playmode(chat_id, "Direct")
             Direct = True
-        is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
+        is_non_admin = await is_nonadmin_chat(chat_id)
         if not is_non_admin:
             Group = True
         else:
             Group = None
-        playty = await get_playtype(CallbackQuery.message.chat.id)
+        playty = await get_playtype(chat_id)
         if playty == "Everyone":
             Playtype = False
         else:
@@ -417,28 +472,30 @@ async def playmode_ans(client, CallbackQuery, _):
             await CallbackQuery.answer(_["set_cb_6"], show_alert=True)
         except Exception:
             pass
-        playty = await get_playtype(CallbackQuery.message.chat.id)
+        playty = await get_playtype(chat_id)
         if playty == "Everyone":
-            await set_playtype(CallbackQuery.message.chat.id, "Admin")
+            await set_playtype(chat_id, "Admin")
             Playtype = False
         else:
-            await set_playtype(CallbackQuery.message.chat.id, "Everyone")
+            await set_playtype(chat_id, "Everyone")
             Playtype = True
-        playmode = await get_playmode(CallbackQuery.message.chat.id)
+        playmode = await get_playmode(chat_id)
         if playmode == "Direct":
             Direct = True
         else:
             Direct = None
-        is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
+        is_non_admin = await is_nonadmin_chat(chat_id)
         if not is_non_admin:
             Group = True
         else:
             Group = None
         buttons = playmode_users_markup(_, Direct, Group, Playtype)
+    body = (
+        rich_heading(f'{pemoji("🎮")} ᴘʟᴀʏ-ᴍᴏᴅᴇ ᴄᴏɴᴛʀᴏʟꜱ', level=4)
+        + buttons
+    )
     try:
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        return await edit_rich(chat_id, mid, body)
     except MessageNotModified:
         return
 
@@ -453,17 +510,20 @@ async def instantplay_ans(client, CallbackQuery, _):
         await CallbackQuery.answer(_["set_cb_6"], show_alert=True)
     except Exception:
         pass
-    instant = await get_instant_play(CallbackQuery.message.chat.id)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
+    instant = await get_instant_play(chat_id)
     if instant:
-        await set_instant_play(CallbackQuery.message.chat.id, False)
+        await set_instant_play(chat_id, False)
     else:
-        await set_instant_play(CallbackQuery.message.chat.id, True)
-    instant = await get_instant_play(CallbackQuery.message.chat.id)
-    buttons = instantplay_markup(_, instant)
+        await set_instant_play(chat_id, True)
+    instant = await get_instant_play(chat_id)
+    body = (
+        rich_heading(f'{pemoji("⚡")} ɪɴꜱᴛᴀɴᴛ ᴘʟᴀʏ ꜱᴡɪᴛᴄʜ', level=4)
+        + instantplay_markup(_, instant)
+    )
     try:
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        return await edit_rich(chat_id, mid, body)
     except MessageNotModified:
         return
 
@@ -473,8 +533,10 @@ async def instantplay_ans(client, CallbackQuery, _):
 @ActualAdminCB
 async def authusers_mar(client, CallbackQuery, _):
     command = CallbackQuery.matches[0].group(1)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
     if command == "AUTHLIST":
-        _authusers = await get_authuser_names(CallbackQuery.message.chat.id)
+        _authusers = await get_authuser_names(chat_id)
         if not _authusers:
             try:
                 return await CallbackQuery.answer(_["setting_5"], show_alert=True)
@@ -486,10 +548,11 @@ async def authusers_mar(client, CallbackQuery, _):
             except Exception:
                 pass
             j = 0
-            await CallbackQuery.edit_message_text(_["auth_6"])
+            body = rich_heading(f'{pemoji("🔗")} ᴀᴜᴛʜᴇᴅ ᴠɪᴘ ᴘᴇᴏᴘʟᴇ', level=4)
+            body += f"<p>{rich_esc(_['auth_6'])}</p>"
             msg = _["auth_7"]
             for note in _authusers:
-                _note = await get_authuser(CallbackQuery.message.chat.id, note)
+                _note = await get_authuser(chat_id, note)
                 user_id = _note["auth_user_id"]
                 admin_id = _note["admin_id"]
                 admin_name = _note["admin_name"]
@@ -499,23 +562,17 @@ async def authusers_mar(client, CallbackQuery, _):
                     j += 1
                 except Exception:
                     continue
-                msg += f"{j}➤ {user}[`{user_id}`]\n"
-                msg += f"   {_['auth_8']} {admin_name}[`{admin_id}`]\n\n"
-            upl = InlineKeyboardMarkup(
-                [
-                    [
-                        back_btn(
-                            text=_["BACK_BUTTON"], callback_data=f"AU"
-                        ),
-                        close_btn(
-                            text=_["CLOSE_BUTTON"],
-                            callback_data=f"close",
-                        ),
-                    ]
-                ]
+                body += (
+                    f"<p>{j}➤ {rich_esc(user)} <code>{user_id}</code></p>"
+                    f"<p>{pemoji('↳')} {rich_esc(_['auth_8'])} "
+                    f"{rich_esc(admin_name)} <code>{admin_id}</code></p>"
+                )
+            body += rich_button_row(
+                rich_button(f"{pemoji('🚀')} {_['BACK_BUTTON']}", callback_data="AU", style="primary"),
+                rich_button(f"{pemoji('❌')} {_['CLOSE_BUTTON']}", callback_data="close", style="danger"),
             )
             try:
-                return await CallbackQuery.edit_message_text(msg, reply_markup=upl)
+                return await edit_rich(chat_id, mid, body)
             except MessageNotModified:
                 return
     try:
@@ -523,35 +580,18 @@ async def authusers_mar(client, CallbackQuery, _):
     except Exception:
         pass
     if command == "AUTH":
-        is_non_admin = await is_nonadmin_chat(CallbackQuery.message.chat.id)
+        is_non_admin = await is_nonadmin_chat(chat_id)
         if not is_non_admin:
-            await add_nonadmin_chat(CallbackQuery.message.chat.id)
+            await add_nonadmin_chat(chat_id)
             buttons = auth_users_markup(_)
         else:
-            await remove_nonadmin_chat(CallbackQuery.message.chat.id)
+            await remove_nonadmin_chat(chat_id)
             buttons = auth_users_markup(_, True)
+    body = (
+        rich_heading(f'{pemoji("🔒")} ᴀᴜᴛʜ-ᴜꜱᴇʀ ᴡɪᴢᴀʀᴅ', level=4)
+        + buttons
+    )
     try:
-        return await CallbackQuery.edit_message_reply_markup(
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        return await edit_rich(chat_id, mid, body)
     except MessageNotModified:
         return
-
-
-"""✅<u>Gʀᴏᴜᴘ Sᴇᴛᴛɪɴɢs:</u>
-/settings - Gᴇᴛ ᴀ ᴄᴏᴍᴘʟᴇᴛᴇ ɢʀᴏᴜᴘ's sᴇᴛᴛɪɴɢs ᴡɪᴛʜ ɪɴʟɪɴᴇ ʙᴜᴛᴛᴏɴs
-
-🔗 <u>Oᴘᴛɪᴏɴs ɪɴ Sᴇᴛᴛɪɴɢs:</u>
-
-1 Yᴏᴜ ᴄᴀɴ sᴇᴛ Aᴜᴅɪᴏ Qᴜᴀʟɪᴛʏ
-2 Yᴏᴜ ᴄᴀɴ sᴇᴛ Vɪᴅᴇᴏ Qᴜᴀʟɪᴛʏ
-3 **Aᴜᴛʜ Usᴇʀs**:- Yᴏᴜ ᴄᴀɴ ᴄʜᴀɴɢᴇ ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs ᴍᴏᴅᴇ ғʀᴏᴍ ʜᴇʀᴇ ᴛᴏ ᴇᴠᴇʀʏᴏɴᴇ ᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.
-4 **Cʟᴇᴀɴ Mᴏᴅᴇ:**ʙᴏᴛ's ᴅᴇʟᴇᴛᴇs ᴛʜᴇ ʙᴏᴛ's ᴍᴇssᴀɢᴇs ᴀғᴛᴇʀ 𝟻 ᴍɪɴs ғʀᴏᴍ ʏᴏᴜʀ ɢʀᴏᴜᴘ ᴛᴏ ᴍᴀᴋᴇ sᴜʀᴇ ʏᴏᴜʀ ᴄʜᴀᴛ ʀᴇᴍᴀɪɴs ᴄʟᴇᴀɴ ᴀɴᴅ ɢᴏᴏᴅ.
-5 **Cᴏᴍᴍᴀɴᴅ Cʟᴇᴀɴ** : Wʜᴇɴ ᴀᴄᴛɪᴠᴀᴛᴇᴅ, Bᴏᴛ ᴡɪʟʟ ᴅᴇʟᴇᴛᴇ ɪᴛs ᴇxᴇᴄᴜᴛᴇᴅ ᴄᴏᴍᴍᴀɴᴅs lɪᴍᴍᴇᴅɪᴀᴛᴇʟʏ.
-       <b><u>Pʟᴀʏ Sᴇᴛᴛɪɴɢs:</></b>
-/playmode - Gᴇᴛ ᴀ ᴄᴏᴍᴘʟᴇᴛᴇ ᴘʟᴀʏ sᴇᴛᴛɪɴɢs ᴘᴀɴᴇʟ ᴡɪᴛʜ ʙᴜᴛᴛᴏɴs ᴡʜᴇʀᴇ ʏᴏᴜ ᴄᴀɴ sᴇᴛ ʏᴏᴜʀ ɢʀᴏᴜᴘ's ᴘʟᴀʏ sᴇᴛᴛɪɴɢs. 
-      <b><u>Oᴘᴛɪᴏɴs ɪɴ Pʟᴀʏᴍᴏᴅᴇ:</u></b>
-1 **Sᴇᴀʀᴄʜ Mᴏᴅᴇ** [Dɪʀᴇᴄᴛ ᴏʀ Iɴʟɪɴᴇ] - Cʜᴀɴɢᴇs ʏᴏᴜʀ sᴇᴀʀᴄʜ ᴍᴏᴅᴇ ᴡʜɪʟᴇ ʏᴏᴜ ɢɪᴠᴇ /playmode
-2 **Aᴅᴍɪɴ Cᴏᴍᴍᴀɴᴅs** [Eᴠᴇʀʏᴏɴᴇ ᴏʀ Aᴅᴍɪɴs] - Iғ ᴇᴠᴇʀʏᴏɴᴇ, ᴀɴʏᴏɴᴇ  ɪɴ ʏᴏᴜ ɢʀᴏᴜᴘ ᴡɪʟʟ ʙᴇ ᴀʙʟᴇ ᴛᴏ ᴜsᴇ ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅ (ʟɪᴋᴇ /skip, /stop etc)
-3 **Pʟᴀʏ Tʏᴘᴇ** [Eᴠᴇʀʏᴏɴᴇ ᴏʀ Aᴅᴍɪɴs] - Iғ ᴀᴅᴍɪɴs, ᴏɴʟʏ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴs ᴄᴀɴ ᴘʟᴀʏ ᴍᴜsɪᴄ ᴏɴ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ.
-"""

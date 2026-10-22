@@ -2,9 +2,9 @@
 # All rights reserved.
 #
 
-from pyrogram.types import InlineKeyboardMarkup
+from pyrogram.types import Message
 
-from config import PLAYLIST_IMG_URL, PRIVATE_BOT_MODE
+from config import PRIVATE_BOT_MODE, PLAYLIST_IMG_URL
 from config import adminlist
 from strings import get_string
 from VenomX import Platform, app
@@ -20,7 +20,15 @@ from VenomX.utils.database import (
     is_served_private_chat,
 )
 from VenomX.utils.inline import botplaylist_markup
-from VenomX.utils.premium import warn_btn
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    rich_img,
+    send_rich,
+)
 
 links = {}
 
@@ -30,17 +38,14 @@ def PlayWrapper(command):
         language = await get_lang(message.chat.id)
         _ = get_string(language)
         if message.sender_chat:
-            upl = InlineKeyboardMarkup(
-                [
-                    [
-                        warn_btn(
-                            text="How to Fix ?",
-                            callback_data="AnonymousAdmin",
-                        ),
-                    ]
-                ]
+            return await send_rich(
+                message.chat.id,
+                rich_heading(f'{pemoji("⚠")} ᴀᴄᴄᴇꜱꜱ ɴᴏᴛᴇ', level=4)
+                + f"<p>{rich_esc(_['general_4'])}</p>"
+                + rich_button_row(
+                    rich_button("❓ ᴋᴀɪꜱᴇ ꜰɪx ᴋᴀʀᴇ ꜱɪʀ", callback_data="AnonymousAdmin", style="danger"),
+                ),
             )
-            return await message.reply_text(_["general_4"], reply_markup=upl)
 
         if await is_maintenance() is False:
             if message.from_user.id not in SUDOERS:
@@ -74,10 +79,12 @@ def PlayWrapper(command):
                 if "stream" in message.command:
                     return await message.reply_text(_["str_1"])
                 buttons = botplaylist_markup(_)
-                return await message.reply_photo(
-                    photo=PLAYLIST_IMG_URL,
-                    caption=_["playlist_1"],
-                    reply_markup=InlineKeyboardMarkup(buttons),
+                return await send_rich(
+                    message.chat.id,
+                    rich_img(PLAYLIST_IMG_URL)
+                    + rich_heading(f'{pemoji("🎵")} ᴠᴇɴᴏᴍ ᴘʟᴀʏʟɪꜱᴛ ᴢᴏɴᴇ', level=4)
+                    + f"<p>{rich_esc(_['playlist_1'])}</p>"
+                    + buttons,
                 )
         if message.command[0][0] == "c":
             chat_id = await get_cmode(message.chat.id)

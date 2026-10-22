@@ -4,7 +4,9 @@
 
 
 
+import asyncio
 import sys
+from pathlib import Path
 
 from pyrogram import Client
 from pyrogram.enums import ChatMemberStatus
@@ -44,19 +46,50 @@ def _package_version(distribution: str) -> str:
 
 
 
+_BOT_SESSION_FILE = Path("cache/bot_session.str")
+
+
 class AyuBot(Client):
     def __init__(self):
         LOGGER(__name__).info(f"Starting Bot")
+        # A stored session string means a restart never touches
+        # auth.ImportBotAuthorization again — fresh bot logins flood-wait hard.
+        session_string = None
+        try:
+            if _BOT_SESSION_FILE.exists():
+                session_string = _BOT_SESSION_FILE.read_text().strip() or None
+        except Exception:
+            session_string = None
         super().__init__(
             "VenomX",
             api_id=config.API_ID,
             api_hash=config.API_HASH,
             bot_token=config.BOT_TOKEN,
+            session_string=session_string,
             in_memory=True,
         )
 
     async def start(self):
-        await super().start()
+        from pyrogram.errors import FloodWait
+
+        for _attempt in range(12):
+            try:
+                await super().start()
+                break
+            except FloodWait as e:
+                wait = int(e.value) + 5
+                LOGGER(__name__).warning(
+                    "Bot auth flood-wait %ss — sleeping, will retry", wait
+                )
+                await asyncio.sleep(wait)
+        else:
+            raise RuntimeError("Bot login kept flood-waiting; giving up")
+        try:
+            if not _BOT_SESSION_FILE.exists():
+                _BOT_SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+                _BOT_SESSION_FILE.write_text(await self.export_session_string())
+        except Exception:
+            pass
         get_me = await self.get_me()
         self.username = get_me.username
         self.id = get_me.id
@@ -72,13 +105,13 @@ class AyuBot(Client):
             python_version = "%d.%d.%d" % sys.version_info[:3]
             tgcalls_version = _package_version("py-tgcalls")
             start_msg = f"""
-╔══════════════════════╗
+╔══════════╗
   🎵 **{self.mention}** 🎵
-╚══════════════════════╝
+╚══════════╝
 
 ⚡ **ʙᴏᴛ sᴛᴀʀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ**
 
-┌──────────────────────┐
+┌────────────┐
 │ 🔑 **ɪᴅ :** <code>{self.id}</code>
 │ 🧑 **ɴᴀᴍᴇ :** {self.name}
 │ 🔗 **ᴜsᴇʀɴᴀᴍᴇ :** @{self.username}
@@ -86,7 +119,7 @@ class AyuBot(Client):
 │ 🌐 **ᴘʟᴀᴛғᴏʀᴍ :** ᴄʟᴏᴜᴅ ʟɪɴᴜx
 │ 🐍 **ᴘʏᴛʜᴏɴ :** {python_version}
 │ ⚙️ **ᴘʏᴛɢᴄᴀʟʟs :** v{tgcalls_version}
-└──────────────────────┘
+└────────────┘
 
 🚀 **ʀᴇᴀᴅʏ ᴛᴏ ᴘʟᴀʏ ᴍᴜsɪᴄ**
 💎 **ᴘʀᴇᴍɪᴜᴍ ᴜɪ ᴀᴄᴛɪᴠᴇ**

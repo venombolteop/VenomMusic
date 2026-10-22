@@ -3,7 +3,6 @@
 #
 
 from pyrogram.enums import ChatMemberStatus, ChatType
-from pyrogram.types import InlineKeyboardMarkup
 
 from config import adminlist
 from strings import get_string
@@ -20,7 +19,24 @@ from VenomX.utils.database import (
 )
 
 from ..formatters import int_to_alpha
-from VenomX.utils.premium import warn_btn
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    send_rich,
+)
+
+
+def _anon_note(_):
+    return (
+        rich_heading(f'{pemoji("⚠")} ᴀɴᴏɴʏᴍᴏᴜꜱ ᴀᴅᴍɪɴ ᴅᴇᴛᴇᴄᴛᴇᴅ', level=4)
+        + f"<p>{rich_esc(_['general_4'])}</p>"
+        + rich_button_row(
+            rich_button("❓ ʜᴏᴡ ᴛᴏ ꜰɪx ᴛʜɪꜱ?", callback_data="AnonymousAdmin", style="danger"),
+        )
+    )
 
 
 def AdminRightsCheck(mystic):
@@ -39,17 +55,7 @@ def AdminRightsCheck(mystic):
         except Exception:
             _ = get_string("en")
         if message.sender_chat:
-            upl = InlineKeyboardMarkup(
-                [
-                    [
-                        warn_btn(
-                            text="How to Fix this? ",
-                            callback_data="AnonymousAdmin",
-                        ),
-                    ]
-                ]
-            )
-            return await message.reply_text(_["general_4"], reply_markup=upl)
+            return await send_rich(message.chat.id, _anon_note(_))
         if message.command[0][0] == "c":
             chat_id = await get_cmode(message.chat.id)
             if chat_id is None:
@@ -95,17 +101,7 @@ def AdminActual(mystic):
             _ = get_string("en")
 
         if message.sender_chat:
-            upl = InlineKeyboardMarkup(
-                [
-                    [
-                        warn_btn(
-                            text="How to Fix this?",
-                            callback_data="AnonymousAdmin",
-                        ),
-                    ]
-                ]
-            )
-            return await message.reply_text(_["general_4"], reply_markup=upl)
+            return await send_rich(message.chat.id, _anon_note(_))
 
         if message.from_user.id not in SUDOERS:
             try:

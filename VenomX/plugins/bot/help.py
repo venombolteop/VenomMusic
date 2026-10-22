@@ -1,37 +1,37 @@
 
 # All rights reserved.
 #
+# Helper module — rich-message help panels (Bot API 10.3) + Venom branding.
+#
 
-import re
 import logging
+import re
 from math import ceil
 from typing import Union
 
 from pyrogram import filters, types
-from pyrogram.enums import ButtonStyle
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import Message
 
 from config import BANNED_USERS, START_IMG_URL
 from strings import get_string, command, helpers, get_command
 from VenomX import HELPABLE, app
 from VenomX.utils.database import get_lang, is_commanddelete_on
 from VenomX.utils.decorators.language import LanguageStart
-from VenomX.utils.inline.help import private_help_panel
-from VenomX.utils.premium import back_btn, close_btn, custom_btn, nav_btn
+from VenomX.utils.inline.start import private_help_panel
+from VenomX.utils.rich_msg import (
+    edit_rich,
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    rich_img,
+    rich_md,
+    send_rich,
+)
 
-COLUMN_SIZE = 4  # Number of button height
-NUM_COLUMNS = 3  # Number of button width
-
-
-class EqInlineKeyboardButton(InlineKeyboardButton):
-    def __eq__(self, other):
-        return self.text == other.text
-
-    def __lt__(self, other):
-        return self.text < other.text
-
-    def __gt__(self, other):
-        return self.text > other.text
+COLUMN_SIZE = 4  # buttons per page column
+NUM_COLUMNS = 3  # buttons per row
 
 
 async def format_helper_text(lng, helper_key: str, text: str) -> str:
@@ -128,79 +128,70 @@ async def format_helper_text(lng, helper_key: str, text: str) -> str:
 
 
 async def paginate_modules(page_n, chat_id: int, close: bool = False):
+    """Rich-message version — returns an HTML fragment with button rows."""
     language = await get_lang(chat_id)
     helpers_dict = helpers.get(language, helpers.get("en", {}))
 
     _HELP_EMOJIS = [
         "🌟", "🔥", "🚀", "⭐", "💫", "✨", "🎵", "🎶", "🎧", "🎤",
         "💜", "🧡", "💛", "💚", "💙", "💖", "⚡", "🎯", "🎲", "🎮",
-        "📌", "🔖", "💎", "👑", "🌈", "🌙", "☀️", "🌸", "🍀", "🦋",
+        "📌", "🔁", "🖥", "👑", "🌈", "🌙", "☀", "🌸", "🍀", "🦋",
     ]
 
-    helper_buttons = [
-        custom_btn(
-            helper_key,
-            callback_data=f"help_helper({helper_key},{page_n},{int(close)})",
-            style=ButtonStyle.PRIMARY,
-            emoji=_HELP_EMOJIS[i % len(_HELP_EMOJIS)],
+    cell = [
+        rich_button(
+            f"{pemoji(emoji)} {rich_esc(text)}",
+            callback_data=cb,
+            style="primary",
         )
-        for i, helper_key in enumerate(helpers_dict)
+        for text, cb, emoji in _cells(helpers_dict, HELPABLE, close, page_n, _HELP_EMOJIS)
     ]
 
-    _offset = len(helpers_dict)
-    module_buttons = [
-        custom_btn(
-            x.__MODULE__,
-            callback_data="help_module({},{},{})".format(
-                x.__MODULE__.lower(), page_n, int(close)
-            ),
-            style=ButtonStyle.PRIMARY,
-            emoji=_HELP_EMOJIS[(_offset + i) % len(_HELP_EMOJIS)],
-        )
-        for i, x in enumerate(HELPABLE.values())
+    rows = [
+        rich_button_row(*cell[i : i + NUM_COLUMNS])
+        for i in range(0, len(cell), NUM_COLUMNS)
     ]
 
-    all_buttons = helper_buttons + module_buttons
-    pairs = [
-        all_buttons[i : i + NUM_COLUMNS]
-        for i in range(0, len(all_buttons), NUM_COLUMNS)
-    ]
-    max_num_pages = ceil(len(pairs) / COLUMN_SIZE) if len(pairs) > 0 else 1
+    max_num_pages = ceil(len(rows) / COLUMN_SIZE) if rows else 1
     modulo_page = page_n % max_num_pages
 
-    navigation_buttons = [
-        nav_btn(
-            "❮",
-            callback_data="help_prev({},{})".format(
-                modulo_page - 1 if modulo_page > 0 else max_num_pages - 1,
-                int(close),
-            ),
-        ),
-        close_btn(
-            "close" if close else "Back",
-            callback_data="close" if close else "settingsback_helper",
-        ),
-        nav_btn(
-            "❯",
-            callback_data="help_next({},{})".format(modulo_page + 1, int(close)),
-        ),
+    nav = rich_button_row(
+        rich_button(f"{pemoji('⬅')} ᴘʀᴇᴠ", callback_data=f"help_prev({modulo_page - 1 if modulo_page > 0 else max_num_pages - 1},{int(close)})", style="primary"),
+        rich_button("✅ ᴄʟᴏsᴇ" if close else f"{pemoji('🚀')} ʙᴀᴄᴋ", callback_data="close" if close else "settingsback_helper", style="danger" if close else "primary"),
+        rich_button(f"{pemoji('➡')} ɴᴇxᴛ", callback_data=f"help_next({modulo_page + 1},{int(close)})", style="primary"),
+    )
+
+    page_rows = rows[modulo_page * COLUMN_SIZE : COLUMN_SIZE * (modulo_page + 1)] + [
+        nav
     ]
 
-    if len(pairs) > COLUMN_SIZE:
-        pairs = pairs[modulo_page * COLUMN_SIZE : COLUMN_SIZE * (modulo_page + 1)] + [
-            navigation_buttons
-        ]
-    else:
-        pairs.append(
-            [
-                close_btn(
-                    "close" if close else "Back",
-                    callback_data="close" if close else "settingsback_helper",
-                )
-            ]
-        )
+    body = rich_heading(f'{pemoji("📚")} ᴠᴇɴᴏᴍ ᴄᴏᴍᴍᴀɴᴅ ᴢᴏɴᴇ', level=4)
+    body += "".join(page_rows)
+    return body
 
-    return InlineKeyboardMarkup(pairs)
+
+def _cells(helpers_dict, HELPABLE, close, page_n, emojis):
+    out = []
+    offset = len(helpers_dict)
+    for i, helper_key in enumerate(helpers_dict):
+        out.append(
+            (
+                helper_key,
+                f"help_helper({helper_key.replace(',', '%44')},{page_n},{int(close)})",
+                emojis[i % len(emojis)],
+            )
+        )
+    for i, x in enumerate(HELPABLE.values()):
+        out.append(
+            (
+                x.__MODULE__,
+                "help_module({},{},{})".format(
+                    x.__MODULE__.lower(), page_n, int(close)
+                ),
+                emojis[(offset + i) % len(emojis)],
+            )
+        )
+    return out
 
 
 @app.on_message(command("HELP_COMMAND") & filters.private & ~BANNED_USERS)
@@ -209,6 +200,7 @@ async def helper_private(
     client: app, update: Union[types.Message, types.CallbackQuery]
 ):
     is_callback = isinstance(update, types.CallbackQuery)
+    body = await paginate_modules(0, update.chat.id if not is_callback else update.message.chat.id, close=not is_callback)
     if is_callback:
         try:
             await update.answer()
@@ -217,8 +209,11 @@ async def helper_private(
         chat_id = update.message.chat.id
         language = await get_lang(chat_id)
         _ = get_string(language)
-        keyboard = await paginate_modules(0, chat_id, close=False)
-        await update.edit_message_text(_["help_1"], reply_markup=keyboard)
+        await edit_rich(
+            chat_id,
+            update.message.id,
+            rich_img(START_IMG_URL) + body if START_IMG_URL else body,
+        )
     else:
         chat_id = update.chat.id
         if await is_commanddelete_on(update.chat.id):
@@ -228,26 +223,20 @@ async def helper_private(
                 pass
         language = await get_lang(chat_id)
         _ = get_string(language)
-        keyboard = await paginate_modules(0, chat_id, close=True)
-        if START_IMG_URL:
-            await update.reply_photo(
-                photo=START_IMG_URL,
-                caption=_["help_1"],
-                reply_markup=keyboard,
-                has_spoiler=True,
-            )
-        else:
-            await update.reply_text(
-                text=_["help_1"],
-                reply_markup=keyboard,
-            )
+        body_top = rich_img(START_IMG_URL) if START_IMG_URL else ""
+        body_top += f"<p>{rich_esc(_['help_1'])}</p>"
+        await send_rich(chat_id, body_top + body)
 
 
 @app.on_message(command("HELP_COMMAND") & filters.group & ~BANNED_USERS)
 @LanguageStart
 async def help_com_group(client, message: Message, _):
-    keyboard = private_help_panel(_)
-    await message.reply_text(_["help_2"], reply_markup=InlineKeyboardMarkup(keyboard))
+    await send_rich(
+        message.chat.id,
+        rich_heading(f'{pemoji("📚")} ᴠᴇɴᴏᴍ HELP', level=4)
+        + f"<p>{rich_esc(_['help_2'])}</p>"
+        + private_help_panel(_),
+    )
 
 
 @app.on_callback_query(filters.regex(r"help_(.*?)"))
@@ -263,9 +252,12 @@ async def help_button(client, query):
         helpers_dict = helpers.get(language, helpers.get("en"))
 
     except Exception:
+        language = "en"
         _ = get_string("en")
         helpers_dict = helpers.get("en", {})
 
+    chat_id = query.message.chat.id
+    mid = query.message.id
     top_text = _["help_1"]
 
     if mod_match:
@@ -273,68 +265,50 @@ async def help_button(client, query):
         prev_page_num = int(mod_match.group(2))
         close = bool(int(mod_match.group(3)))
         text = (
-            f"<b><u>Here is the help for {HELPABLE[module].__MODULE__}:</u></b>\n"
-            + HELPABLE[module].__HELP__
+            f"<b><u>ʜᴇʟᴘ ɢᴜɪᴅᴇ ꜰᴏʀ {rich_esc(HELPABLE[module].__MODULE__)}:</u></b>"
+            + rich_md(HELPABLE[module].__HELP__)
         )
-        key = InlineKeyboardMarkup(
-            [
-                [
-                    back_btn(
-                        "Back",
-                        callback_data=f"help_prev({prev_page_num},{int(close)})",
-                    ),
-                    close_btn("Close", callback_data="close"),
-                ],
-            ]
+        key = rich_button_row(
+            rich_button(f"{pemoji('🚀')} ʙᴀᴄᴋ", callback_data=f"help_prev({prev_page_num},{int(close)})", style="primary"),
+            rich_button(f"{pemoji('❌')} ᴄʟᴏsᴇ", callback_data="close", style="danger"),
         )
-        await query.message.edit(
-            text=text,
-            reply_markup=key,
-            disable_web_page_preview=True,
-        )
+        body = rich_heading(f'{pemoji("📖")} ᴍᴏᴅᴜʟᴇ ɢᴜɪᴅᴇ', level=4)
+        body += f"<p>{text}</p>"
+        body += key
+        await edit_rich(chat_id, mid, body)
     elif prev_match:
         curr_page = int(prev_match.group(1))
         close = bool(int(prev_match.group(2)))
-        await query.message.edit(
-            text=top_text,
-            reply_markup=await paginate_modules(
-                curr_page, query.message.chat.id, close=close
-            ),
-            disable_web_page_preview=True,
+        body = f"<p><b>{rich_esc(top_text)}</b></p>" + await paginate_modules(
+            curr_page, chat_id, close=close
         )
+        await edit_rich(chat_id, mid, body)
     elif next_match:
         next_page = int(next_match.group(1))
         close = bool(int(next_match.group(2)))
-        await query.message.edit(
-            text=top_text,
-            reply_markup=await paginate_modules(
-                next_page, query.message.chat.id, close=close
-            ),
-            disable_web_page_preview=True,
+        body = f"<p><b>{rich_esc(top_text)}</b></p>" + await paginate_modules(
+            next_page, chat_id, close=close
         )
+        await edit_rich(chat_id, mid, body)
     elif helper_match:
-        helper_key = helper_match.group(1)
+        helper_key = helper_match.group(1).replace("%44", ",")
         page_n = int(helper_match.group(2))
         close = bool(int(helper_match.group(3)))
         raw_text = helpers_dict.get(helper_key, None)
         formatted_text = await format_helper_text(language, helper_key, raw_text)
-        key = InlineKeyboardMarkup(
-            [
-                [
-                    back_btn(
-                        "Back", callback_data=f"help_prev({page_n},{int(close)})"
-                    ),
-                    close_btn("Close", callback_data="close"),
-                ]
-            ]
+        key = rich_button_row(
+            rich_button(f"{pemoji('🚀')} ʙᴀᴄᴋ", callback_data=f"help_prev({page_n},{int(close)})", style="primary"),
+            rich_button(f"{pemoji('❌')} ᴄʟᴏsᴇ", callback_data="close", style="danger"),
         )
+        body = rich_heading(f'{pemoji("🎧")} {rich_esc(helper_key)}', level=4)
+        body += f"<p>{rich_md(formatted_text)}</p>"
+        body += key
         try:
-            await query.message.edit(
-                text=f"<b>{helper_key}:</b>\n{formatted_text}",
-                reply_markup=key,
-                disable_web_page_preview=True,
-            )
+            await edit_rich(chat_id, mid, body)
         except Exception as e:
             logging.exception(e)
 
-    await client.answer_callback_query(query.id)
+    try:
+        await client.answer_callback_query(query.id)
+    except Exception:
+        pass

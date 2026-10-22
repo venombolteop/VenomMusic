@@ -14,8 +14,8 @@ from datetime import datetime
 from io import BytesIO
 
 from pyrogram import filters
-from pyrogram.enums import ButtonStyle, ChatMemberStatus
-from pyrogram.types import InlineKeyboardMarkup, Message
+from pyrogram.enums import ChatMemberStatus
+from pyrogram.types import Message
 
 from strings import command
 from VenomX import Platform, app, LOGGER
@@ -26,33 +26,42 @@ from VenomX.utils.database import (
     set_vc_lyrics,
 )
 from VenomX.utils.decorators.admins import AdminRightsCheck
-from VenomX.utils.premium import close_btn, custom_btn
+from VenomX.utils.rich_msg import (
+    edit_rich,
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_heading,
+    send_rich,
+)
 from VenomX.utils.stream import lyrics as lyrics_display
 
 _LOG = "Lyrics"
 
 
 def panel_markup(on: bool):
-    """The on/off panel, with the current state spelled out on the buttons."""
-    return InlineKeyboardMarkup(
-        [
-            [
-                custom_btn(
-                    "Lyrics: on" if on else "Lyrics: off",
-                    callback_data="lyrics|off" if on else "lyrics|on",
-                    style=ButtonStyle.SUCCESS if on else ButtonStyle.DANGER,
-                    emoji="✅" if on else "❌",
-                )
-            ],
-            [close_btn("Close")],
-        ]
+    return (
+        rich_button_row(
+            rich_button(
+                ("✅ ꜱᴛᴀᴛᴜꜱ: ᴏɴ" if on else "❌ ꜱᴛᴀᴛᴜꜱ: ᴏꜰꜰ"),
+                callback_data="lyrics|off" if on else "lyrics|on",
+                style="success" if on else "danger",
+            )
+        )
+        + rich_button_row(
+            rich_button("❌ ᴄʟᴏꜱᴇ", callback_data="close", style="danger")
+        )
     )
 
 
-async def _is_admin(message: Message) -> bool:
-    """A callback carries no command decorator, so the admin check is explicit."""
+async def _is_admin(chat, user_id: int) -> bool:
+    """A callback carries no command decorator, so the admin check is explicit.
+
+    The caller passes the clicker's id — CallbackQuery.message.from_user is the
+    bot itself, which made the old check an admin-self-check in disguise.
+    """
     try:
-        member = await message.chat.get_member(message.from_user.id)
+        member = await chat.get_member(user_id)
         return member.status in (
             ChatMemberStatus.ADMINISTRATOR,
             ChatMemberStatus.OWNER,
@@ -120,20 +129,18 @@ async def lyrics_status(client, message: Message):
         return await _lyrics_text(client, message, asked)
     chat_id = message.chat.id
     on = await get_vc_lyrics(chat_id)
-    await message.reply_text(
-        "🎵 <b>Lyrics in the voice chat panel</b>\n\n"
-        "Lines follow the song as it plays, here in this chat only — "
-        "switching it does not touch any other chat.\n\n"
-        "Status: <b>{state}</b>".format(state="on" if on else "off"),
-        reply_markup=panel_markup(on),
-    )
+    body = rich_heading(f'{pemoji("🎵")} ᴠᴇɴᴏᴍ ʟʏʀɪᴄꜱ ᴘᴀɴᴇʟ', level=4)
+    body += f"<p>Lines ᴍᴏᴠᴇ ᴡɪᴛʜ ᴛʜᴇ ꜱᴏɴɢ ᴛɪᴍᴇ — ᴄʜᴀᴛ-ᴏɴʟʏ\nꜱᴛᴀᴛᴜꜱ: <b>{'ᴏɴ' if on else 'ᴏꜰꜰ'}</b></p>"
+    body += panel_markup(on)
+    await send_rich(chat_id, body)
 
 
 @app.on_callback_query(filters.regex(r"^lyrics\|(on|off)$"))
 async def lyrics_toggle(client, CallbackQuery):
-    await CallbackQuery.answer()
     chat_id = CallbackQuery.message.chat.id
-    if not await _is_admin(CallbackQuery.message):
+    if not await _is_admin(
+        CallbackQuery.message.chat, CallbackQuery.from_user.id
+    ):
         return await CallbackQuery.answer(
             "Only an admin can change this.", show_alert=True
         )
@@ -144,6 +151,10 @@ async def lyrics_toggle(client, CallbackQuery):
             "Lyrics is already {} here.".format("on" if want_on else "off"),
             show_alert=True,
         )
+    try:
+        await CallbackQuery.answer()
+    except Exception:
+        pass
 
     await set_vc_lyrics(chat_id, want_on)
     if want_on:
@@ -158,13 +169,10 @@ async def lyrics_toggle(client, CallbackQuery):
         CallbackQuery.from_user.id,
     )
 
-    return await CallbackQuery.edit_message_text(
-        "🎵 <b>Lyrics in the voice chat panel</b>\n\n"
-        "Lines follow the song as it plays, here in this chat only — "
-        "switching it does not touch any other chat.\n\n"
-        "Status: <b>{state}</b>".format(state="on" if want_on else "off"),
-        reply_markup=panel_markup(want_on),
-    )
+    body = rich_heading(f'{pemoji("🎵")} ᴠᴇɴᴏᴍ ʟʏʀɪᴄꜱ ᴘᴀɴᴇʟ', level=4)
+    body += f"<p>Lines ᴍᴏᴠᴇ ᴡɪᴛʜ ᴛʜᴇ ꜱᴏɴɢ ᴛɪᴍᴇ — ᴄʜᴀᴛ-ᴏɴʟʏ\nꜱᴛᴀᴛᴜꜱ: <b>{'ᴏɴ' if want_on else 'ᴏꜰꜰ'}</b></p>"
+    body += panel_markup(want_on)
+    return await edit_rich(CallbackQuery.message.chat.id, CallbackQuery.message.id, body)
 
 
 LANG_STATES = {
@@ -175,21 +183,22 @@ LANG_STATES = {
 
 
 def lang_markup(current: str):
-    row = []
-    for code, label in (
-        ("auto", "Auto"),
-        ("hindi", "Hindi"),
-        ("english", "English"),
-    ):
-        row.append(
-            custom_btn(
+    return rich_button_row(
+        *(
+            rich_button(
                 f"{label} ✓" if code == current else label,
                 callback_data=f"lyricslang|{code}",
-                style=ButtonStyle.SUCCESS if code == current else ButtonStyle.PRIMARY,
-                emoji="✅" if code == current else None,
+                style="success" if code == current else "primary",
+            )
+            for code, label in (
+                ("auto", "ᴀᴜᴛᴏ"),
+                ("hindi", "ʜɪɴᴅɪ"),
+                ("english", "ᴇɴɢʟɪꜱʜ"),
             )
         )
-    return InlineKeyboardMarkup([row, [close_btn("Close")]])
+    ) + rich_button_row(
+        rich_button("❌ ᴄʟᴏꜱᴇ", callback_data="close", style="danger")
+    )
 
 
 @app.on_message(
@@ -198,36 +207,33 @@ def lang_markup(current: str):
 )
 async def lyrics_lang(client, message: Message):
     current = await get_lyrics_lang(message.chat.id)
-    await message.reply_text(
-        "🎵 <b>Lyrics language</b> for this chat\n\n"
-        "Which script the timed lines should be in. "
-        "<b>Auto</b> takes whichever the song has.\n\n"
-        "Current: <b>{state}</b>".format(
-            state=LANG_STATES.get(current, current)
-        ),
-        reply_markup=lang_markup(current),
-    )
+    body = rich_heading(f'{pemoji("🌐")} ʟʏʀɪᴄꜱ ʟᴀɴɢᴜᴀɢᴇ ꜱᴇᴛᴜᴘ', level=4)
+    body += f"<p><b>ᴀᴜᴛᴏ</b> = ɢᴇᴛ ᴡʜᴀᴛᴇᴠᴇʀ ᴛʜᴇ ꜱᴏɴɢ ʜᴀꜱ\nᴄᴜʀʀᴇɴᴛ: <b>{LANG_STATES.get(current, current)}</b></p>"
+    body += lang_markup(current)
+    await send_rich(message.chat.id, body)
 
 
 @app.on_callback_query(filters.regex(r"^lyricslang\|(auto|hindi|english)$"))
 async def lyrics_lang_cb(client, CallbackQuery):
-    await CallbackQuery.answer()
-    if not await _is_admin(CallbackQuery.message):
+    if not await _is_admin(
+        CallbackQuery.message.chat, CallbackQuery.from_user.id
+    ):
         return await CallbackQuery.answer(
             "Only an admin can change this.", show_alert=True
         )
+    try:
+        await CallbackQuery.answer()
+    except Exception:
+        pass
     chat_id = CallbackQuery.message.chat.id
     want = CallbackQuery.matches[0].group(1)
     await set_lyrics_lang(chat_id, want)
     lyrics_display.forget(chat_id)
     LOGGER(_LOG).info("lyrics language for chat %s set to %s", chat_id, want)
-    return await CallbackQuery.edit_message_text(
-        "🎵 <b>Lyrics language</b> for this chat\n\n"
-        "Which script the timed lines should be in. "
-        "<b>Auto</b> takes whichever the song has.\n\n"
-        "Current: <b>{state}</b>".format(state=LANG_STATES.get(want, want)),
-        reply_markup=lang_markup(want),
-    )
+    body = rich_heading(f'{pemoji("🌐")} ʟʏʀɪᴄꜱ ʟᴀɴɢᴜᴀɢᴇ ꜱᴇᴛᴜᴘ', level=4)
+    body += f"<p><b>ᴀᴜᴛᴏ</b> = ɢᴇᴛ ᴡʜᴀᴛᴇᴠᴇʀ ᴛʜᴇ ꜱᴏɴɢ ʜᴀꜱ\nᴄᴜʀʀᴇɴᴛ: <b>{LANG_STATES.get(want, want)}</b></p>"
+    body += lang_markup(want)
+    return await edit_rich(CallbackQuery.message.chat.id, CallbackQuery.message.id, body)
 
 
 async def _lyrics_text(client, message: Message, query: str):

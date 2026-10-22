@@ -2,7 +2,7 @@
 # All rights reserved.
 #
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardMarkup, Message
+from pyrogram.types import Message
 
 from config import BANNED_USERS, adminlist
 from strings import get_string, command
@@ -20,7 +20,14 @@ from VenomX.utils.database import (
     is_nonadmin_chat,
     set_loop,
 )
-from VenomX.utils.premium import warn_btn
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    send_rich,
+)
 
 
 @app.on_message(command("STOP_COMMAND") & filters.group & ~BANNED_USERS)
@@ -50,17 +57,14 @@ async def stop_music(cli, message: Message):
         _ = get_string("en")
 
     if message.sender_chat:
-        upl = InlineKeyboardMarkup(
-            [
-                [
-                    warn_btn(
-                        text="How to Fix this? ",
-                        callback_data="AnonymousAdmin",
-                    ),
-                ]
-            ]
+        return await send_rich(
+            message.chat.id,
+            rich_heading(f'{pemoji("⚠")} ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴ ᴅᴇᴛᴇᴄᴛᴇᴅ', level=4)
+            + f"<p>{rich_esc(_['general_4'])}</p>"
+            + rich_button_row(
+                rich_button("❓ ʜᴏᴡ ᴛᴏ ꜰɪx ᴛʜɪꜱ?", callback_data="AnonymousAdmin", style="danger"),
+            ),
         )
-        return await message.reply_text(_["general_4"], reply_markup=upl)
 
     if message.command[0][0] == "c":
         chat_id = await get_cmode(message.chat.id)
