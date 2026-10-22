@@ -2,9 +2,7 @@
 # All rights reserved.
 
 from VenomX import app
-from pyrogram.types import InlineKeyboardMarkup
 from pyrogram import filters
-from VenomX.utils.premium import back_btn, nav_btn, star_btn
 
 
 class Fonts:
@@ -2372,93 +2370,137 @@ class Fonts:
 
 @app.on_message(filters.command(["font", "fonts"]))
 async def style_buttons(c, m, cb=False):
-    buttons = [
-        [
-            star_btn("𝚃𝚢𝚙𝚎𝚠𝚛𝚒𝚝𝚎𝚛", callback_data="style+typewriter"),
-            star_btn("𝕆𝕦𝕥𝕝𝕚𝕟𝕖", callback_data="style+outline"),
-            star_btn("𝐒𝐞𝐫𝐢𝐟", callback_data="style+serif"),
-        ],
-        [
-            star_btn("𝑺𝒆𝒓𝒊𝒇", callback_data="style+bold_cool"),
-            star_btn("𝑆𝑒𝑟𝑖𝑓", callback_data="style+cool"),
-            star_btn("Sᴍᴀʟʟ Cᴀᴘs", callback_data="style+small_cap"),
-        ],
-        [
-            star_btn("𝓈𝒸𝓇𝒾𝓅𝓉", callback_data="style+script"),
-            star_btn("𝓼𝓬𝓻𝓲𝓹𝓽", callback_data="style+script_bolt"),
-            star_btn("ᵗⁱⁿʸ", callback_data="style+tiny"),
-        ],
-        [
-            star_btn("ᑕOᗰIᑕ", callback_data="style+comic"),
-            star_btn("𝗦𝗮𝗻𝘀", callback_data="style+sans"),
-            star_btn("𝙎𝙖𝙣𝙨", callback_data="style+slant_sans"),
-        ],
-        [
-            star_btn("𝘚𝘢𝘯𝘴", callback_data="style+slant"),
-            star_btn("𝖲𝖺𝗇𝗌", callback_data="style+sim"),
-            star_btn("Ⓒ︎Ⓘ︎Ⓡ︎Ⓒ︎Ⓛ︎Ⓔ︎Ⓢ︎", callback_data="style+circles"),
-        ],
-        [
-            star_btn("🅒︎🅘︎🅡︎🅒︎🅛︎🅔︎🅢︎", callback_data="style+circle_dark"),
-            star_btn("𝔊𝔬𝔱𝔥𝔦𝔠", callback_data="style+gothic"),
-            star_btn("𝕲𝖔𝖙𝖍𝖎𝖈", callback_data="style+gothic_bolt"),
-        ],
-        [
-            star_btn("C͜͡l͜͡o͜͡u͜͡d͜͡s͜͡", callback_data="style+cloud"),
-            star_btn("H̆̈ă̈p̆̈p̆̈y̆̈", callback_data="style+happy"),
-            star_btn("S̑̈ȃ̈d̑̈", callback_data="style+sad"),
-        ],
-        [nav_btn("ɴᴇxᴛ ➻", callback_data="nxt")],
-    ]
+    from VenomX.utils.rich_msg import (
+        edit_rich,
+        rich_button,
+        rich_button_row,
+        rich_heading,
+        send_rich,
+    )
+
+    def sb(label, cb_data):
+        return rich_button(label, callback_data=cb_data, style="primary")
+
+    buttons = (
+        rich_button_row(
+            sb("𝚃𝚢𝚙𝚎𝚠𝚛𝚒𝚝𝚎𝚛", "style+typewriter"),
+            sb("𝕆𝕦𝕥𝕝𝕚𝕟𝕖", "style+outline"),
+            sb("𝐒𝐞𝐫𝐢𝐟", "style+serif"),
+        )
+        + rich_button_row(
+            sb("𝑺𝒆𝒓𝒊𝒇", "style+bold_cool"),
+            sb("𝑆𝑒𝑟𝑖𝑓", "style+cool"),
+            sb("Sᴍᴀʟʟ Cᴀᴘꜱ", "style+small_cap"),
+        )
+        + rich_button_row(
+            sb("𝓈𝒸𝓇𝒾𝓅𝓉", "style+script"),
+            sb("𝓼𝓬𝓻𝓲𝓹𝓽", "style+script_bolt"),
+            sb("ᵗⁱⁿʸ", "style+tiny"),
+        )
+        + rich_button_row(
+            sb("ᑕOᗰIᑕ", "style+comic"),
+            sb("𝗦𝗮𝗻𝘀", "style+sans"),
+            sb("𝙎𝙖𝙣𝙨", "style+slant_sans"),
+        )
+        + rich_button_row(
+            sb("𝘚𝘢𝘯𝘴", "style+slant"),
+            sb("𝖲𝖺𝗇𝗌", "style+sim"),
+            sb("Ⓒ︎Ⓘ︎Ⓡ︎Ⓒ︎Ⓛ︎Ⓔ︎Ⓢ︎", "style+circles"),
+        )
+        + rich_button_row(
+            sb("🅒︎🅘︎🅡︎🅒︎🅛︎🅔︎🅢︎", "style+circle_dark"),
+            sb("𝔊𝔬𝔱𝔥𝔦𝔠", "style+gothic"),
+            sb("𝕲𝖔𝖙𝖍𝖎𝖈", "style+gothic_bolt"),
+        )
+        + rich_button_row(
+            sb("C͜͡l͜͡o͜͡u͜͡d͜͡s͜͡", "style+cloud"),
+            sb("H̆̈ă̈p̆̈p̆̈y̆̈", "style+happy"),
+            sb("S̑̈ȃ̈d̑̈", "style+sad"),
+        )
+        + rich_button_row(
+            sb("ɴᴇxᴛ ➻", "nxt"),
+        )
+    )
     if not cb:
-        await m.reply_text(
-            text=m.text.split(None, 1)[1],
-            reply_markup=InlineKeyboardMarkup(buttons),
-            quote=True,
+        await send_rich(
+            m.chat.id,
+            rich_heading("🎨 ᴠᴇɴᴏᴍ ꜰᴏɴᴛ ꜱᴛʏʟᴇʀ", level=4)
+            + f"<p>{rich_label((m.text.split(None, 1)[1] if m.text and len(m.text.split()) > 1 else ''))}</p>"
+            + buttons,
         )
     else:
         await m.answer()
-        await m.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
+        await edit_rich(
+            m.message.chat.id,
+            m.message.id,
+            rich_heading("🎨 ᴠᴇɴᴏᴍ ꜰᴏɴᴛ ꜱᴛʏʟᴇʀ", level=4)
+            + f"<p>{rich_label(m.message.text or m.message.caption or '')}</p>"
+            + buttons,
+        )
+
+
+def rich_label(text):
+    from VenomX.utils.rich_msg import rich_esc
+
+    return f"<code>{rich_esc(text)}</code>"
 
 
 @app.on_callback_query(filters.regex("^nxt"))
 async def nxt(c, m):
+    from VenomX.utils.rich_msg import (
+        edit_rich,
+        rich_button,
+        rich_button_row,
+        rich_heading,
+    )
+
+    def sb(label, cb_data):
+        return rich_button(label, callback_data=cb_data, style="primary")
+
     if m.data == "nxt":
-        buttons = [
-            [
-                star_btn("🇸 🇵 🇪 🇨 🇮 🇦 🇱 ", callback_data="style+special"),
-                star_btn("🅂🅀🅄🄰🅁🄴🅂", callback_data="style+squares"),
-                star_btn("🆂︎🆀︎🆄︎🅰︎🆁︎🅴︎🆂︎", callback_data="style+squares_bold"),
-            ],
-            [
-                star_btn("ꪖꪀᦔꪖꪶꪊᥴ𝓲ꪖ", callback_data="style+andalucia"),
-                star_btn("爪卂几ᘜ卂", callback_data="style+manga"),
-                star_btn("S̾t̾i̾n̾k̾y̾", callback_data="style+stinky"),
-            ],
-            [
-                star_btn("B̥ͦu̥ͦb̥ͦb̥ͦl̥ͦe̥ͦs̥ͦ", callback_data="style+bubbles"),
-                star_btn("U͟n͟d͟e͟r͟l͟i͟n͟e͟", callback_data="style+underline"),
-                star_btn("꒒ꍏꀷꌩꌃꀎꁅ", callback_data="style+ladybug"),
-            ],
-            [
-                star_btn("R҉a҉y҉s҉", callback_data="style+rays"),
-                star_btn("B҈i҈r҈d҈s҈", callback_data="style+birds"),
-                star_btn("S̸l̸a̸s̸h̸", callback_data="style+slash"),
-            ],
-            [
-                star_btn("s⃠t⃠o⃠p⃠", callback_data="style+stop"),
-                star_btn("S̺͆k̺͆y̺͆l̺͆i̺͆n̺͆e̺͆", callback_data="style+skyline"),
-                star_btn("A͎r͎r͎o͎w͎s͎", callback_data="style+arrows"),
-            ],
-            [
-                star_btn("ዪሀክቿነ", callback_data="style+qvnes"),
-                star_btn("S̶t̶r̶i̶k̶e̶", callback_data="style+strike"),
-                star_btn("F༙r༙o༙z༙e༙n༙", callback_data="style+frozen"),
-            ],
-            [back_btn("ʙᴀᴄᴋ", callback_data="nxt+0")],
-        ]
+        buttons = (
+            rich_button_row(
+                sb("🇸 🇵 🇪 🇨 🇮 🇦 🇱", "style+special"),
+                sb("🅂🅀🅄🄰🅁🄴🅂", "style+squares"),
+                sb("🆂︎🆀︎🆄︎🅰︎🆁︎🅴︎🆂︎", "style+squares_bold"),
+            )
+            + rich_button_row(
+                sb("ꪖꪀᦔꪖꪶꪊᥴ𝓲ꪖ", "style+andalucia"),
+                sb("爪卂几ᘜ卂", "style+manga"),
+                sb("S̾t̾i̾n̾k̾y̾", "style+stinky"),
+            )
+            + rich_button_row(
+                sb("B̥ͦu̥ͦb̥ͦb̥ͦl̥ͦe̥ͦꜱ̥ͦ", "style+bubbles"),
+                sb("U͟n͟d͟e͟r͟l͟i͟n͟e͟", "style+underline"),
+                sb("꒒ꍏꀷꌩꌃꀎꁅ", "style+ladybug"),
+            )
+            + rich_button_row(
+                sb("R҉a҉y҉ꜱ҉", "style+rays"),
+                sb("B҈i҈r҈d҈ꜱ҈", "style+birds"),
+                sb("S̸l̸a̸s̸h̸", "style+slash"),
+            )
+            + rich_button_row(
+                sb("ꜱ⃠ᴛ⃠ᴏ⃠ᴘ⃠", "style+stop"),
+                sb("S̺͆ᴋ̺͆ʏ̺͆ʟ̺͆ɪ̺͆ɴ̺͆ᴇ̺͆", "style+skyline"),
+                sb("ᴀ͎ʀ͎ʀ͎ᴏ͎ᴡ͎ꜱ͎", "style+arrows"),
+            )
+            + rich_button_row(
+                sb("ዪሀክቿነ", "style+qvnes"),
+                sb("ꜱ̶ᴛ̶ʀ̶ɪ̶ᴋ̶ᴇ̶", "style+strike"),
+                sb("F༙ʀ༙ᴏ༙ᴢ༙ᴇ༙ɴ༙", "style+frozen"),
+            )
+            + rich_button_row(
+                sb("ʙᴀᴄᴋ", "nxt+0"),
+            )
+        )
         await m.answer()
-        await m.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
+        await edit_rich(
+            m.message.chat.id,
+            m.message.id,
+            rich_heading("🎨 ᴠᴇɴᴏᴍ ꜰᴏɴᴛ ꜱᴛʏʟᴇʀ", level=4)
+            + f"<p>{rich_label(m.message.text or m.message.caption or '')}</p>"
+            + buttons,
+        )
     else:
         await style_buttons(c, m, cb=True)
 
@@ -2547,10 +2589,73 @@ async def style(c, m):
     if style == "frozen":
         cls = Fonts.frozen
     new_text = cls(m.message.reply_to_message.text.split(None, 1)[1])
+    from VenomX.utils.rich_msg import edit_rich, rich_heading
+
     try:
-        await m.message.edit_text(f"`{new_text}`")
+        keep = m.message.text or ""
+        rows = ""
+        if "<tg-button-row>" in keep:
+            idx = keep.find("<p>", keep.find("</heading>"))
+        # simply rebuild page-1 grid after applying the style
+        from VenomX.plugins.tools.font import _apply_rows
+
+        rows = _apply_rows()
+        head = rich_heading("🎨 ᴠᴇɴᴏᴍ ꜰᴏɴᴛ ꜱᴛʏʟᴇʀ", level=4)
+        await edit_rich(
+            m.message.chat.id,
+            m.message.id,
+            head + f"<p><code>{rich_esc(new_text)}</code></p>" + rows,
+        )
     except BaseException:
         pass
+
+
+def _apply_rows():
+    from VenomX.utils.rich_msg import rich_button, rich_button_row
+
+    def sb(label, cb_data):
+        return rich_button(label, callback_data=cb_data, style="primary")
+
+    return (
+        rich_button_row(
+            sb("𝚃𝚢𝚙𝚎𝚠𝚛𝚒𝚝𝚎𝚛", "style+typewriter"),
+            sb("𝕆𝕦𝕥𝕝𝕚𝕟𝕖", "style+outline"),
+            sb("𝐒𝐞𝐫𝐢𝐟", "style+serif"),
+        )
+        + rich_button_row(
+            sb("𝑺𝒆𝒓𝒊𝒇", "style+bold_cool"),
+            sb("𝑆𝑒𝑟𝑖𝑓", "style+cool"),
+            sb("Sᴍᴀʟʟ Cᴀᴘꜱ", "style+small_cap"),
+        )
+        + rich_button_row(
+            sb("𝓈𝒸𝓇𝒾𝓅𝓉", "style+script"),
+            sb("𝓼𝓬𝓻𝓲𝓹𝓽", "style+script_bolt"),
+            sb("ᵗⁱⁿʸ", "style+tiny"),
+        )
+        + rich_button_row(
+            sb("ᑕOᗰIᑕ", "style+comic"),
+            sb("𝗦𝗮𝗻𝘀", "style+sans"),
+            sb("𝙎𝙖𝙣𝙨", "style+slant_sans"),
+        )
+        + rich_button_row(
+            sb("𝘚𝘢𝘯𝘴", "style+slant"),
+            sb("𝖲𝖺𝗇𝗌", "style+sim"),
+            sb("Ⓒ︎Ⓘ︎Ⓡ︎Ⓒ︎Ⓛ︎Ⓔ︎Ⓢ︎", "style+circles"),
+        )
+        + rich_button_row(
+            sb("🅒︎🅘︎🅡︎🅒︎🅛︎🅔︎🅢︎", "style+circle_dark"),
+            sb("𝔊𝔬𝔱𝔥𝔦𝔠", "style+gothic"),
+            sb("𝕲𝖔𝖙𝖍𝖎𝖈", "style+gothic_bolt"),
+        )
+        + rich_button_row(
+            sb("C͜͡l͜͡o͜͡u͜͡d͜͡s͜͡", "style+cloud"),
+            sb("H̆̈ă̈p̆̈p̆̈y̆̈", "style+happy"),
+            sb("S̑̈ȃ̈d̑̈", "style+sad"),
+        )
+        + rich_button_row(
+            sb("ɴᴇxᴛ ➻", "nxt"),
+        )
+    )
 
 
 __HELP__ = """

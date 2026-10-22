@@ -1,9 +1,15 @@
 import os
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardMarkup
 from VenomX import app
 import requests
-from VenomX.utils.premium import link_btn
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_esc,
+    rich_heading,
+    rich_url_button,
+    rich_button_row,
+    send_rich,
+)
 
 
 def upload_file(file_path):
@@ -22,7 +28,7 @@ def upload_file(file_path):
 async def get_link_group(client, message):
     if not message.reply_to_message:
         return await message.reply_text(
-            "Pʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇᴅɪᴀ ᴛᴏ ᴜᴘʟᴏᴀᴅ ᴏɴ Tᴇʟᴇɢʀᴀᴘʜ"
+            "Pʟᴇᴀꜱᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇᴅɪᴀ ᴛᴏ ᴜᴘʟᴏᴀᴅ ᴏɴ Tᴇʟᴇɢʀᴀᴘʜ"
         )
 
     media = message.reply_to_message
@@ -35,10 +41,10 @@ async def get_link_group(client, message):
         file_size = media.document.file_size
 
     if file_size > 200 * 1024 * 1024:
-        return await message.reply_text("⚠️ Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴇᴅɪᴀ ғɪʟᴇ ᴜɴᴅᴇʀ 200MB.")
+        return await message.reply_text("⚠️ Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴇᴅɪᴀ ꜰɪʟᴇ ᴜɴᴅᴇʀ 200MB.")
 
     try:
-        text = await message.reply("Pʀᴏᴄᴇssɪɴɢ...")
+        text = await message.reply("Pʀᴏᴄᴇꜱꜱɪɴɢ...")
 
         async def progress(current, total):
             try:
@@ -48,28 +54,21 @@ async def get_link_group(client, message):
 
         try:
             local_path = await media.download(progress=progress)
-            await text.edit_text("📤 Uᴘʟᴏᴀᴅɪɴɢ ᴛᴏ ᴛᴇʟᴇɢʀᴀᴘʜ...")
+            await text.edit_text("📤 Uᴘʟᴏᴀᴅɪɴɢ ᴛᴏ ᴄᴀᴛʙᴏx...")
 
             success, upload_path = upload_file(local_path)
 
             if success:
-                await text.edit_text(
-                    f"🌐 | [👉ʏᴏᴜʀ ʟɪɴᴋ ᴛᴀᴘ ʜᴇʀᴇ👈]({upload_path})",
-                    reply_markup=InlineKeyboardMarkup(
-                        [
-                            [
-                                link_btn(
-                                    "𝖢ʀᴇᴀᴛᴇ ʙʏ Vᴇɴᴏᴍ 𝖳ᴀᴘ ᴛᴏ 𝖲ᴇᴇ",
-                                    url=upload_path,
-                                    emoji="🌐",
-                                )
-                            ]
-                        ]
-                    ),
+                await text.delete()
+                body = rich_heading(f'{pemoji("🌐")} ᴠᴇɴᴏᴍ ʟɪɴᴋ-ᴏ-ᴍᴀᴛɪᴄ', level=4)
+                body += f"<p> uploader: <a href='{rich_esc(upload_path)}'>{rich_esc(upload_path)}</a></p>"
+                body += rich_button_row(
+                    rich_url_button("🌐 ᴄʀᴇᴀᴛᴇᴅ ʙʏ ᴠᴇɴᴏᴍ · ᴛᴀᴘ ᴛᴏ ꜱᴇᴇ", upload_path),
                 )
+                await send_rich(message.chat.id, body)
             else:
                 await text.edit_text(
-                    f"ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴜᴘʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ ғɪʟᴇ\n{upload_path}"
+                    f"ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴜᴘʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ ꜰɪʟᴇ\n{upload_path}"
                 )
 
             try:
@@ -78,7 +77,7 @@ async def get_link_group(client, message):
                 pass
 
         except Exception as e:
-            await text.edit_text(f"❌ Fɪʟᴇ ᴜᴘʟᴏᴀᴅ ғᴀɪʟᴇᴅ\n\n<i>Rᴇᴀsᴏɴ: {e}</i>")
+            await text.edit_text(f"❌ Fɪʟᴇ ᴜᴘʟᴏᴀᴅ ꜰᴀɪʟᴇᴅ\n\n<i>Rᴇᴀꜱᴏɴ: {e}</i>")
             try:
                 os.remove(local_path)
             except Exception:

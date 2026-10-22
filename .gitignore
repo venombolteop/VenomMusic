@@ -27,3 +27,7 @@ logs/
 # env backups and local error dumps
 .env.bak-*
 unknown_errors.txt
+.venv-rich/
+fetch_refs.py
+test_emoji_edit.py
+test_rich.py

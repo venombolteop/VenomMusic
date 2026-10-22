@@ -1,12 +1,15 @@
 
 # All rights reserved.
 #
+# Top-tracks module — rich-message panels (Bot API 10.3) + Venom branding.
+#
+
 import asyncio
 
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardMarkup
 
 from config import BANNED_USERS
+from strings import get_string
 from VenomX import app
 from VenomX.utils.database import (
     get_global_tops,
@@ -18,6 +21,15 @@ from VenomX.utils.inline.playlist import (
     botplaylist_markup,
     failed_top_markup,
     top_play_markup,
+)
+from VenomX.utils.rich_msg import (
+    RichMystic,
+    delete_msg,
+    edit_rich,
+    pemoji,
+    rich_esc,
+    rich_heading,
+    send_rich,
 )
 from VenomX.utils.stream.stream import stream
 
@@ -31,9 +43,11 @@ async def get_play_markup(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    buttons = botplaylist_markup(_)
-    return await CallbackQuery.edit_message_reply_markup(
-        reply_markup=InlineKeyboardMarkup(buttons)
+    await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        rich_heading(f'{pemoji("🎵")} ᴘʟᴀʏʟɪsᴛ ᴍᴇɴᴜ', level=4)
+        + botplaylist_markup(_),
     )
 
 
@@ -44,9 +58,11 @@ async def get_topz_playlists(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    buttons = top_play_markup(_)
-    return await CallbackQuery.edit_message_reply_markup(
-        reply_markup=InlineKeyboardMarkup(buttons)
+    await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        rich_heading(f'{pemoji("🔥")} ᴛᴏᴘ ᴘʟᴀʏʟɪsᴛ ᴇᴅɪᴛᴏʀ', level=4)
+        + top_play_markup(_),
     )
 
 
@@ -61,13 +77,15 @@ async def server_to_play(client, CallbackQuery, _):
         pass
     callback_data = CallbackQuery.data.strip()
     what = callback_data.split(None, 1)[1]
-    mystic = await CallbackQuery.edit_message_text(
-        _["tracks_1"].format(
-            what,
-            CallbackQuery.from_user.first_name,
-        )
+    mid = await send_rich(
+        chat_id,
+        rich_heading(
+            f'{pemoji("⏳")} ᴄᴏᴍᴘɪʟɪɴɢ {rich_esc(what)} ᴛᴏᴘ ʟɪsᴛ ᴏꜰ {rich_esc(CallbackQuery.from_user.first_name)}...',
+            level=4,
+        ),
     )
-    upl = failed_top_markup(_)
+    if not mid:
+        return
     if what == "Global":
         stats = await get_global_tops()
     elif what == "Group":
@@ -75,7 +93,12 @@ async def server_to_play(client, CallbackQuery, _):
     elif what == "Personal":
         stats = await get_userss(CallbackQuery.from_user.id)
     if not stats:
-        return await mystic.edit(_["tracks_2"].format(what), reply_markup=upl)
+        return await edit_rich(
+            chat_id,
+            mid,
+            f"<p>{rich_esc(_['tracks_2'].format(what))}</p>"
+            + failed_top_markup(_),
+        )
 
     def get_stats():
         results = {}
@@ -90,7 +113,7 @@ async def server_to_play(client, CallbackQuery, _):
                 )
             )
         if not results:
-            return mystic.edit(_["tracks_2"].format(what), reply_markup=upl)
+            return None
         details = []
         limit = 0
         for vidid, count in list_arranged.items():
@@ -101,7 +124,7 @@ async def server_to_play(client, CallbackQuery, _):
             limit += 1
             details.append(vidid)
         if not details:
-            return mystic.edit(_["tracks_2"].format(what), reply_markup=upl)
+            return None
         return details
 
     try:
@@ -109,10 +132,17 @@ async def server_to_play(client, CallbackQuery, _):
     except Exception as e:
         print(e)
         return
+    if details is None:
+        return await edit_rich(
+            chat_id,
+            mid,
+            f"<p>{rich_esc(_['tracks_2'].format(what))}</p>"
+            + failed_top_markup(_),
+        )
     try:
         await stream(
             _,
-            mystic,
+            RichMystic(chat_id, mid),
             CallbackQuery.from_user.id,
             details,
             chat_id,
@@ -124,5 +154,5 @@ async def server_to_play(client, CallbackQuery, _):
     except Exception as e:
         ex_type = type(e).__name__
         err = e if ex_type == "AssistantErr" else _["general_3"].format(ex_type)
-        return await mystic.edit_text(err)
-    return await mystic.delete()
+        return await edit_rich(chat_id, mid, f"<p>{rich_esc(err)}</p>")
+    return await delete_msg(chat_id, mid)

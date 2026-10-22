@@ -1,53 +1,78 @@
 
 # All rights reserved.
 #
+# Language settings — rich-message grid (Bot API 10.3) + premium emoji per row.
+#
 
-from pykeyboard import InlineKeyboard
 from pyrogram import filters
-from pyrogram.enums import ButtonStyle
 from pyrogram.types import Message
 
 from config import BANNED_USERS
-from strings import get_string, languages_present, command
+from strings import command, get_string, languages_present
 from VenomX import app
 from VenomX.utils.database import get_lang, set_lang
 from VenomX.utils.decorators import ActualAdminCB, language, languageCB
-from VenomX.utils.premium import back_btn, close_btn, custom_btn
+from VenomX.utils.rich_msg import (
+    edit_rich,
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    send_rich,
+)
 
-# One unique premium emoji per language button
+# One unique premium emoji per language button (only emoji that exist in the DB)
 _LANG_EMOJIS = ["🌟", "🔥", "🚀", "⭐", "💫", "✨", "🎵", "🎶", "🎧", "🎤"]
 
 
 def lanuages_keyboard(_):
-    keyboard = InlineKeyboard(row_width=2)
-    lang_buttons = []
+    rows = []
+    row = []
     for i, lang_key in enumerate(languages_present):
-        lang_buttons.append(
-            custom_btn(
-                languages_present[lang_key],
+        row.append(
+            rich_button(
+                f"{pemoji(_LANG_EMOJIS[i % len(_LANG_EMOJIS)])} "
+                f"{rich_esc(languages_present[lang_key])}",
                 callback_data=f"languages:{lang_key}",
-                style=ButtonStyle.PRIMARY,
-                emoji=_LANG_EMOJIS[i % len(_LANG_EMOJIS)],
+                style="primary",
             )
         )
-    keyboard.add(*lang_buttons)
-    keyboard.row(
-        back_btn(
-            _["BACK_BUTTON"],
-            callback_data=f"settingsback_helper",
-        ),
-        close_btn(_["CLOSE_BUTTON"], callback_data=f"close"),
+        if len(row) == 2:
+            rows.append(rich_button_row(*row))
+            row = []
+    if row:
+        rows.append(rich_button_row(*row))
+    rows.append(
+        rich_button_row(
+            rich_button(
+                f"{pemoji('🚀')} {_['BACK_BUTTON']}",
+                callback_data="settingsback_helper",
+                style="primary",
+            ),
+            rich_button(
+                f"{pemoji('❌')} {_['CLOSE_BUTTON']}",
+                callback_data="close",
+                style="danger",
+            ),
+        )
     )
-    return keyboard
+    return "".join(rows)
+
+
+def languages_panel(_, title, chat_id):
+    body = rich_heading(f'{pemoji("🌐")} ᴋᴏɴᴅᴏ ᴋɪ ᴠᴇɴᴏᴍ ʙʜᴀsʜᴀ?', level=4)
+    body += f"<p>{rich_esc(_['setting_1'].format(title, chat_id))}</p>"
+    body += lanuages_keyboard(_)
+    return body
 
 
 @app.on_message(command("LANGUAGE_COMMAND") & filters.group & ~BANNED_USERS)
 @language
 async def langs_command(client, message: Message, _):
-    keyboard = lanuages_keyboard(_)
-    await message.reply_text(
-        _["setting_1"].format(message.chat.title, message.chat.id),
-        reply_markup=keyboard,
+    await send_rich(
+        message.chat.id,
+        languages_panel(_, message.chat.title, message.chat.id),
     )
 
 
@@ -58,8 +83,13 @@ async def lanuagecb(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    keyboard = lanuages_keyboard(_)
-    return await CallbackQuery.edit_message_reply_markup(reply_markup=keyboard)
+    return await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        languages_panel(
+            _, CallbackQuery.message.chat.title, CallbackQuery.message.chat.id
+        ),
+    )
 
 
 @app.on_callback_query(filters.regex(r"languages:(.*?)") & ~BANNED_USERS)
@@ -82,5 +112,10 @@ async def language_markup(client, CallbackQuery, _):
             show_alert=True,
         )
     await set_lang(CallbackQuery.message.chat.id, langauge)
-    keyboard = lanuages_keyboard(_)
-    return await CallbackQuery.edit_message_reply_markup(reply_markup=keyboard)
+    return await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        languages_panel(
+            _, CallbackQuery.message.chat.title, CallbackQuery.message.chat.id
+        ),
+    )

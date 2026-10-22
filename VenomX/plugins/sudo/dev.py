@@ -108,22 +108,39 @@ async def executor(client: app, message: Message):
         await message.delete()
         os.remove(filename)
     else:
-        t2 = time()
-        keyboard = InlineKeyboardMarkup(
-            [
-                [
-                    nav_btn(
-                        text="⏳",
-                        callback_data=f"runtime {round(t2-t1, 3)} Seconds",
-                    ),
-                    close_btn(
-                        text="🗑",
-                        callback_data=f"forceclose abc|{message.from_user.id}",
-                    ),
-                ]
-            ]
+        from VenomX.utils.rich_msg import (
+            rich_button,
+            rich_button_row,
+            rich_esc,
+            send_rich,
         )
-        await edit_or_reply(message, text=final_output, reply_markup=keyboard)
+
+        t2 = time()
+        result_body = rich_button_row(
+            rich_button("⏳ Runtime", callback_data=f"runtime {round(t2-t1, 3)} Seconds", style="primary"),
+            rich_button("🗑 Close", callback_data=f"forceclose abc|{message.from_user.id}", style="danger"),
+        )
+        mid = await send_rich(
+            message.chat.id,
+            f"<p><b>RESULTS:</b></p><p><pre language='python'>{rich_esc(evaluation)}</pre></p>"
+            + result_body,
+        )
+        if not mid:
+            keyboard = InlineKeyboardMarkup(
+                [
+                    [
+                        nav_btn(
+                            text="⏳",
+                            callback_data=f"runtime {round(t2-t1, 3)} Seconds",
+                        ),
+                        close_btn(
+                            text="🗑",
+                            callback_data=f"forceclose abc|{message.from_user.id}",
+                        ),
+                    ]
+                ]
+            )
+            await edit_or_reply(message, text=final_output, reply_markup=keyboard)
 
 
 @app.on_callback_query(filters.regex(r"runtime"))

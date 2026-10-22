@@ -150,6 +150,11 @@ def pick_id(emoji):
         if fb:
             ids = emoji_ids(fb)
     if not ids:
+        # Missing control icons -> verified equivalents available in the DB
+        fb2 = _DB_EMOJI_FALLBACK.get(_norm(emoji)) or _DB_EMOJI_FALLBACK.get(emoji)
+        if fb2:
+            ids = emoji_ids(fb2)
+    if not ids:
         return None
     return random.choice(ids)
 
@@ -390,6 +395,37 @@ _BTN_EMOJI_FALLBACK = {
     "\U0001f4e2": "\U0001f3a4",  # 📢 → 🎤
     "\U0001f4ca": "\U0001f4cb",  # 📊 → 📋
     "\U0001f5bc": "\U0001f4f7",  # 🖼 → 📷
+}
+
+
+# Missing emojis mapped to DB-verified equivalents (player + banner icons).
+_DB_EMOJI_FALLBACK = {
+    "▶": "⏺",
+    "⏸": "⏹",
+    "🛑": "🚫",
+    "❌": "⛔",
+    "⏩": "⚡",
+    "⏪": "◀",
+    "⬅": "◀",
+    "➡": "🔛",
+    "⏳": "⌛",
+    "⏱": "🕐",
+    "⚙": "🎛",
+    "➕": "📂",
+    "💬": "🗯",
+    "🚀": "🛩",
+    "🔁": "🔃",
+    "🔇": "🔅",
+    "🔊": "⚡",
+    "🎲": "🎯",
+    "🎵": "🎧",
+    "🔑": "🔠",
+    "🧑": "👤",
+    "🧑‍💻": "👨‍💻",
+    "📡": "📟",
+    "🌐": "🌎",
+    "🐍": "🐉",
+    "💎": "💠",
 }
 
 

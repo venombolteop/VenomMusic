@@ -28,9 +28,9 @@ async def play_logs(message, streamtype, thumbnail=None):
             chat_line = f"🏷 **Chat:** {chat_title}"
 
         logger_text = f"""
-╔══════════════════════╗
+╔══════════╗
   🎵 **{app.mention} Play Log**
-╚══════════════════════╝
+╚══════════╝
 
 🏰 **Group Info**
 ├ {chat_line}

@@ -62,8 +62,11 @@ async def play_commnd(
         query_text[:120],
     )
     try:
-        mystic = await message.reply_text(
-            _["play_2"].format(channel) if channel else _["play_1"]
+        from VenomX.utils.rich_msg import status_card
+
+        mystic = await status_card(
+            message.chat.id,
+            _["play_2"].format(channel) if channel else _["play_1"],
         )
     except ChatWriteForbidden:
         LOGGER(_PLAY_LOG).warning("[PLAY] ChatWriteForbidden for chat=%s", message.chat.id)
@@ -426,10 +429,12 @@ async def play_commnd(
             return await play_logs(message, streamtype="M3u8 or Index Link")
     else:
         if len(message.command) < 2:
-            buttons = botplaylist_markup(_)
-            return await mystic.edit_text(
-                _["playlist_1"],
-                reply_markup=InlineKeyboardMarkup(buttons),
+            from VenomX.utils.rich_msg import edit_rich, rich_esc
+
+            return await edit_rich(
+                message.chat.id,
+                mystic.id,
+                f"<p>{rich_esc(_['playlist_1'])}</p>{botplaylist_markup(_)}",
             )
         slider = True
         query = " ".join(message.command[1:])

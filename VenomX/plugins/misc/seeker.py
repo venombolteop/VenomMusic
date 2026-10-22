@@ -160,6 +160,9 @@ async def markup_timer():
             except Exception:
                 pass
 
+            if markup == "rich":
+                continue
+
             try:
                 buttons = (
                     stream_markup_timer(

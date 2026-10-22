@@ -1,12 +1,14 @@
 
 # All rights reserved.
 #
+# Personal playlist module — rich-message panels (Bot API 10.3) + Venom branding.
+#
+
 import os
 from random import randint
 
-from pykeyboard import InlineKeyboard
 from pyrogram import filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import Message
 
 from config import BANNED_USERS, SERVER_PLAYLIST_LIMIT
 from strings import command
@@ -21,6 +23,15 @@ from VenomX.utils.decorators import language, languageCB
 from VenomX.utils.decorators.play import botplaylist_markup
 from VenomX.utils.inline.playlist import get_playlist_markup, warning_markup
 from VenomX.utils.pastebin import Ayushbin
+from VenomX.utils.rich_msg import (
+    edit_rich,
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    send_rich,
+)
 from VenomX.utils.stream.stream import stream
 
 
@@ -53,68 +64,55 @@ async def check_playlist(client, message: Message, _):
     await message.reply_photo(carbon, caption=_["playlist_15"].format(link), has_spoiler=True)
 
 
-async def get_keyboard(_, user_id):
-    keyboard = InlineKeyboard(row_width=5)
+async def get_keyboard_html(_, user_id):
     _playlist = await get_playlist_names(user_id)
     count = len(_playlist)
+    rows = []
+    row = []
     for x in _playlist:
         _note = await get_playlist(user_id, x)
-        title = _note["title"]
-        title = title.title()
-        keyboard.row(
-            InlineKeyboardButton(
-                text=title,
+        title = _note["title"].title()
+        row.append(
+            rich_button(
+                f"{pemoji('🗑')} {rich_esc(title)}",
                 callback_data=f"del_playlist {x}",
+                style="primary",
             )
         )
-    keyboard.row(
-        InlineKeyboardButton(
-            text=_["PL_B_5"],
-            callback_data=f"delete_warning",
-        ),
-        InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"close"),
+        if len(row) == 2:
+            rows.append(rich_button_row(*row))
+            row = []
+    if row:
+        rows.append(rich_button_row(*row))
+    rows.append(
+        rich_button_row(
+            rich_button(
+                f"{pemoji('🧨')} {_['PL_B_5']}",
+                callback_data="delete_warning",
+                style="danger",
+            ),
+            rich_button(
+                f"{pemoji('❌')} {_['CLOSE_BUTTON']}",
+                callback_data="close",
+                style="primary",
+            ),
+        )
     )
-    return keyboard, count
+    return "".join(rows), count
 
 
 @app.on_message(command("DELETE_PLAYLIST_COMMAND") & filters.group & ~BANNED_USERS)
 @language
 async def del_group_message(client, message: Message, _):
-    upl = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    text=_["PL_B_6"],
-                    url=f"https://t.me/{app.username}?start=delplaylists",
-                ),
-            ]
-        ]
-    )
-    await message.reply_text(_["playlist_6"], reply_markup=upl)
-
-
-async def get_keyboard(_, user_id):
-    keyboard = InlineKeyboard(row_width=5)
-    _playlist = await get_playlist_names(user_id)
-    count = len(_playlist)
-    for x in _playlist:
-        _note = await get_playlist(user_id, x)
-        title = _note["title"]
-        title = title.title()
-        keyboard.row(
-            InlineKeyboardButton(
-                text=title,
-                callback_data=f"del_playlist {x}",
-            )
-        )
-    keyboard.row(
-        InlineKeyboardButton(
-            text=_["PL_B_5"],
-            callback_data=f"delete_warning",
+    await send_rich(
+        message.chat.id,
+        f"<p>{rich_esc(_['playlist_6'])}</p>"
+        + rich_button_row(
+            f'<tg-button type="url" style="primary" '
+            f'url="https://t.me/{app.username}?start=delplaylists">'
+            f'{pemoji("🔗")} ᴏᴘᴇɴ Dᴍ</tg-button>'
         ),
-        InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data=f"close"),
     )
-    return keyboard, count
 
 
 @app.on_message(command("DELETE_PLAYLIST_COMMAND") & filters.private & ~BANNED_USERS)
@@ -122,11 +120,13 @@ async def get_keyboard(_, user_id):
 async def del_plist_msg(client, message: Message, _):
     _playlist = await get_playlist_names(message.from_user.id)
     if _playlist:
-        get = await message.reply_text(_["playlist_2"])
+        body = rich_heading(f'{pemoji("🗑")} ᴅᴇʟᴇᴛᴇ ᴘʟᴀʏʟɪsᴛ', level=4)
+        keyboard, count = await get_keyboard_html(_, message.from_user.id)
+        body += f"<p>{rich_esc(_['playlist_7'].format(count))}</p>"
+        body += keyboard
+        await send_rich(message.chat.id, body)
     else:
         return await message.reply_text(_["playlist_3"])
-    keyboard, count = await get_keyboard(_, message.from_user.id)
-    await get.edit_text(_["playlist_7"].format(count), reply_markup=keyboard)
 
 
 @app.on_callback_query(filters.regex("play_playlist") & ~BANNED_USERS)
@@ -153,7 +153,9 @@ async def play_playlist(client, CallbackQuery, _):
     except Exception:
         pass
     video = True if mode == "v" else None
-    mystic = await CallbackQuery.message.reply_text(_["play_1"])
+    from VenomX.utils.rich_msg import status_card
+
+    mystic = await status_card(chat_id, _["play_1"])
     for vidids in _playlist:
         result.append(vidids)
     try:
@@ -200,7 +202,9 @@ async def play_playlist_command(client, message, _):
 
     result = []
     video = True if mode == "v" else None
-    mystic = await message.reply_text(_["play_1"])
+    from VenomX.utils.rich_msg import status_card
+
+    mystic = await status_card(message.chat.id, _["play_1"])
 
     for vidids in _playlist:
         result.append(vidids)
@@ -225,78 +229,6 @@ async def play_playlist_command(client, message, _):
     return await mystic.delete()
 
 
-"""
-@app.on_message(filters.command(ADD_PLAYLIST_COMMAND) & ~BANNED_USERS)
-@language
-async def add_playlist(client, message: Message, _):
-    if len(message.command) < 2:
-        return await message.reply_text(_["playlist_22"])
-    query = message.command[1]
-
-    if "youtube.com/playlist" in query:
-        adding = await message.reply_text(_["playlist_21"])
-        try:
-            results = Playlist(url)
-            for video in results.videos:
-                if video.get("isPlayable"):
-                    video_info = {
-                        "videoid": video["id"],
-                        "title": video["title"],
-                        "duration": video["duration"],
-                    }
-                    user_id = message.from_user.id
-                    await save_playlist(user_id, video["id"], video_info)
-
-        except Exception as e:
-            return await message.reply_text(
-                f"Looking like not a valid youtube playlist url or\nPlaylist created by YouTube Not Supported"
-            )
-
-        user_id = message.from_user.id
-        await adding.delete()
-        return await message.reply_text(_["playlist_20"])
-    else:
-        try:
-            user_id = message.from_user.id
-            _check = await get_playlist(user_id, videoid)
-            if _check:
-                try:
-                    return await message.reply_text(_["playlist_8"])
-                except KeyError:
-                    pass
-
-            _count = await get_playlist_names(user_id)
-            count = len(_count)
-            if count == SERVER_PLAYLIST_LIMIT:
-                try:
-                    return await message.reply_text(
-                        _["playlist_9"].format(SERVER_PLAYLIST_LIMIT)
-                    )
-                except KeyError:
-                    pass
-
-            m = await message.reply(_["playlist_21"])
-            title, duration_min, duration_sec, thumbnail, videoid = (
-                await Platform.youtube.details(videoid, True)
-            )
-            title = (title[:50]).title()
-            plist = {
-                "videoid": videoid,
-                "title": title,
-                "duration": duration_min,
-            }
-
-            await save_playlist(user_id, videoid, plist)
-            await m.delete()
-            await message.reply_photo(thumbnail, caption=_["playlist_20"], has_spoiler=True)
-
-        except KeyError:
-            return await message.reply_text("⚠️ **Something wrong happens **")
-        except Exception:
-            pass
-"""
-
-
 @app.on_callback_query(filters.regex("remove_playlist") & ~BANNED_USERS)
 @languageCB
 async def del_plist(client, CallbackQuery, _):
@@ -314,7 +246,11 @@ async def del_plist(client, CallbackQuery, _):
         except Exception:
             return
 
-    return await CallbackQuery.edit_message_text(text=_["playlist_23"])
+    return await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        f"<p>{rich_esc(_['playlist_23'])}</p>",
+    )
 
 
 @app.on_callback_query(filters.regex("add_playlist") & ~BANNED_USERS)
@@ -364,7 +300,7 @@ async def add_playlist(client, CallbackQuery, _):
 
 @app.on_callback_query(filters.regex("del_playlist") & ~BANNED_USERS)
 @languageCB
-async def del_plist(client, CallbackQuery, _):
+async def del_plist_cb(client, CallbackQuery, _):
     callback_data = CallbackQuery.data.strip()
     videoid = callback_data.split(None, 1)[1]
     user_id = CallbackQuery.from_user.id
@@ -379,18 +315,29 @@ async def del_plist(client, CallbackQuery, _):
             return await CallbackQuery.answer(_["playlist_12"], show_alert=True)
         except Exception:
             return
-    keyboard, count = await get_keyboard(_, user_id)
-    return await CallbackQuery.edit_message_reply_markup(reply_markup=keyboard)
+    keyboard, count = await get_keyboard_html(_, user_id)
+    return await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        f"<p>{rich_esc(_['playlist_7'].format(count))}</p>{keyboard}",
+    )
 
 
 @app.on_callback_query(filters.regex("delete_whole_playlist") & ~BANNED_USERS)
 @languageCB
 async def del_whole_playlist(client, CallbackQuery, _):
     _playlist = await get_playlist_names(CallbackQuery.from_user.id)
-    for x in _playlist:
+    try:
         await CallbackQuery.answer(_["playlist_25"], show_alert=True)
+    except Exception:
+        pass
+    for x in _playlist:
         await delete_playlist(CallbackQuery.from_user.id, x)
-    return await CallbackQuery.edit_message_text(_["playlist_13"])
+    return await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        f"<p>{rich_esc(_['playlist_13'])}</p>",
+    )
 
 
 @app.on_callback_query(filters.regex("get_playlist_playmode") & ~BANNED_USERS)
@@ -400,24 +347,24 @@ async def get_playlist_playmode_(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    buttons = get_playlist_markup(_)
-    await CallbackQuery.edit_message_reply_markup(
-        reply_markup=InlineKeyboardMarkup(buttons)
+    await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        f"<p>{rich_esc(_['playlist_4'])}</p>{get_playlist_markup(_)}",
     )
 
 
 @app.on_callback_query(filters.regex("home_play") & ~BANNED_USERS)
 @languageCB
 async def home_play_(client, CallbackQuery, _):
-    pass
-
     try:
         await CallbackQuery.answer()
     except Exception:
         pass
-    buttons = botplaylist_markup(_)
-    return await CallbackQuery.edit_message_reply_markup(
-        reply_markup=InlineKeyboardMarkup(buttons)
+    await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        f"<p>{rich_esc(_['playlist_4'])}</p>{botplaylist_markup(_)}",
     )
 
 
@@ -428,8 +375,11 @@ async def delete_warning_message(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    upl = warning_markup(_)
-    return await CallbackQuery.edit_message_text(_["playlist_14"], reply_markup=upl)
+    return await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        f"<p>{rich_esc(_['playlist_14'])}</p>{warning_markup(_)}",
+    )
 
 
 @app.on_callback_query(filters.regex("del_back_playlist") & ~BANNED_USERS)
@@ -447,7 +397,9 @@ async def del_back_playlist(client, CallbackQuery, _):
             return await CallbackQuery.answer(_["playlist_3"], show_alert=True)
         except Exception:
             return
-    keyboard, count = await get_keyboard(_, user_id)
-    return await CallbackQuery.edit_message_text(
-        _["playlist_7"].format(count), reply_markup=keyboard
+    keyboard, count = await get_keyboard_html(_, user_id)
+    return await edit_rich(
+        CallbackQuery.message.chat.id,
+        CallbackQuery.message.id,
+        f"<p>{rich_esc(_['playlist_7'].format(count))}</p>{keyboard}",
     )

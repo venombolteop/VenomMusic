@@ -1,6 +1,9 @@
 
 # All rights reserved.
 #
+# Stats module — rich-message cards (Bot API 10.3) + Venom branding.
+#
+
 import asyncio
 import platform
 from sys import version as pyver
@@ -8,8 +11,7 @@ from sys import version as pyver
 import psutil
 from pyrogram import __version__ as pyrover
 from pyrogram import filters
-from pyrogram.errors import MessageIdInvalid
-from pyrogram.types import CallbackQuery, InputMediaPhoto, Message
+from pyrogram.types import CallbackQuery
 from pytgcalls.__version__ import __version__ as pytgver
 
 import config
@@ -38,30 +40,39 @@ from VenomX.utils.inline.stats import (
     stats_buttons,
     top_ten_stats_markup,
 )
+from VenomX.utils.rich_msg import (
+    edit_rich,
+    pemoji,
+    rich_esc,
+    rich_heading,
+    rich_img,
+    send_rich,
+)
 
 loop = asyncio.get_running_loop()
 
 
 @app.on_message(command("STATS_COMMAND") & ~BANNED_USERS)
 @language
-async def stats_global(client, message: Message, _):
+async def stats_global(client, message, _):
     upl = stats_buttons(_, True if message.from_user.id in SUDOERS else False)
-    await message.reply_photo(
-        photo=config.STATS_IMG_URL,
-        caption=_["gstats_11"].format(app.mention),
-        reply_markup=upl,
-        has_spoiler=True,
-    )
+    body = rich_img(config.STATS_IMG_URL)
+    body += rich_heading(f'{pemoji("📊")} ᴠᴇɴᴏᴍ sᴛᴀᴛs', level=4)
+    body += f"<p>{rich_esc(_['gstats_11'].format(app.mention))}</p>"
+    body += upl
+    await send_rich(message.chat.id, body)
 
 
 @app.on_message(command("GSTATS_COMMAND") & ~BANNED_USERS)
 @language
-async def gstats_global(client, message: Message, _):
-    mystic = await message.reply_text(_["gstats_1"])
+async def gstats_global(client, message, _):
+    mystic = await send_rich(
+        message.chat.id, f"<p>{rich_esc(_['gstats_1'])}</p>"
+    )
     stats = await get_global_tops()
     if not stats:
         await asyncio.sleep(1)
-        return await mystic.edit(_["gstats_2"])
+        return await edit_rich(message.chat.id, mystic, f"<p>{rich_esc(_['gstats_2'])}</p>")
 
     def get_stats():
         results = {}
@@ -76,7 +87,7 @@ async def gstats_global(client, message: Message, _):
                 )
             )
         if not results:
-            return mystic.edit(_["gstats_2"])
+            return None
         videoid = None
         co = None
         for vidid, count in list_arranged.items():
@@ -93,6 +104,8 @@ async def gstats_global(client, message: Message, _):
     except Exception as e:
         print(e)
         return
+    if videoid is None:
+        return await edit_rich(message.chat.id, mystic, f"<p>{rich_esc(_['gstats_2'])}</p>")
     (
         title,
         duration_min,
@@ -101,16 +114,15 @@ async def gstats_global(client, message: Message, _):
         vidid,
     ) = await Platform.youtube.details(videoid, True)
     title = title.title()
-    final = f"Top played Tracks on  {app.mention}\n\n**Title:** {title}\n\nPlayed** {co} **times"
     upl = get_stats_markup(_, True if message.from_user.id in SUDOERS else False)
-    await app.send_photo(
-        message.chat.id,
-        photo=thumbnail,
-        caption=final,
-        reply_markup=upl,
-        has_spoiler=True,
+    body = rich_img(thumbnail)
+    body += rich_heading(f'{pemoji("🏆")} ᴛᴏᴘ ᴘʟᴀʏᴇᴅ ᴛʀᴀᴄᴋ', level=4)
+    body += (
+        f"<p><b>{rich_esc(title)}</b></p>"
+        f"<p>{pemoji('🔥')} {rich_esc(app.mention)} — {rich_esc(co)}x</p>"
     )
-    await mystic.delete()
+    body += upl
+    await edit_rich(message.chat.id, mystic, body)
 
 
 @app.on_callback_query(filters.regex("GetStatsNow") & ~BANNED_USERS)
@@ -124,10 +136,13 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    mystic = await CallbackQuery.edit_message_text(
-        _["gstats_3"].format(
-            f"ᴏғ {CallbackQuery.message.chat.title}" if what == "Here" else what
-        )
+    chat_id_cb = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
+    sub = f"ᴏғ {rich_esc(CallbackQuery.message.chat.title)}" if what == "Here" else what
+    await edit_rich(
+        chat_id_cb,
+        mid,
+        rich_heading(f'{pemoji("⏳")} ᴄᴏʟʟᴇᴄᴛɪɴɢ {sub}...', level=4),
     )
     if what == "Tracks":
         stats = await get_global_tops()
@@ -139,7 +154,9 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
         stats = await get_particulars(chat_id)
     if not stats:
         await asyncio.sleep(1)
-        return await mystic.edit(_["gstats_2"], reply_markup=upl)
+        return await edit_rich(
+            chat_id_cb, mid, f"<p>{rich_esc(_['gstats_2'])}</p>{upl}"
+        )
     queries = await get_queries()
 
     def get_stats():
@@ -155,7 +172,7 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
                 )
             )
         if not results:
-            return mystic.edit(_["gstats_2"], reply_markup=upl)
+            return None
         msg = ""
         limit = 0
         total_count = 0
@@ -168,10 +185,9 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
                 details = stats.get(items)
                 title = (details["title"][:35]).title()
                 if items == "telegram":
-                    msg += f"🔗[TelegramVideos and media's](https://t.me/telegram) ** Played {count} Times**\n\n"
+                    msg += f"📁 ᴛᴇʟᴇɢʀᴀᴍ ꜰɪʟᴇꜱ  {count}x \n"
                 else:
-                    msg += f"🔗 [{title}](https://www.youtube.com/watch?v={items}) ** Played {count} Times**\n\n"
-
+                    msg += f" {rich_esc(title)}  {count}x \n"
             temp = (
                 _["gstats_4"].format(
                     queries,
@@ -187,10 +203,15 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
         return msg, list_arranged
 
     try:
-        msg, list_arranged = await loop.run_in_executor(None, get_stats)
+        got = await loop.run_in_executor(None, get_stats)
     except Exception as e:
         print(e)
         return
+    if got is None:
+        return await edit_rich(
+            chat_id_cb, mid, f"<p>{rich_esc(_['gstats_2'])}</p>{upl}"
+        )
+    msg, list_arranged = got
     limit = 0
     if what in ["Users", "Chats"]:
         for items, count in list_arranged.items():
@@ -208,20 +229,18 @@ async def top_users_ten(client, CallbackQuery: CallbackQuery, _):
             except Exception:
                 continue
             limit += 1
-            msg += f"🔗`{extract}` Played {count} Times on bot.\n\n"
+            msg += f" {rich_esc(extract)}  {count}x \n"
         temp = (
             _["gstats_5"].format(limit, app.mention)
             if what == "Chats"
             else _["gstats_6"].format(limit, app.mention)
         )
         msg = temp + msg
-    med = InputMediaPhoto(media=config.GLOBAL_IMG_URL, caption=msg)
-    try:
-        await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
-    except MessageIdInvalid:
-        await CallbackQuery.message.reply_photo(
-            photo=config.GLOBAL_IMG_URL, caption=msg, reply_markup=upl, has_spoiler=True
-        )
+    body = rich_img(config.GLOBAL_IMG_URL)
+    body += rich_heading(f'{pemoji("📊")} ᴠᴇɴᴏᴍ ᴛᴏᴘ ʟɪsᴛ', level=4)
+    body += f"<p>{msg}</p>"
+    body += upl
+    await edit_rich(chat_id_cb, mid, body)
 
 
 @app.on_callback_query(filters.regex("TopOverall") & ~BANNED_USERS)
@@ -237,7 +256,6 @@ async def overall_stats(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    await CallbackQuery.edit_message_text(_["gstats_8"])
     served_chats = len(await get_served_chats())
     served_users = len(await get_served_users())
     total_queries = await get_queries()
@@ -253,36 +271,30 @@ async def overall_stats(client, CallbackQuery, _):
         ass = "Yes"
     else:
         ass = "No"
-    text = f"""**Bot's Stats and information:**
-
-**Imported Modules:** {mod}
-**Served chats:** {served_chats} 
-**Served Users:** {served_users} 
-**Blocked Users:** {blocked} 
-**Sudo Users:** {sudoers} 
-    
-**Total Queries:** {total_queries} 
-**Total Assistant:** {assistant}
-**Auto Leaving Assistsant:** {ass}
-
-**Play Duration Limit:** {play_duration} ᴍɪɴs
-**Song Download Limit:** {song} ᴍɪɴs
-**Bot's Server Playlist Limit:** {playlist_limit}
-**Playlist Play Limit:** {fetch_playlist}"""
-    med = InputMediaPhoto(media=config.STATS_IMG_URL, caption=text)
-    try:
-        await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
-    except MessageIdInvalid:
-        await CallbackQuery.message.reply_photo(
-            photo=config.STATS_IMG_URL, caption=text, reply_markup=upl, has_spoiler=True
-        )
+    body = rich_img(config.STATS_IMG_URL)
+    body += rich_heading(f'{pemoji("📊")} ᴠᴇɴᴏᴍ ʙᴏᴛ sᴛᴀᴛs', level=4)
+    body += (
+        f"<p>🧬 ᴍᴏᴅᴜʟᴇꜱ: {mod}</p>"
+        f"<p>🛸 ꜱᴇʀᴠᴇᴅ ᴄʜᴀᴛꜱ: {served_chats}</p>"
+        f"<p>👤 ꜱᴇʀᴠᴇᴅ ᴜꜱᴇʀꜱ: {served_users}</p>"
+        f"<p>🚫 ʙʟᴏᴄᴋᴇᴅ ᴜꜱᴇʀꜱ: {blocked}</p>"
+        f"<p>👑 ꜱᴜᴅᴏ ᴜꜱᴇʀꜱ: {sudoers}</p>"
+        f"<p>❤️ ᴛᴏᴛᴀʟ qᴜᴇʀɪᴇꜱ: {total_queries}</p>"
+        f"<p>💌 ᴀꜱꜱɪꜱᴛᴀɴᴛꜱ: {assistant}</p>"
+        f"<p>🚀 ᴀᴜᴛᴏ ʟᴇᴀᴠɪɴɢ: {ass}</p>"
+        f"<p>⏱ ᴘʟᴀʏ ʟɪᴍɪᴛ: {play_duration} ᴍɪɴꜱ</p>"
+        f"<p>💠 ᴄʟᴇᴀɴ ꜱᴏɴɢ ʟɪᴍ: {song} ᴍɪɴꜱ</p>"
+        f"<p>📕 ᴘʟᴀʏʟɪꜱᴛ ʟɪᴍ: {playlist_limit} / {fetch_playlist}</p>"
+    )
+    body += upl
+    await edit_rich(CallbackQuery.message.chat.id, CallbackQuery.message.id, body)
 
 
 @app.on_callback_query(filters.regex("bot_stats_sudo"))
 @languageCB
 async def overall_stats(client, CallbackQuery, _):
     if CallbackQuery.from_user.id not in SUDOERS:
-        return await CallbackQuery.answer("ᴏɴʟʏ ғᴏʀ sᴜᴅᴏ ᴜsᴇʀ's", show_alert=True)
+        return await CallbackQuery.answer("ᴏɴʟʏ ꜰᴏʀ ꜱᴜᴅᴏ ᴜꜱᴇʀ'ꜱ", show_alert=True)
     callback_data = CallbackQuery.data.strip()
     what = callback_data.split(None, 1)[1]
     if what != "s":
@@ -293,7 +305,6 @@ async def overall_stats(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    await CallbackQuery.edit_message_text(_["gstats_8"])
     sc = platform.system()
     p_core = psutil.cpu_count(logical=False)
     t_core = psutil.cpu_count(logical=True)
@@ -305,7 +316,7 @@ async def overall_stats(client, CallbackQuery, _):
         else:
             cpu_freq = f"{round(cpu_freq, 2)}MHz"
     except Exception:
-        cpu_freq = "Unable to Fetch"
+        cpu_freq = "ᴇʀʀᴏʀ"
     hdd = psutil.disk_usage("/")
     total = hdd.total / (1024.0**3)
     total = str(total)
@@ -327,39 +338,24 @@ async def overall_stats(client, CallbackQuery, _):
     total_queries = await get_queries()
     blocked = len(BANNED_USERS)
     sudoers = len(await get_sudoers())
-    text = f""" **Bot Stats and information:**
-
-**Imported modules:** {mod}
-**Platform:** {sc}
-**Ram:** {ram}
-**Physical Cores:** {p_core}
-**Total Cores:** {t_core}
-**Cpu frequency:** {cpu_freq}
-
-**Python Version:** {pyver.split()[0]}
-**Pyrogram Version:** {pyrover}
-**Py-tgcalls Version:** {pytgver}
-**Total Storage:** {total[:4]} ɢiʙ
-**Storage Used:** {used[:4]} ɢiʙ
-**Storage Left:** {free[:4]} ɢiʙ
-
-**Served chats:** {served_chats} 
-**Served users:** {served_users} 
-**Blocked users:** {blocked} 
-**Sudo users:** {sudoers} 
-
-**Total DB Storage:** {storage} ᴍʙ
-**Total DB Collection:** {collections}
-**Total DB Keys:** {objects}
-**Total Bot Queries:** `{total_queries} `
-    """
-    med = InputMediaPhoto(media=config.STATS_IMG_URL, caption=text)
-    try:
-        await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
-    except MessageIdInvalid:
-        await CallbackQuery.message.reply_photo(
-            photo=config.STATS_IMG_URL, caption=text, reply_markup=upl, has_spoiler=True
-        )
+    body = rich_img(config.STATS_IMG_URL)
+    body += rich_heading(f'{pemoji("🖥")} ᴠᴇɴᴏᴍ ꜱᴜᴅᴏ ꜱᴛᴀᴛꜱ', level=4)
+    body += (
+        f"<p>🧬 ᴍᴏᴅᴜʟᴇꜱ: {mod}</p>"
+        f"<p>🛡 ᴘʟᴀᴛꜰᴏʀᴍ: {rich_esc(sc)}</p>"
+        f"<p>💾 ʀᴀᴍ: {rich_esc(ram)}</p>"
+        f"<p>⚙ ᴄᴏʀᴇꜱ: {p_core} / {t_core}</p>"
+        f"<p>⏩ ᴄᴘᴜ: {rich_esc(cpu_freq)}</p>"
+        f"<p>🐍 ᴘʏᴛʜᴏɴ: {rich_esc(pyver.split()[0])}</p>"
+        f"<p>🚩 ᴘʏʀᴏɢʀᴀᴍ: {rich_esc(pyrover)}</p>"
+        f"<p>📞 ᴘʏ-ᴛɢᴄᴀʟʟꜱ: {rich_esc(pytgver)}</p>"
+        f"<p>🌩 ꜱᴛᴏʀᴇᴅ: {rich_esc(total[:4])} ɢɪʙ / {rich_esc(used[:4])} / {rich_esc(free[:4])}</p>"
+        f"<p>🛸 ᴄʜᴀᴛꜱ: {served_chats} 👤 ᴜꜱᴇʀꜱ: {served_users}</p>"
+        f"<p>❤️ qᴜᴇʀɪᴇꜱ: {total_queries}</p>"
+        f"<p>🗂 ᴅʙ: {rich_esc(storage)} ᴍʙ · {collections} ᴄᴏʟ · {objects} ᴋᴇʏꜱ</p>"
+    )
+    body += upl
+    await edit_rich(CallbackQuery.message.chat.id, CallbackQuery.message.id, body)
 
 
 @app.on_callback_query(
@@ -372,54 +368,33 @@ async def back_buttons(client, CallbackQuery, _):
     except Exception:
         pass
     command = CallbackQuery.matches[0].group(1)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
     if command == "TOPMARKUPGET":
-        upl = top_ten_stats_markup(_)
-        med = InputMediaPhoto(
-            media=config.GLOBAL_IMG_URL,
-            caption=_["gstats_9"],
-        )
-        try:
-            await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
-        except MessageIdInvalid:
-            await CallbackQuery.message.reply_photo(
-                photo=config.GLOBAL_IMG_URL,
-                caption=_["gstats_9"],
-                reply_markup=upl,
-                has_spoiler=True,
-            )
+        body = rich_img(config.GLOBAL_IMG_URL)
+        body += rich_heading(f'{pemoji("📊")} ᴛᴏᴘ ꜱᴛᴀᴛꜱ ᴠɪᴇᴡ', level=4)
+        body += f"<p>{rich_esc(_['gstats_9'])}</p>"
+        body += top_ten_stats_markup(_)
+        await edit_rich(chat_id, mid, body)
     if command == "GlobalStats":
-        upl = get_stats_markup(
-            _,
-            True if CallbackQuery.from_user.id in SUDOERS else False,
-        )
-        med = InputMediaPhoto(
-            media=config.GLOBAL_IMG_URL,
-            caption=_["gstats_10"].format(app.mention),
-        )
-        try:
-            await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
-        except MessageIdInvalid:
-            await CallbackQuery.message.reply_photo(
-                photo=config.GLOBAL_IMG_URL,
-                caption=_["gstats_10"].format(app.mention),
-                reply_markup=upl,
-                has_spoiler=True,
+        body = rich_img(config.GLOBAL_IMG_URL)
+        body += rich_heading(f'{pemoji("📊")} ꜰᴜʟʟ ꜱᴛᴀᴛꜱ ᴢᴏɴᴇ', level=4)
+        body += (
+            f"<p>{rich_esc(_['gstats_10'].format(app.mention))}</p>"
+            + get_stats_markup(
+                _,
+                True if CallbackQuery.from_user.id in SUDOERS else False,
             )
+        )
+        await edit_rich(chat_id, mid, body)
     if command == "GETSTATS":
-        upl = stats_buttons(
-            _,
-            True if CallbackQuery.from_user.id in SUDOERS else False,
-        )
-        med = InputMediaPhoto(
-            media=config.STATS_IMG_URL,
-            caption=_["gstats_11"].format(app.mention),
-        )
-        try:
-            await CallbackQuery.edit_message_media(media=med, reply_markup=upl)
-        except MessageIdInvalid:
-            await CallbackQuery.message.reply_photo(
-                photo=config.STATS_IMG_URL,
-                caption=_["gstats_11"].format(app.mention),
-                reply_markup=upl,
-                has_spoiler=True,
+        body = rich_img(config.STATS_IMG_URL)
+        body += rich_heading(f'{pemoji("📊")} ꜰᴜʟʟ ꜱᴛᴀᴛꜱ ᴢᴏɴᴇ', level=4)
+        body += (
+            f"<p>{rich_esc(_['gstats_11'].format(app.mention))}</p>"
+            + stats_buttons(
+                _,
+                True if CallbackQuery.from_user.id in SUDOERS else False,
             )
+        )
+        await edit_rich(chat_id, mid, body)

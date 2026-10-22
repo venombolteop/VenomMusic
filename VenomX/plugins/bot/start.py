@@ -1,13 +1,16 @@
 
 # All rights reserved.
 #
+# Start module — rich-message cards (Bot API 10.3) + Venom branding.
+#
+
 import asyncio
 import time
 
 from py_yt import VideosSearch
 from pyrogram import filters
-from pyrogram.enums import ChatType, ParseMode
-from pyrogram.types import InlineKeyboardMarkup, Message
+from pyrogram.enums import ChatType
+from pyrogram.types import Message
 
 import config
 from config import BANNED_USERS, START_IMG_URL
@@ -32,7 +35,16 @@ from VenomX.utils.decorators.language import LanguageStart
 from VenomX.utils.formatters import get_readable_time
 from VenomX.utils.functions import MARKDOWN, WELCOMEHELP
 from VenomX.utils.inline import private_panel, start_pannel
-from VenomX.utils.premium import close_btn, link_btn
+from VenomX.utils.rich_msg import (
+    edit_rich,
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    rich_img,
+    send_rich,
+)
 
 loop = asyncio.get_running_loop()
 
@@ -45,42 +57,36 @@ async def start_comm(client, message: Message, _):
     if len(message.text.split()) > 1:
         name = message.text.split(None, 1)[1]
         if name[0:4] == "help":
-            keyboard = await paginate_modules(0, chat_id, close=True)
-
-            if config.START_IMG_URL:
-                return await message.reply_photo(
-                    photo=START_IMG_URL,
-                    caption=_["help_1"],
-                    reply_markup=keyboard,
-                    has_spoiler=True,
-                )
-            else:
-                return await message.reply_text(
-                    text=_["help_1"],
-                    reply_markup=keyboard,
-                )
+            body = rich_img(START_IMG_URL) if config.START_IMG_URL else ""
+            body += rich_heading(f'{pemoji("🧮")} ᴠᴇɴᴏᴍ ɴᴇxᴜs ʜᴇʟᴘ', level=4)
+            body += f"<p>{rich_esc(_['help_1'])}</p>"
+            body += await paginate_modules(0, chat_id, close=True)
+            return await send_rich(chat_id, body)
         if name[0:4] == "song":
             await message.reply_text(_["song_2"])
             return
         if name == "mkdwn_help":
-            await message.reply(
-                MARKDOWN,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
+            await send_rich(
+                chat_id,
+                rich_heading(f'{pemoji("🧾")} ᴛᴇxᴛ ꜰᴏʀᴍᴀᴛ ɴᴏᴛᴇꜱ', level=4)
+                + f"<pre>{rich_esc(MARKDOWN)}</pre>",
             )
         if name == "greetings":
-            await message.reply(
-                WELCOMEHELP,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
+            await send_rich(
+                chat_id,
+                rich_heading(f'{pemoji("✨")} ᴇᴄᴏ-ᴡᴇʟᴄᴏᴍᴇ ᴠɪʙᴇꜱ', level=4)
+                + f"<pre>{rich_esc(WELCOMEHELP)}</pre>",
             )
         if name[0:3] == "sta":
-            m = await message.reply_text("🔎 Fetching Your personal stats.!")
+            mid = await send_rich(
+                chat_id,
+                rich_heading(f'{pemoji("⏳")} ᴄᴏʟʟᴇᴄᴛɪɴɢ ʏᴏᴜʀ ꜱᴛᴀᴛꜱ...', level=4),
+            )
             stats = await get_userss(message.from_user.id)
             tot = len(stats)
             if not stats:
                 await asyncio.sleep(1)
-                return await m.edit(_["ustats_1"])
+                return await edit_rich(chat_id, mid, f"<p>{rich_esc(_['ustats_1'])}</p>")
 
             def get_stats():
                 msg = ""
@@ -97,7 +103,7 @@ async def start_comm(client, message: Message, _):
                         )
                     )
                 if not results:
-                    return m.edit(_["ustats_1"])
+                    return None
                 tota = 0
                 videoid = None
                 for vidid, count in list_arranged.items():
@@ -110,20 +116,25 @@ async def start_comm(client, message: Message, _):
                     details = stats.get(vidid)
                     title = (details["title"][:35]).title()
                     if vidid == "telegram":
-                        msg += f"🔗[Telegram Files and Audio]({config.SUPPORT_GROUP}) ** played {count} Times**\n\n"
+                        msg += f"{pemoji('🔗')} ᴛᴇʟᴇɢʀᴀᴍ ꜰɪʟᴇꜱ  {count}x \n"
                     else:
-                        msg += f"🔗 [{title}](https://www.youtube.com/watch?v={vidid}) ** played {count} Times**\n\n"
-                msg = _["ustats_2"].format(tot, tota, limit) + msg
+                        msg += f"{pemoji('🔗')} {rich_esc(title)}  {count}x \n"
+                msg = rich_esc(_["ustats_2"].format(tot, tota, limit)) + msg
                 return videoid, msg
 
             try:
-                videoid, msg = await loop.run_in_executor(None, get_stats)
+                got = await loop.run_in_executor(None, get_stats)
             except Exception as e:
                 print(e)
                 return
+            if got is None:
+                return await edit_rich(chat_id, mid, f"<p>{rich_esc(_['ustats_1'])}</p>")
+            videoid, msg = got
             thumbnail = await Platform.youtube.thumbnail(videoid, True)
-            await m.delete()
-            await message.reply_photo(photo=thumbnail, caption=msg, has_spoiler=True)
+            body = rich_img(thumbnail)
+            body += rich_heading(f'{pemoji("📊")} ᴠᴇɴᴏᴍ ᴘᴇʀꜱᴏɴᴀʟ ꜱᴛᴀᴛꜱ', level=4)
+            body += f"<p>{msg}</p>"
+            await edit_rich(chat_id, mid, body)
             return
         if name[0:3] == "sud":
             await sudoers_list(client=client, message=message, _=_)
@@ -151,7 +162,10 @@ async def start_comm(client, message: Message, _):
             await del_plist_msg(client=client, message=message, _=_)
             await asyncio.sleep(1)
         if name[0:3] == "inf":
-            m = await message.reply_text("🔎 Fetching info..")
+            mid = await send_rich(
+                chat_id,
+                rich_heading(f'{pemoji("⏳")} ᴄᴏʟʟᴇᴄᴛɪɴɢ ɪɴꜰᴏ...', level=4),
+            )
             query = (str(name)).replace("info_", "", 1)
             query = f"https://www.youtube.com/watch?v={query}"
             results = VideosSearch(query, limit=1)
@@ -164,35 +178,20 @@ async def start_comm(client, message: Message, _):
                 channel = result["channel"]["name"]
                 link = result["link"]
                 published = result["publishedTime"]
-            searched_text = f"""
-🔍__**Video track information **__
-
-❇️**Title:** {title}
-
-⏳**Duration:** {duration} Mins
-👀**Views:** `{views}`
-⏰**Published times:** {published}
-🎥**Channel Name:** {channel}
-📎**Channel Link:** [Visit from here]({channellink})
-🔗**Videp linl:** [Link]({link})
-"""
-            key = InlineKeyboardMarkup(
-                [
-                    [
-                        link_btn("Watch", url=f"{link}", emoji="🎥"),
-                        close_btn("Close", callback_data="close"),
-                    ],
-                ]
+            body = rich_img(thumbnail)
+            body += rich_heading(f'{pemoji("🔍")} ᴠᴇɴᴏᴍ ᴛʀᴀᴄᴋ ɪɴꜰᴏ', level=4)
+            body += (
+                f"<p><b>{rich_esc(title)}</b></p>"
+                f"<p>{pemoji('⏳')} <b>ᴅᴜʀᴀᴛɪᴏɴ</b>: {rich_esc(duration)} ᴍɪɴꜱ\n"
+                f"{pemoji('👀')} <b>ᴠɪᴇᴡꜱ</b>: {rich_esc(views)}\n"
+                f"{pemoji('⏰')} <b>ᴘᴜʙʟɪꜱʜᴇᴅ</b>: {rich_esc(published)}\n"
+                f"{pemoji('🎥')} <b>ᴄʜᴀɴɴᴇʟ</b>: {rich_esc(channel)}</p>"
             )
-            await m.delete()
-            await app.send_photo(
-                message.chat.id,
-                photo=thumbnail,
-                caption=searched_text,
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=key,
-                has_spoiler=True,
+            body += rich_button_row(
+                rich_url_button(f"{pemoji('👀')} ᴡᴀᴛᴄʜ ᴏɴ ʏᴏᴜᴛᴜʙᴇ", link, style="primary"),
+                rich_button(f"{pemoji('❌')} ᴄʟᴏꜱᴇ", callback_data="close", style="danger"),
             )
+            await edit_rich(chat_id, mid, body)
             await asyncio.sleep(1)
             if await is_on_off(config.LOG):
                 sender_id = message.from_user.id
@@ -208,24 +207,12 @@ async def start_comm(client, message: Message, _):
         except Exception:
             OWNER = None
         out = private_panel(_, app.username, OWNER)
-        if config.START_IMG_URL:
-            try:
-                await message.reply_photo(
-                    photo=config.START_IMG_URL,
-                    caption=_["start_1"].format(app.mention),
-                    reply_markup=InlineKeyboardMarkup(out),
-                    has_spoiler=True,
-                )
-            except Exception:
-                await message.reply_text(
-                    text=_["start_1"].format(app.mention),
-                    reply_markup=InlineKeyboardMarkup(out),
-                )
-        else:
-            await message.reply_text(
-                text=_["start_1"].format(app.mention),
-                reply_markup=InlineKeyboardMarkup(out),
-            )
+        body = rich_img(START_IMG_URL) if config.START_IMG_URL else ""
+        body += rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ᴍᴜꜱɪᴄ ʜᴜʙ', level=4)
+        body += f"<p>{rich_esc(_['start_1'].format(app.mention))}</p>"
+        body += out
+        await send_rich(chat_id, body)
+
         if await is_on_off(config.LOG):
             sender_id = message.from_user.id
             sender_name = message.from_user.first_name
@@ -251,7 +238,7 @@ async def welcome(client, message: Message):
     if config.PRIVATE_BOT_MODE == str(True):
         if not await is_served_private_chat(message.chat.id):
             await message.reply_text(
-                "**ᴛʜɪs ʙᴏᴛ's ᴘʀɪᴠᴀᴛᴇ ᴍᴏᴅᴇ ʜᴀs ʙᴇᴇɴ ᴇɴᴀʙʟᴇᴅ ᴏɴʟʏ ᴍʏ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜsᴇ ᴛʜɪs ɪғ ᴡᴀɴᴛ ᴛᴏ ᴜsᴇ ᴛʜɪs ɪɴ ʏᴏᴜʀ ᴄʜᴀᴛ sᴏ sᴀʏ ᴛᴏ ᴍʏ ᴏᴡɴᴇʀ ᴛᴏ ᴀᴜᴛʜᴏʀɪᴢᴇ ʏᴏᴜʀ ᴄʜᴀᴛ."
+                "**ᴛʜɪꜱ ʙᴏᴛ'ꜱ ᴘʀɪᴠᴀᴛᴇ ᴍᴏᴅᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴀʙʟᴇᴅ ᴏɴʟʏ ᴍʏ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ɪꜰ ᴡᴀɴᴛ ᴛᴏ ᴜꜱᴇ ᴛʜɪꜱ ɪɴ ʏᴏᴜʀ ᴄʜᴀᴛ ꜱᴏ ꜱᴀʏ ᴛᴏ ᴍʏ ᴏᴡɴᴇʀ ᴛᴏ ᴀᴜᴛʜᴏʀɪᴢᴇ ʏᴏᴜʀ ᴄʜᴀᴛ."
             )
             return await app.leave_chat(message.chat.id)
     else:
@@ -274,14 +261,10 @@ async def welcome(client, message: Message):
                     return await app.leave_chat(chat_id)
                 userbot = await get_assistant(message.chat.id)
                 out = start_pannel(_)
-                await message.reply_text(
-                    _["start_2"].format(
-                        app.mention,
-                        userbot.username,
-                        userbot.id,
-                    ),
-                    reply_markup=InlineKeyboardMarkup(out),
-                )
+                body = rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ᴀʀʀɪᴠᴇᴅ ɪɴ ᴠɪʙᴇ!', level=4)
+                body += f"<p>{rich_esc(_['start_2'].format(app.mention, userbot.username, userbot.id))}</p>"
+                body += out
+                await send_rich(chat_id, body)
             if member.id in config.OWNER_ID:
                 return await message.reply_text(
                     _["start_3"].format(app.mention, member.mention)
