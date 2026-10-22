@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import random
 import re
 from pathlib import Path
 
@@ -49,7 +48,7 @@ def pick_id(em: str) -> str | None:
     ids = (_EMOJI_DB.get(key) or {}).get("ids") or []
     cid = None
     if ids:
-        cid = random.choice(ids)
+        cid = ids[0]
     else:
         fb = _RICH_EMOJI_FALLBACK.get(key)
         if fb:
@@ -299,12 +298,13 @@ def _beautify(html: str) -> str:
             return m.group(0)
         return f'<img src="tg://emoji?id={cid}"/>'
 
-    # longest keys first, then leftovers
-    html = _EMOJI_RE.sub(_swap, html)
-    html = _EMOJI_SINGLE_RE.sub(_swap, html)
-
-    # emoji already injected by pemoji() or builders stays untouched because
-    # tags only contain digits; nothing else needs protecting.
+    # Replace emoji only in visible text, never inside HTML tags/attributes.
+    # Splitting around tags also preserves any existing <img src="tg://emoji..."/>.
+    parts = re.split(r"(<[^>]*>)", html)
+    for i in range(0, len(parts), 2):
+        parts[i] = _EMOJI_RE.sub(_swap, parts[i])
+        parts[i] = _EMOJI_SINGLE_RE.sub(_swap, parts[i])
+    html = "".join(parts)
     return _nl_fix(html)
 
 
