@@ -35,7 +35,7 @@ def pemoji(em: str) -> str:
     cid = pick_id(em)
     if not cid:
         return em
-    return f'<img src="tg://emoji?id={cid}"/>'
+    return f'<tg-emoji emoji-id="{cid}">{em}</tg-emoji>'
 
 
 _CHOSEN: dict = {}
@@ -54,7 +54,7 @@ def pick_id(em: str) -> str | None:
         if fb:
             ids = (_EMOJI_DB.get(fb) or {}).get("ids") or []
             if ids:
-                cid = random.choice(ids)
+                cid = ids[0]
     _CHOSEN[key] = cid
     return cid
 
@@ -221,7 +221,7 @@ _TAG_KEEP_RE = re.compile(
     r"(<a\s+(?:href\s*=\s*(?:\"|')?[^ >]*(?:\"|')?)?[^>]*>"
     r"|</a>|<b>|</b>|<i>|</i>|<u>|</u>|<s>|</s>|<em>|</em>|<strong>|</strong>"
     r"|<code>|</code>|<pre(?:\s[^>]*)?>|</pre>|<br\s*/?>"
-    r"|<blockquote>|</blockquote>|<emoji[^>]*>|</emoji>)"
+    r"|<blockquote>|</blockquote>|<tg-emoji[^>]*>|</tg-emoji>)"
 )
 
 def rich_md(text: str) -> str:
@@ -278,12 +278,30 @@ def _nl_fix(html: str) -> str:
     return _restore_code("".join(out), stash)
 
 
+def _protect_custom_emojis(html: str):
+    """Keep existing custom-emoji entities intact during visible-text emoji conversion."""
+    stash = []
+
+    def _keep(m):
+        stash.append(m.group(0))
+        return f"\x00EMOJI{len(stash) - 1}\x00"
+
+    return re.sub(r"<tg-emoji\b[^>]*>.*?</tg-emoji>", _keep, html, flags=re.DOTALL)
+
+
+def _restore_custom_emojis(html: str, stash) -> str:
+    for i, tag in enumerate(stash):
+        html = html.replace(f"\x00EMOJI{i}\x00", tag)
+    return html
+
+
 def _beautify(html: str) -> str:
     """Post-process: leftover **bold**, `code`, and premium-emoji pass.
 
     Every emoji char that has a DB id anywhere in visible text is upgraded to
     its premium custom-emoji tag, so panels never ship plain emoji.
     """
+    html, emoji_stash = _protect_custom_emojis(html)
     html, stash = _protect_code(html)
     html = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", html, flags=re.DOTALL)
     html = re.sub(r"__(.+?)__", r"<i>\1</i>", html, flags=re.DOTALL)
@@ -296,7 +314,7 @@ def _beautify(html: str) -> str:
         cid = pick_id(m.group(0))
         if not cid:
             return m.group(0)
-        return f'<img src="tg://emoji?id={cid}"/>'
+        return f'<tg-emoji emoji-id="{cid}">{m.group(0)}</tg-emoji>'
 
     # Replace emoji only in visible text, never inside HTML tags/attributes.
     # Splitting around tags also preserves any existing <img src="tg://emoji..."/>.
@@ -305,6 +323,7 @@ def _beautify(html: str) -> str:
         parts[i] = _EMOJI_RE.sub(_swap, parts[i])
         parts[i] = _EMOJI_SINGLE_RE.sub(_swap, parts[i])
     html = "".join(parts)
+    html = _restore_custom_emojis(html, emoji_stash)
     return _nl_fix(html)
 
 
