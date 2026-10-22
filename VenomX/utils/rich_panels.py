@@ -1,6 +1,6 @@
 # All rights reserved.
 #
-# Venom-style now-playing rich card with a live progress bar.
+# Now-playing rich card with a live progress bar.
 #
 # The card is a TEXT rich message (Bot API 10.3): buttons live in the message
 # HTML, so the classic photo card is gone. A background refresher re-renders
@@ -9,7 +9,6 @@
 #
 
 import asyncio
-import random
 import time
 
 from VenomX.misc import db
@@ -59,10 +58,8 @@ def _bar_style(percentage: float) -> str:
 
 
 def _ctl_style() -> str:
-    try:
-        return random.choice(["primary", "success", "danger"])
-    except Exception:
-        return "primary"
+    # Keep the skip button style stable across periodic panel refreshes.
+    return "primary"
 
 
 def _toggle_button(chat_id: int) -> str:
