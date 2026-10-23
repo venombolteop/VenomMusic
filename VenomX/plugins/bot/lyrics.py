@@ -35,6 +35,7 @@ from VenomX.utils.rich_msg import (
     send_rich,
 )
 from VenomX.utils.stream import lyrics as lyrics_display
+from VenomX.utils.rich_msg import reply_note, status_card
 
 _LOG = "Lyrics"
 
@@ -78,7 +79,7 @@ async def _is_admin(chat, user_id: int) -> bool:
 async def lyrics_on(client, message: Message):
     chat_id = message.chat.id
     if await get_vc_lyrics(chat_id):
-        await message.reply_text(
+        await reply_note(message, 
             "🎵 Lyrics is <b>already on</b> in this chat.\n"
             "Use <code>/lyricsoff</code> to switch it off here."
         )
@@ -86,7 +87,7 @@ async def lyrics_on(client, message: Message):
     await set_vc_lyrics(chat_id, True)
     lyrics_display.forget(chat_id)
     LOGGER(_LOG).info("lyrics panel enabled for chat %s by %s", chat_id, message.from_user.id)
-    await message.reply_text(
+    await reply_note(message, 
         "🎵 Lyrics <b>on</b> for this chat.\n"
         "Lines will appear in the voice chat panel as the song plays. "
         "This does not change any other chat."
@@ -101,7 +102,7 @@ async def lyrics_on(client, message: Message):
 async def lyrics_off(client, message: Message):
     chat_id = message.chat.id
     if not await get_vc_lyrics(chat_id):
-        await message.reply_text(
+        await reply_note(message, 
             "🎵 Lyrics is <b>already off</b> in this chat.\n"
             "Use <code>/lyricson</code> to switch it on here."
         )
@@ -110,7 +111,7 @@ async def lyrics_off(client, message: Message):
     lyrics_display.stop(chat_id)
     lyrics_display.forget(chat_id)
     LOGGER(_LOG).info("lyrics panel disabled for chat %s by %s", chat_id, message.from_user.id)
-    await message.reply_text(
+    await reply_note(message, 
         "🎵 Lyrics <b>off</b> for this chat.\n"
         "Nothing will be posted in the voice chat panel here. "
         "This does not change any other chat."
@@ -243,12 +244,12 @@ async def _lyrics_text(client, message: Message, query: str):
     playing, which is the whole point of asking for one by name.
     """
     if not query.strip():
-        await message.reply_text(
+        await reply_note(message, 
             "🎵 <b>Usage</b>\n<code>/lyrics kesariya</code>"
         )
         return
 
-    status = await message.reply_text("🎵 <b>Searching lyrics…</b>")
+    status = await status_card(message.chat.id, "🎵 <b>Searching lyrics…</b>")
     try:
         details, vidid = await Platform.youtube.track(query)
     except Exception:

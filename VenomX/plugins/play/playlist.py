@@ -33,6 +33,7 @@ from VenomX.utils.rich_msg import (
     send_rich,
 )
 from VenomX.utils.stream.stream import stream
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 @app.on_message(command("PLAYLIST_COMMAND") & ~BANNED_USERS)
@@ -40,9 +41,9 @@ from VenomX.utils.stream.stream import stream
 async def check_playlist(client, message: Message, _):
     _playlist = await get_playlist_names(message.from_user.id)
     if _playlist:
-        get = await message.reply_text(_["playlist_2"])
+        get = await status_card(message.chat.id, _["playlist_2"])
     else:
-        return await message.reply_text(_["playlist_3"])
+        return await reply_note(message, _["playlist_3"])
     msg = _["playlist_4"]
     count = 0
     for ptlist in _playlist:
@@ -126,7 +127,7 @@ async def del_plist_msg(client, message: Message, _):
         body += keyboard
         await send_rich(message.chat.id, body)
     else:
-        return await message.reply_text(_["playlist_3"])
+        return await reply_note(message, _["playlist_3"])
 
 
 @app.on_callback_query(filters.regex("play_playlist") & ~BANNED_USERS)
