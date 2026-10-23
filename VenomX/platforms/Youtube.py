@@ -96,6 +96,7 @@ RUNTIME_PRIORITY = ["node", "bun", "deno"]
 # Progressive itag 18 (360p mp4) still works with cookies + tv/mweb/web clients.
 _YT_CLIENTS = ["tv", "mweb", "web"]
 _YT_CLIENTS_STR = "tv,mweb,web"
+_INNERTUBE_NEXT_URL = "https://www.youtube.com/youtubei/v1/next?prettyPrint=false"
 _AUDIO_FMT = "bestaudio/best/18/worst"
 _VIDEO_FMT = (
     "bestvideo[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/"
@@ -763,26 +764,77 @@ class YouTube:
             result = []
 
         # Radio/Mix lists (RD...) are not real playlist pages — yt-dlp comes
-        # back with zero entries because the page is JS-driven. Attaching the
-        # list to a plain watch URL instead hands yt-dlp the mix through the
-        # watch page, which it can enumerate. Try that before giving up.
+        # back with zero entries because the page is JS-driven. YouTube's
+        # InnerTube "next" endpoint enumerates mixes reliably (this is what
+        # other players do); a watch-page retry is kept as backup.
         if not result and match and str(match.group(1)).startswith("RD"):
-            watch_link = f"https://www.youtube.com/watch?list={match.group(1)}"
-            _log("info", "playlist() empty for mix %s — retrying via watch page", match.group(1))
-            mix_cmd = (
-                f"{shlex.quote(yt_dlp_binary())} {proxy_part}{cookie_part}{pot_part}"
-                f"-i --extractor-args 'youtube:player_client=android,tv'"
-                f' --get-id --flat-playlist --playlist-end {limit} --skip-download "{watch_link}" '
-                f"2>/dev/null"
-            )
-            mix_raw = await shell_cmd(mix_cmd)
-            try:
-                result = [key for key in mix_raw.split("\n") if key]
-            except Exception:
-                result = []
-            _log("info", "playlist() mix retry got %d items in %.1fs", len(result), time.monotonic() - t0)
+            plist_id = str(match.group(1))
+            _log("info", "playlist() empty for mix %s — trying InnerTube next", plist_id)
+            result = await self._mix_tracks(plist_id, limit)
+            if not result:
+                watch_link = f"https://www.youtube.com/watch?list={plist_id}"
+                _log("info", "playlist() mix retry via watch page %s", plist_id)
+                mix_cmd = (
+                    f"{shlex.quote(yt_dlp_binary())} {proxy_part}{cookie_part}{pot_part}"
+                    f"-i --extractor-args 'youtube:player_client=android,tv'"
+                    f' --get-id --flat-playlist --playlist-end {limit} --skip-download "{watch_link}" '
+                    f"2>/dev/null"
+                )
+                mix_raw = await shell_cmd(mix_cmd)
+                try:
+                    result = [key for key in mix_raw.split("\n") if key]
+                except Exception:
+                    result = []
+            _log("info", "playlist() mix fallback got %d items in %.1fs", len(result), time.monotonic() - t0)
 
         _log("info", "playlist() OK in %.1fs got %d items", time.monotonic() - t0, len(result))
+        return result
+
+    async def _mix_tracks(self, plist_id: str, limit: int) -> list:
+        """Enumerate a YouTube Mix/radio playlist through the InnerTube next API.
+
+        Mixes never render as playlist pages, so yt-dlp finds nothing; the
+        `next` endpoint with just the playlistId returns the queue panel.
+        """
+        payload = {
+            "context": {
+                "client": {
+                    "clientName": "WEB",
+                    "clientVersion": "2.20260101.00.00",
+                    "hl": "en",
+                }
+            },
+            "playlistId": plist_id,
+        }
+        try:
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=12)
+            ) as session:
+                async with session.post(
+                    _INNERTUBE_NEXT_URL,
+                    json=payload,
+                    headers={"content-type": "application/json"},
+                ) as resp:
+                    data = await resp.json(content_type=None)
+        except Exception as e:
+            _log("warning", "playlist() mix API failed: %s", e)
+            return []
+
+        ids: list = []
+
+        def _walk(node):
+            if isinstance(node, dict):
+                panel = node.get("playlistPanelVideoRenderer")
+                if isinstance(panel, dict) and panel.get("videoId"):
+                    ids.append(panel["videoId"])
+                for value in node.values():
+                    _walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    _walk(value)
+
+        _walk(data)
+        return ids[:limit]
         return result
 
     async def _api_search(self, query: str, t0: float):
