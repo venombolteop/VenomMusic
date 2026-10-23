@@ -3,7 +3,16 @@
 from config import LOG, LOGGER_ID
 from VenomX import app
 from VenomX.utils.database import is_on_off
-from VenomX.utils.rich_msg import send_rich
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    rich_kv,
+    rich_note,
+    rich_url_button,
+    send_rich,
+)
 
 
 async def play_logs(message, streamtype, thumbnail=None):
@@ -23,57 +32,31 @@ async def play_logs(message, streamtype, thumbnail=None):
             query = message.text or "N/A"
 
         chat_title = message.chat.title or "Unknown"
-        if chat_link:
-            chat_line = f"🏷 **Chat:** [{chat_title}]({chat_link})"
-        else:
-            chat_line = f"🏷 **Chat:** {chat_title}"
 
-        logger_text = f"""
-╔══════════╗
-  🎵 **{app.mention} Play Log**
-╚══════════╝
+        # Rich-native log card: heading, optional thumb, callout info block
+        # with highlighted values, footer and a centered chat link button.
+        # No tree art and no markdown — rich HTML renders none of that.
+        html = rich_heading("🎵 ᴠᴇɴᴏᴍ ᴘʟᴀʏ ʟᴏɢ", level=4)
+        thumb = str(thumbnail) if thumbnail else ""
+        if thumb.startswith(("http://", "https://")):
+            html += f'<img src="{thumb}"/>'
+        info = (
+            f"{pemoji('🏰')} {rich_kv('Chat:', chat_title)}<br>"
+            f"{pemoji('🆔')} {rich_kv('ID:', message.chat.id)}<br>"
+            f"{pemoji('🔗')} {rich_kv('Username:', chatusername)}<br>"
+            f"{pemoji('👤')} {rich_esc(user.mention)}<br>"
+            f"{pemoji('🆔')} {rich_kv('ID:', user.id)}<br>"
+            f"{pemoji('🔗')} {rich_kv('Username:', username)}<br>"
+            f"{pemoji('🔎')} {rich_kv('Query:', str(query)[:120])}<br>"
+            f"{pemoji('📡')} {rich_kv('Stream:', str(streamtype))}"
+        )
+        html += rich_note(info)
+        html += f"<footer>{app.mention} · ᴅɪʀᴇᴄᴛ ꜱᴛʀᴇᴀᴍ</footer>"
+        target = chat_link or f"https://t.me/{str(chatusername).lstrip('@')}"
+        html += rich_button_row(
+            rich_url_button("🏷 ᴏᴘᴇɴ ᴄʜᴀᴛ", target, style="primary"),
+            align="center",
+        )
 
-🏰 **Group Info**
-├ {chat_line}
-├ 🆔 **Chat ID:** `{message.chat.id}`
-└ 🔗 **Username:** {chatusername}
-
-👤 **Requested By**
-├ 🧑 **Name:** {user.mention}
-├ 🆔 **User ID:** `{user.id}`
-└ 🔗 **Username:** {username}
-
-🎶 **Track Details**
-├ 🔎 **Query:** `{query}`
-└ 📡 **Stream:** `{streamtype}`
-
-⚡ **Mode:** Direct Stream · Premium UI
-"""
         if message.chat.id != LOGGER_ID:
-            from VenomX.utils.rich_msg import rich_esc
-
-            try:
-                if thumbnail and str(thumbnail).startswith(("http://", "https://")):
-                    html = (
-                        f"<img src=\"{thumbnail}\"/>"
-                        f"<p>{rich_esc(logger_text)}</p>"
-                    )
-                else:
-                    html = f"<p>{rich_esc(logger_text)}</p>"
-                html += (
-                    "<tg-button-row>"
-                    f'<tg-button type="url" style="primary" '
-                    f'url="{chat_link or f"https://t.me/{chatusername.lstrip(chr(64))}"}">'
-                    "🏷 Chat</tg-button></tg-button-row>"
-                )
-                await send_rich(LOGGER_ID, html)
-            except Exception:
-                try:
-                    await app.send_message(
-                        chat_id=LOGGER_ID,
-                        text=logger_text,
-                        disable_web_page_preview=True,
-                    )
-                except Exception:
-                    pass
-        return
+            await send_rich(LOGGER_ID, html)

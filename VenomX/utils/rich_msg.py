@@ -123,9 +123,9 @@ def rich_note(text: str) -> str:
     return f"<blockquote>{text}</blockquote>"
 
 
-def rich_kv(label: str, value: str) -> str:
+def rich_kv(label: str, value) -> str:
     """One 'key: value' line with a highlighted value."""
-    return f"{rich_esc(label)} <mark>{rich_esc(value)}</mark>"
+    return f"{str(label)} <mark>{str(value)}</mark>"
 
 
 def _ctl(emoji: str, label: str, callback: str, style: str, default_label: str = "") -> str:
@@ -424,9 +424,20 @@ class RichMystic:
         return await delete_msg(self.chat_id, self.id)
 
 
-async def status_card(chat_id: int, text: str) -> RichMystic:
-    """Send a rich 'working on it...' card and return its adapter handle."""
+async def status_card(chat_id: int, text: str, fallback_message=None):
+    """Send a rich 'working on it...' card and return its adapter handle.
+
+    fallback_message: a pyrogram Message used verbatim (reply) when the rich
+    send fails, so the status stays visible instead of silently no-oping.
+    """
     mid = await send_rich(chat_id, f"<p>{rich_esc(text)}</p>")
+    if not mid and fallback_message is not None:
+        try:
+            return await fallback_message.reply_text(
+                text, disable_web_page_preview=True
+            )
+        except Exception:  # noqa: BLE001
+            return RichMystic(chat_id, None)
     return RichMystic(chat_id, mid)
 
 

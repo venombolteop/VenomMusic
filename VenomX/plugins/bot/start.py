@@ -41,6 +41,7 @@ from VenomX.utils.rich_msg import (
     pemoji,
     rich_button,
     rich_button_row,
+    rich_url_button,
     rich_esc,
     rich_heading,
     rich_img,
