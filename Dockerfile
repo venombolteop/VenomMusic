@@ -11,6 +11,7 @@ RUN apt-get update \
        unzip \
        gcc \
        git \
+       curl \
        procps \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
