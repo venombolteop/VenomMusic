@@ -103,8 +103,9 @@ def _track_link(item):
 def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
     """Yukki-style queue card: aside now-playing plus a bordered track table.
 
-    Every up-next row carries a danger delete button; hidden rows are
-    revealed with a single show-more callback button.
+    Table matches the Yukki layout: # / Track (link) / duration, each row
+    ending in a danger delete button. Hidden rows are revealed with a single
+    show-more callback button.
     """
     total = len(got)
     upnext = max(total - 1, 0)
@@ -113,24 +114,21 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
     if shown > upnext:
         shown = upnext
 
-    body = rich_heading(f'{pemoji("🗂")} ᴠᴇɴᴏᴍ ᴍᴜsɪᴄ ǫᴜᴇᴜᴇ ( {total} )', level=3)
+    body = rich_heading(f'{pemoji("🗂")} ᴍᴜsɪᴄ ǫᴜᴇᴜᴇ', level=3)
     now = got[0]
     now_url = _track_link(now)
     now_title = _short(now.get("title"))
     now_head = f'<a href="{now_url}">{rich_esc(now_title)}</a>' if now_url else rich_esc(now_title)
     body += (
-        f'<aside>{pemoji("🔴")} <b>ᴏɴ ɴᴏᴡ ᴘʟᴀʏɪɴɢ</b><br>{now_head}<br>'
+        f'<aside>{pemoji("🔴")} <b>ɴᴏᴡ ᴘʟᴀʏɪɴɢ</b><br>{now_head}<br>'
         f'{pemoji("⏱")} {rich_esc(now.get("dur") or "--:--")}  •  '
         f'{pemoji("👤")} {rich_esc(now.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")}</aside>'
     )
 
     if upnext > 0:
-        body += f'<p>{pemoji("🎼")} <b>ᴜᴘ ɴᴇxᴛ</b> ( {upnext} )</p>'
+        body += f'<p>{pemoji("➡")} <b>ᴜᴘ ɴᴇxᴛ</b> • {upnext} ꜰᴏᴜɴᴅ</p>'
         body += '<table bordered striped compact>'
-        body += (
-            f'<tr><th>#</th><th>{pemoji("🎵")} ᴛʀᴀᴄᴋ</th><th>⏱</th>'
-            f'<th>👤</th><th>🗑</th></tr>'
-        )
+        body += f'<tr><th>#</th><th>{pemoji("🎵")} ᴛʀᴀᴄᴋ</th><th>⏱</th><th>🗑</th></tr>'
         for i in range(1, shown + 1):
             x = got[i]
             row_url = _track_link(x)
@@ -143,7 +141,6 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
             body += (
                 f'<tr><td>{i}</td><td>{track_cell}</td>'
                 f'<td>{rich_esc(x.get("dur") or "--:--")}</td>'
-                f'<td>{rich_esc(x.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")}</td>'
                 f'<td><tg-button type="callback_data" style="danger" '
                 f'data="qdel {what}|{i}">✕</tg-button></td></tr>'
             )
@@ -151,10 +148,11 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
         if upnext > shown:
             body += rich_button_row(
                 rich_button(
-                    f'{pemoji("➕")} ꜱʜᴏᴡ ᴍᴏʀᴇ ( {upnext - shown} )',
+                    f'{pemoji("➕")} ꜱʜᴏᴡ ᴍᴏʀᴇ · {upnext - shown}',
                     f"qmore {what}",
                     style="primary",
-                )
+                ),
+                align="center",
             )
     else:
         body += f'<footer>{pemoji("✨")} ᴛʜᴇ ᴜᴘ-ɴᴇxᴛ ǫᴜᴇᴜᴇ ɪꜱ ᴇᴍᴘᴛʏ</footer>'
@@ -274,20 +272,27 @@ async def queued_tracks(client, CallbackQuery: CallbackQuery, _):
     await CallbackQuery.answer()
     basic[videoid] = False
     buttons = queue_back_markup(_, what)
-    body = queue_list_html(_, got, buttons, what=what)
     chat_id = CallbackQuery.message.chat.id
     mid = CallbackQuery.message.id
     from VenomX.utils.rich_panels import mark_panel_closed
 
     mark_panel_closed(chat_id, mid)
-    if len(body) < 3500:
+    # Rich messages cap near 4k chars: shrink the visible page before ever
+    # falling back to a pastebin, so the table stays visible for long queues.
+    shown = 15
+    while shown >= 4:
+        body = queue_list_html(_, got, buttons, what=what, shown=shown)
+        if len(body) <= 3900:
+            break
+        shown -= 3
+    if len(body) <= 3900:
         await edit_rich(chat_id, mid, body)
         return
     link = await Ayushbin(plain_list_text(got))
     await edit_rich(
         chat_id,
         mid,
-        rich_heading(f'{pemoji("🗂")} ᴠᴇɴᴏᴍ ᴍᴜsɪᴄ ǫᴜᴇᴜᴇ ( {len(got)} )', level=3)
+        rich_heading(f'{pemoji("🗂")} ᴍᴜsɪᴄ ǫᴜᴇᴜᴇ', level=3)
         + f'<p>{rich_esc(_["queue_3"].format(link))}</p>'
         + buttons,
     )
@@ -338,12 +343,17 @@ async def qmore_card(client, CallbackQuery, _):
         return await CallbackQuery.answer(_["queue_2"], show_alert=True)
     await CallbackQuery.answer()
     buttons = queue_back_markup(_, what)
-    body = queue_list_html(_, got, buttons, what=what, shown=len(got))
     chat_id = CallbackQuery.message.chat.id
     mid = CallbackQuery.message.id
     from VenomX.utils.rich_panels import mark_panel_closed
 
     mark_panel_closed(chat_id, mid)
+    shown = 15
+    while shown >= 4:
+        body = queue_list_html(_, got, buttons, what=what, shown=shown)
+        if len(body) <= 3900:
+            break
+        shown -= 3
     await edit_rich(chat_id, mid, body)
 
 
