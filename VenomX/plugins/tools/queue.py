@@ -128,7 +128,7 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
     if upnext > 0:
         body += f'<p>{pemoji("➡")} <b>ᴜᴘ ɴᴇxᴛ</b> • {upnext} ꜰᴏᴜɴᴅ</p>'
         body += '<table bordered striped compact>'
-        body += f'<tr><th>#</th><th>{pemoji("🎵")} ᴛʀᴀᴄᴋ</th><th>⏱</th><th>🗑</th></tr>'
+        body += f'<tr><th>#</th><th>{pemoji("🎵")} ᴛʀᴀᴄᴋ</th><th>⏱</th><th>👤</th><th>🗑</th></tr>'
         for i in range(1, shown + 1):
             x = got[i]
             row_url = _track_link(x)
@@ -141,6 +141,7 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
             body += (
                 f'<tr><td>{i}</td><td>{track_cell}</td>'
                 f'<td>{rich_esc(x.get("dur") or "--:--")}</td>'
+                f'<td>{rich_esc(x.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")}</td>'
                 f'<td><tg-button type="callback_data" style="danger" '
                 f'data="qdel {what}|{i}">✕</tg-button></td></tr>'
             )
