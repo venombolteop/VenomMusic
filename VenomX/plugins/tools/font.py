@@ -2589,7 +2589,7 @@ async def style(c, m):
     if style == "frozen":
         cls = Fonts.frozen
     new_text = cls(m.message.reply_to_message.text.split(None, 1)[1])
-    from VenomX.utils.rich_msg import edit_rich, rich_heading
+    from VenomX.utils.rich_msg import edit_rich, rich_esc, rich_heading
 
     try:
         keep = m.message.text or ""

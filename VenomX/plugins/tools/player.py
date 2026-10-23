@@ -39,6 +39,16 @@ async def pause_admin(cli, message: Message, _, chat_id):
         None,
     )
     thumbs = _thumbs_obj[0].file_id if _thumbs_obj else None
+    reply_markup = next(
+        (
+            item["mystic"].reply_markup
+            for item in check
+            if isinstance(item, dict)
+            and "mystic" in item
+            and hasattr(item["mystic"], "reply_markup")
+        ),
+        None,
+    )
     caption = next(
         (
             item["mystic"].caption

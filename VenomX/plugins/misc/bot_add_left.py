@@ -12,6 +12,7 @@ from VenomX import app
 from VenomX.utils.database import delete_served_chat, get_assistant, is_on_off
 from VenomX.utils.rich_msg import (
     pemoji,
+    rich_esc,
     rich_url_button,
     rich_button_row,
     send_rich,

@@ -13,7 +13,7 @@ from pyrogram.types import InlineKeyboardMarkup, Voice
 import config
 from config import lyrical
 from VenomX import app
-from ..utils.rich_msg import edit_any, pemoji
+from ..utils.rich_msg import edit_any, pemoji, rich_esc, send_rich
 from ..utils.formatters import convert_bytes, get_readable_time, seconds_to_min
 from ..utils.premium import stop_btn
 
