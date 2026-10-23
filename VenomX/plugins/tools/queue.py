@@ -5,6 +5,7 @@
 #
 
 import asyncio
+import re
 
 from pyrogram import filters
 from pyrogram.types import CallbackQuery, Message
@@ -57,7 +58,7 @@ def player_html(_, image, title, stream_type, user, run_info, cplay, videoid):
     body += rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ᴍᴜsɪᴄ ᴘʟᴀʏᴇʀ', level=4)
     body += f"<p>{pemoji('🎼')} ᴘʟᴀʏɪɴɢ : <b>{rich_esc(title)}</b></p>"
     body += f"<p>{pemoji('🔊')} sᴛʀᴇᴀᴍ : {rich_esc(stream_type)}</p>"
-    body += f"<p>{pemoji('👤')} ᴘʟᴀʏᴇᴅ ʙʏ : <b>{rich_esc(user)}</b></p>"
+    body += f"<p>{pemoji('👤')} ᴘʟᴀʏᴇᴅ ʙʏ : <b>{rich_esc(_name(user))}</b></p>"
     if run_info is None:
         body += f"<p>{pemoji('⏳')} ᴅᴜʀᴀᴛɪᴏɴ : ᴜɴᴋɴᴏᴡɴ</p>"
         body += f"<p>{pemoji('🗂')} ᴛᴀᴘ ᴏᴜᴛᴘᴜᴛ ᴛᴏ ᴠɪᴇᴡ ᴛʜᴇ ᴡʜᴏʟᴇ ǫᴜᴇᴜᴇ</p>"
@@ -76,17 +77,25 @@ def plain_list_text(got):
         j += 1
         if j == 1:
             msg += (
-                f'🔴 {x["title"]}\n⏱ {x["dur"]}\n🎙 {x["by"]}\n\n'
+                f'🔴 {x["title"]}\n⏱ {x["dur"]}\n🎙 {_name(x["by"])}\n\n'
                 "➡️ ᴜᴘ ɴᴇxᴛ ʜᴇʀᴇ ᴅᴇᴀᴅʀᴇɴ:\n\n"
             )
         else:
-            msg += f'{j}. {x["title"]}\n⏱ {x["dur"]}\n🎙 {x["by"]}\n\n'
+            msg += f'{j}. {x["title"]}\n⏱ {x["dur"]}\n🎙 {_name(x["by"])}\n\n'
     return msg
 
 
 def _short(text, n=40):
     text = str(text or "").title()
     return text if len(text) <= n else text[: n - 1] + "…"
+
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _name(value):
+    """Strip a mention fragment down to its display name."""
+    return _TAG_RE.sub("", str(value or "")).strip() or "ᴛʜᴇ ʜᴏꜱᴛ"
 
 
 def _track_link(item):
@@ -123,7 +132,7 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 19):
     body += (
         f'<aside>{pemoji("🔴")} <b>ɴᴏᴡ ᴘʟᴀʏɪɴɢ</b><br>{now_head}<br>'
         f'{pemoji("⏱")} {rich_esc(str(now.get("dur") or "--:--").replace(" ", ""))}  •  '
-        f'{pemoji("👤")} {rich_esc(_short(now.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ", 14))}</aside>'
+        f'{pemoji("👤")} {rich_esc(_short(_name(now.get("by")), 14))}</aside>'
     )
 
     if upnext > 0:
@@ -134,7 +143,7 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 19):
             x = got[i]
             row_url = _track_link(x)
             row_title = _short(x.get("title"), 30)
-            by = _short(x.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ", 14)
+            by = _short(_name(x.get("by")), 14)
             dur = str(x.get("dur") or "--:--").replace(" ", "")
             track_cell = (
                 f'<a href="{row_url}">{rich_esc(row_title)}</a>'
