@@ -10,6 +10,7 @@ from pyrogram.types import Message
 
 from VenomX import app
 from VenomX.misc import SUDOERS
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 async def member_permissions(chat_id: int, user_id: int):
@@ -47,9 +48,9 @@ async def authorised(func, subFunc2, client, message, *args, **kwargs):
     except Exception as e:
         logging.exception(e)
         try:
-            await message.reply_text(str(e.MESSAGE))
+            await reply_note(message, str(e.MESSAGE))
         except AttributeError:
-            await message.reply_text(str(e))
+            await reply_note(message, str(e))
         e = err()
         print(str(e))
     return subFunc2
@@ -70,7 +71,7 @@ async def unauthorised(
             + f"\n**Permission:** __{permission}__"
         )
     try:
-        await message.reply_text(text)
+        await reply_note(message, text)
     except ChatWriteForbidden:
         await app.leave_chat(chatID)
     return subFunc2

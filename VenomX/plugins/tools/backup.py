@@ -13,6 +13,7 @@ from config import BANNED_USERS, MONGO_DB_URI, OWNER_ID
 from VenomX import app
 from VenomX.core.mongo import DB_NAME
 from VenomX.utils.rich_msg import ids_of, send_rich
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -63,7 +64,7 @@ async def export_database(client, message):
         unavailable = "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
         await send_rich(message.chat.id, f"<p>{unavailable}</p>")
         return
-    mystic = await message.reply_text("📦 Exporting Your mongodatabase...")
+    mystic = await status_card(message.chat.id, "📦 Exporting Your mongodatabase...")
     _mongo_async_ = AsyncIOMotorClient(MONGO_DB_URI)
     databases = await _mongo_async_.list_database_names()
 
@@ -136,7 +137,7 @@ async def import_database(client, message):
         )
         return
 
-    mystic = await message.reply_text("📥 Downloading...")
+    mystic = await status_card(message.chat.id, "📥 Downloading...")
 
     async def progress(current, total):
         try:

@@ -32,7 +32,7 @@ class Telegram:
         for x in out:
             if j <= 2:
                 j += 1
-                await message.reply_text(x)
+                await send_rich(message.chat.id, f"<p>{rich_esc(x)}</p>")
         return True
 
     async def get_link(self, message):

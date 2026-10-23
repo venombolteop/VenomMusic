@@ -25,6 +25,7 @@ from VenomX.utils.rich_msg import (
     rich_button_row,
     rich_esc,
     rich_heading,
+    reply_note,
     send_rich,
 )
 
@@ -59,24 +60,24 @@ def AdminRightsCheck(mystic):
         if message.command[0][0] == "c":
             chat_id = await get_cmode(message.chat.id)
             if chat_id is None:
-                return await message.reply_text(_["setting_12"])
+                return await reply_note(message, _["setting_12"])
             try:
                 await app.get_chat(chat_id)
             except Exception:
-                return await message.reply_text(_["cplay_4"])
+                return await reply_note(message, _["cplay_4"])
         else:
             chat_id = message.chat.id
         if not await is_active_chat(chat_id):
-            return await message.reply_text(_["general_6"])
+            return await reply_note(message, _["general_6"])
         is_non_admin = await is_nonadmin_chat(message.chat.id)
         if not is_non_admin:
             if message.from_user.id not in SUDOERS:
                 admins = adminlist.get(message.chat.id)
                 if not admins:
-                    return await message.reply_text(_["admin_18"])
+                    return await reply_note(message, _["admin_18"])
                 else:
                     if message.from_user.id not in admins:
-                        return await message.reply_text(_["admin_19"])
+                        return await reply_note(message, _["admin_19"])
         return await mystic(client, message, _, chat_id)
 
     return wrapper

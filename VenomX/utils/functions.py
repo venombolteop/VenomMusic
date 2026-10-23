@@ -5,6 +5,7 @@ from re import sub as re_sub
 from pyrogram import errors
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
+from VenomX.utils.rich_msg import reply_note, status_card
 
 MARKDOWN = """
 ʀᴇᴀᴅ ᴛʜᴇ ʙᴇʟᴏᴡ ᴛᴇxᴛ ᴄᴀʀᴇғᴜʟʟʏ ᴛᴏ ғɪɴᴅ ᴏᴜᴛ ʜᴏᴡ ғᴏʀᴍᴀᴛᴛɪɴɢ ᴡᴏʀᴋs!
@@ -292,7 +293,7 @@ async def time_converter(message: Message, time_value: str) -> datetime:
     currunt_time = datetime.now()
     time_digit = time_value[:-1]
     if not time_digit.isdigit():
-        return await message.reply_text("Incorrect time specified")
+        return await reply_note(message, "Incorrect time specified")
     if check_unit == "m":
         temp_time = currunt_time + timedelta(minutes=int(time_digit))
     elif check_unit == "h":
@@ -300,5 +301,5 @@ async def time_converter(message: Message, time_value: str) -> datetime:
     elif check_unit == "d":
         temp_time = currunt_time + timedelta(days=int(time_digit))
     else:
-        return await message.reply_text("Incorrect time specified.")
+        return await reply_note(message, "Incorrect time specified.")
     return temp_time
