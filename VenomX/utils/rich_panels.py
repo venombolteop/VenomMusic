@@ -246,6 +246,29 @@ async def replace_panel(chat_id: int, message_id: int, text: str) -> bool:
     return await edit_rich(chat_id, message_id, f"<p>{rich_esc(text)}</p>")
 
 
+async def snapshot_card(chat_id: int) -> int | None:
+    """Re-send an up-to-date now-playing card without touching the live panel.
+
+    Used by the mirror command (/player): the active panel keeps ticking,
+    this is a read-only copy built straight from db state.
+    """
+    playing = db.get(chat_id)
+    if not playing:
+        return None
+    videoid = playing[0].get("vidid")
+    try:
+        total_sec = float(playing[0].get("seconds") or 0)
+    except Exception:
+        total_sec = 0
+    title = (playing[0].get("title") or "Unknown").title()
+    duration_min = playing[0].get("dur") or "--:--"
+    user_name = playing[0].get("by") or "venom"
+    thumb = await _maxres(videoid, None)
+    body = _body(None, title, duration_min, user_name, thumb)
+    played = float(playing[0].get("played", 0) or 0)
+    return await _send_card(chat_id, body + _rows(chat_id, videoid, played, total_sec))
+
+
 async def notice_card(
     _,
     chat_id: int,
