@@ -215,6 +215,9 @@ BANNED_USERS = filters.user()
 YTDOWNLOADER = 1
 LOG = 2
 LOG_FILE_NAME = "VenomXlogs.txt"
+# systemd users: set SERVICE_NAME (e.g. "venom.service") so /update and /restart
+# restart the unit cleanly; empty keeps the self re-exec fallback.
+SERVICE_NAME = getenv("SERVICE_NAME", "")
 TEMP_DB_FOLDER = "tempdb"
 adminlist = {}
 lyrical = {}

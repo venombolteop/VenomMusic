@@ -20,6 +20,7 @@ from pyrogram.enums import ChatType
 
 import config
 from config import BANNED_USERS
+import shutil
 from strings import command
 from VenomX import app
 from VenomX.core.call import Ayush
@@ -37,6 +38,19 @@ from VenomX.utils.rich_msg import send_note, send_rich
 from VenomX.utils.rich_msg import reply_note, status_card
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def _restart_cmd() -> str:
+    """Relaunch command: systemd unit when configured, else self re-exec.
+
+    The re-exec (`kill -9 <pid> && python3 -m VenomX`) also survives on bare
+    hosts — the spawned shell outlives the killed interpreter — but systemd
+    owns the lifecycle cleanly, so SERVICE_NAME wins when set.
+    """
+    name = str(config.SERVICE_NAME or "").strip()
+    if name and shutil.which("systemctl"):
+        return f"systemctl restart {name}"
+    return f"kill -9 {os.getpid()} && python3 -m VenomX"
 
 
 async def is_heroku():
@@ -136,7 +150,7 @@ async def vardel_(client, message, _):
             return await reply_note(message, _["heroku_4"])
         else:
             await reply_note(message, _["heroku_7"].format(check_var))
-            os.system(f"kill -9 {os.getpid()} && python3 -m VenomX")
+            os.system(_restart_cmd())
 
 
 @app.on_message(command("SETVAR_COMMAND") & SUDOERS)
@@ -165,7 +179,7 @@ async def set_var(client, message, _):
             await reply_note(message, _["heroku_9"].format(to_set))
         else:
             await reply_note(message, _["heroku_10"].format(to_set))
-        os.system(f"kill -9 {os.getpid()} && python3 -m VenomX")
+        os.system(_restart_cmd())
 
 
 @app.on_message(command("USAGE_COMMAND") & SUDOERS)
@@ -306,7 +320,7 @@ async def update_(client, message, _):
             )
     else:
         os.system("pip3 install --no-cache-dir -U -r requirements.txt")
-        os.system(f"kill -9 {os.getpid()} && python3 -m VenomX")
+        os.system(_restart_cmd())
         exit()
 
 
@@ -364,4 +378,4 @@ async def restart_(client, message):
     await response.edit_text(
         "Restart process started, please wait for few seconds until the bot starts..."
     )
-    os.system(f"kill -9 {os.getpid()} && python3 -m VenomX")
+    os.system(_restart_cmd())
