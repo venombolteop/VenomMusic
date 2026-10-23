@@ -112,8 +112,20 @@ def rich_switch_button(text: str, query: str, style: str = "primary") -> str:
     )
 
 
-def rich_button_row(*buttons: str) -> str:
-    return "<tg-button-row>" + "".join(buttons) + "</tg-button-row>"
+def rich_button_row(*buttons: str, align: str = "") -> str:
+    """Row of rich buttons; optional align: left / center / right."""
+    open_attr = f' align="{align}"' if align else ""
+    return f"<tg-button-row{open_attr}>" + "".join(buttons) + "</tg-button-row>"
+
+
+def rich_note(text: str) -> str:
+    """Block-quoted note block — draws attention like a callout card."""
+    return f"<blockquote>{text}</blockquote>"
+
+
+def rich_kv(label: str, value: str) -> str:
+    """One 'key: value' line with a highlighted value."""
+    return f"{rich_esc(label)} <mark>{rich_esc(value)}</mark>"
 
 
 def _ctl(emoji: str, label: str, callback: str, style: str, default_label: str = "") -> str:
@@ -423,14 +435,21 @@ def ids_of(m) -> tuple[int | None, int | None]:
     return chat_id, getattr(m, "id", None)
 
 
-async def send_note(chat_id: int, text: str, heading: str | None = None) -> int | None:
-    """One-off rich notice card (admin actions, statuses, log lines)."""
+async def send_note(chat_id: int, text: str, heading: str | None = None,
+                    style: str = "primary") -> int | None:
+    """One-off rich notice card (admin actions, statuses, log lines).
+
+    Callout-blockquote body so the note pops against chat background, and a
+    single centered close row.
+    """
     body = ""
     if heading:
         body += rich_heading(f"{pemoji('🎵')} {rich_esc(heading)}", level=4)
-    body += f"<p>{rich_esc(text)}</p>"
+    body += rich_note(rich_esc(text).replace("\n", "<br>"))
     body += rich_button_row(
-        rich_button(f"{pemoji('❌')} ᴄʟᴏsᴇ", callback_data="close", style="danger"),
+        rich_button(f"{pemoji('❌')} ᴄʟᴏsᴇ", callback_data="close", style="danger",
+                    ),
+        align="center",
     )
     return await send_rich(chat_id, body)
 
