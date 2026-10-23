@@ -34,6 +34,7 @@ from VenomX.utils.decorators import AdminActual, language
 from VenomX.utils.decorators.language import language
 from VenomX.utils.pastebin import Ayushbin
 from VenomX.utils.rich_msg import send_note, send_rich
+from VenomX.utils.rich_msg import reply_note, status_card
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -67,19 +68,19 @@ async def log_(client, message, _):
         if await is_heroku():
             if HAPP is None:
                 if os.path.exists(config.LOG_FILE_NAME):
-                    return await message.reply_text(await _get_log())
-                return await message.reply_text(_["heroku_1"])
+                    return await reply_note(message, await _get_log())
+                return await reply_note(message, _["heroku_1"])
             data = HAPP.get_log()
             link = await Ayushbin(data)
-            return await message.reply_text(link)
+            return await reply_note(message, link)
         else:
             if os.path.exists(config.LOG_FILE_NAME):
                 link = await _get_log()
-                return await message.reply_text(link)
+                return await reply_note(message, link)
             else:
-                return await message.reply_text(_["heroku_2"])
+                return await reply_note(message, _["heroku_2"])
     except Exception:
-        await message.reply_text(_["heroku_2"])
+        await reply_note(message, _["heroku_2"])
 
 
 @app.on_message(command("GETVAR_COMMAND") & SUDOERS)
@@ -87,27 +88,27 @@ async def log_(client, message, _):
 async def varget_(client, message, _):
     usage = _["heroku_3"]
     if len(message.command) != 2:
-        return await message.reply_text(usage)
+        return await reply_note(message, usage)
     check_var = message.text.split(None, 2)[1]
     if await is_heroku():
         if HAPP is None:
-            return await message.reply_text(_["heroku_1"])
+            return await reply_note(message, _["heroku_1"])
         heroku_config = HAPP.config()
         if check_var in heroku_config:
-            return await message.reply_text(
+            return await reply_note(message, 
                 f"**{check_var}:** `{heroku_config[check_var]}`"
             )
         else:
-            return await message.reply_text(_["heroku_4"])
+            return await reply_note(message, _["heroku_4"])
     else:
         path = dotenv.find_dotenv()
         if not path:
-            return await message.reply_text(_["heroku_5"])
+            return await reply_note(message, _["heroku_5"])
         output = dotenv.get_key(path, check_var)
         if not output:
-            await message.reply_text(_["heroku_4"])
+            await reply_note(message, _["heroku_4"])
         else:
-            return await message.reply_text(f"**{check_var}:** `{str(output)}`")
+            return await reply_note(message, f"**{check_var}:** `{str(output)}`")
 
 
 @app.on_message(command("DELVAR_COMMAND") & SUDOERS)
@@ -115,26 +116,26 @@ async def varget_(client, message, _):
 async def vardel_(client, message, _):
     usage = _["heroku_6"]
     if len(message.command) != 2:
-        return await message.reply_text(usage)
+        return await reply_note(message, usage)
     check_var = message.text.split(None, 2)[1]
     if await is_heroku():
         if HAPP is None:
-            return await message.reply_text(_["heroku_1"])
+            return await reply_note(message, _["heroku_1"])
         heroku_config = HAPP.config()
         if check_var in heroku_config:
-            await message.reply_text(_["heroku_7"].format(check_var))
+            await reply_note(message, _["heroku_7"].format(check_var))
             del heroku_config[check_var]
         else:
-            return await message.reply_text(_["heroku_4"])
+            return await reply_note(message, _["heroku_4"])
     else:
         path = dotenv.find_dotenv()
         if not path:
-            return await message.reply_text(_["heroku_5"])
+            return await reply_note(message, _["heroku_5"])
         output = dotenv.unset_key(path, check_var)
         if not output[0]:
-            return await message.reply_text(_["heroku_4"])
+            return await reply_note(message, _["heroku_4"])
         else:
-            await message.reply_text(_["heroku_7"].format(check_var))
+            await reply_note(message, _["heroku_7"].format(check_var))
             os.system(f"kill -9 {os.getpid()} && python3 -m VenomX")
 
 
@@ -143,27 +144,27 @@ async def vardel_(client, message, _):
 async def set_var(client, message, _):
     usage = _["heroku_8"]
     if len(message.command) < 3:
-        return await message.reply_text(usage)
+        return await reply_note(message, usage)
     to_set = message.text.split(None, 2)[1].strip()
     value = message.text.split(None, 2)[2].strip()
     if await is_heroku():
         if HAPP is None:
-            return await message.reply_text(_["heroku_1"])
+            return await reply_note(message, _["heroku_1"])
         heroku_config = HAPP.config()
         if to_set in heroku_config:
-            await message.reply_text(_["heroku_9"].format(to_set))
+            await reply_note(message, _["heroku_9"].format(to_set))
         else:
-            await message.reply_text(_["heroku_10"].format(to_set))
+            await reply_note(message, _["heroku_10"].format(to_set))
         heroku_config[to_set] = value
     else:
         path = dotenv.find_dotenv()
         if not path:
-            return await message.reply_text(_["heroku_5"])
+            return await reply_note(message, _["heroku_5"])
         dotenv.set_key(path, to_set, value)
         if dotenv.get_key(path, to_set):
-            await message.reply_text(_["heroku_9"].format(to_set))
+            await reply_note(message, _["heroku_9"].format(to_set))
         else:
-            await message.reply_text(_["heroku_10"].format(to_set))
+            await reply_note(message, _["heroku_10"].format(to_set))
         os.system(f"kill -9 {os.getpid()} && python3 -m VenomX")
 
 
@@ -173,10 +174,10 @@ async def usage_dynos(client, message, _):
     ### Credits CatUserbot
     if await is_heroku():
         if HAPP is None:
-            return await message.reply_text(_["heroku_1"])
+            return await reply_note(message, _["heroku_1"])
     else:
-        return await message.reply_text(_["heroku_11"])
-    dyno = await message.reply_text(_["heroku_12"])
+        return await reply_note(message, _["heroku_11"])
+    dyno = await status_card(message.chat.id, _["heroku_12"])
     Heroku = heroku3.from_key(config.HEROKU_API_KEY)
     account_id = Heroku.account().id
     useragent = (
@@ -229,8 +230,8 @@ Total Left: `{hours}`**h**  `{minutes}`**m**  [`{percentage}`**%**]"""
 async def update_(client, message, _):
     if await is_heroku():
         if HAPP is None:
-            return await message.reply_text(_["heroku_1"])
-    response = await message.reply_text(_["heroku_13"])
+            return await reply_note(message, _["heroku_1"])
+    response = await status_card(message.chat.id, _["heroku_13"])
     try:
         repo = Repo()
     except GitCommandError:
@@ -312,7 +313,7 @@ async def update_(client, message, _):
 @app.on_message(command("REBOOT_COMMAND") & filters.group & ~BANNED_USERS)
 @AdminActual
 async def reboot(client, message: Message, _):
-    mystic = await message.reply_text(
+    mystic = await status_card(message.chat.id, 
         f"Please Wait... \nRebooting{app.mention} For Your Chat."
     )
     await asyncio.sleep(1)
@@ -341,7 +342,7 @@ async def restart_(client, message):
         if message.chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
             return
         return await reboot(client, message)
-    response = await message.reply_text("Restarting...")
+    response = await status_card(message.chat.id, "Restarting...")
     ac_chats = await get_active_chats()
     for x in ac_chats:
         try:

@@ -29,6 +29,7 @@ from VenomX.utils.database import (
 )
 from VenomX.utils.decorators.language import language
 from VenomX.utils.formatters import alpha_to_int
+from VenomX.utils.rich_msg import reply_note, status_card
 
 AUTO_DELETE = config.CLEANMODE_DELETE_MINS
 AUTO_SLEEP = 5
@@ -74,7 +75,7 @@ async def braodcast_message(client, message, _):
         y = message.chat.id
     else:
         if len(message.command) < 2:
-            return await message.reply_text(_["broad_5"])
+            return await reply_note(message, _["broad_5"])
         query = message.text.split(None, 1)[1]
 
         if "-nobot" in query:
@@ -88,7 +89,7 @@ async def braodcast_message(client, message, _):
         if "-user" in query:
             query = query.replace("-user", "")
         if query == "":
-            return await message.reply_text(_["broad_6"])
+            return await reply_note(message, _["broad_6"])
 
     IS_BROADCASTING = True
 
@@ -130,7 +131,7 @@ async def braodcast_message(client, message, _):
             except Exception:
                 continue
         try:
-            await message.reply_text(_["broad_1"].format(sent, pin))
+            await reply_note(message, _["broad_1"].format(sent, pin))
         except Exception:
             pass
 
@@ -170,13 +171,13 @@ async def braodcast_message(client, message, _):
             except Exception:
                 pass
         try:
-            await message.reply_text(_["broad_7"].format(susr, pin))
+            await reply_note(message, _["broad_7"].format(susr, pin))
         except Exception:
             pass
 
     # Bot broadcasting by assistant
     if "-assistant" in message.text:
-        aw = await message.reply_text(_["broad_2"])
+        aw = await status_card(message.chat.id, _["broad_2"])
         text = _["broad_3"]
         from VenomX.core.userbot import assistants
 

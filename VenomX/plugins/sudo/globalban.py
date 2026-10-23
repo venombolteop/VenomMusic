@@ -21,6 +21,7 @@ from VenomX.utils.database import (
     remove_banned_user,
 )
 from VenomX.utils.decorators.language import language
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 @app.on_message(command("GBAN_COMMAND") & SUDOERS)
@@ -28,7 +29,7 @@ from VenomX.utils.decorators.language import language
 async def gbanuser(client, message: Message, _):
     if not message.reply_to_message:
         if len(message.command) != 2:
-            return await message.reply_text(_["general_1"])
+            return await reply_note(message, _["general_1"])
         user = message.text.split(None, 1)[1]
         user = await app.get_users(user)
         user_id = user.id
@@ -37,14 +38,14 @@ async def gbanuser(client, message: Message, _):
         user_id = message.reply_to_message.from_user.id
         mention = message.reply_to_message.from_user.mention
     if user_id == message.from_user.id:
-        return await message.reply_text(_["gban_1"])
+        return await reply_note(message, _["gban_1"])
     elif user_id == app.id:
-        return await message.reply_text(_["gban_2"])
+        return await reply_note(message, _["gban_2"])
     elif user_id in SUDOERS:
-        return await message.reply_text(_["gban_3"])
+        return await reply_note(message, _["gban_3"])
     is_gbanned = await is_banned_user(user_id)
     if is_gbanned:
-        return await message.reply_text(_["gban_4"].format(mention))
+        return await reply_note(message, _["gban_4"].format(mention))
     if user_id not in BANNED_USERS:
         BANNED_USERS.add(user_id)
     served_chats = []
@@ -53,7 +54,7 @@ async def gbanuser(client, message: Message, _):
         served_chats.append(int(chat["chat_id"]))
     time_expected = len(served_chats)
     time_expected = get_readable_time(time_expected)
-    mystic = await message.reply_text(_["gban_5"].format(mention, time_expected))
+    mystic = await status_card(message.chat.id, _["gban_5"].format(mention, time_expected))
     number_of_chats = 0
     for chat_id in served_chats:
         try:
@@ -64,7 +65,7 @@ async def gbanuser(client, message: Message, _):
         except Exception:
             pass
     await add_banned_user(user_id)
-    await message.reply_text(_["gban_6"].format(mention, number_of_chats))
+    await reply_note(message, _["gban_6"].format(mention, number_of_chats))
     await mystic.delete()
 
 
@@ -73,7 +74,7 @@ async def gbanuser(client, message: Message, _):
 async def gungabn(client, message: Message, _):
     if not message.reply_to_message:
         if len(message.command) != 2:
-            return await message.reply_text(_["general_1"])
+            return await reply_note(message, _["general_1"])
         user = message.text.split(None, 1)[1]
         user = await app.get_users(user)
         user_id = user.id
@@ -83,7 +84,7 @@ async def gungabn(client, message: Message, _):
         mention = message.reply_to_message.from_user.mention
     is_gbanned = await is_banned_user(user_id)
     if not is_gbanned:
-        return await message.reply_text(_["gban_7"].format(mention))
+        return await reply_note(message, _["gban_7"].format(mention))
     if user_id in BANNED_USERS:
         BANNED_USERS.remove(user_id)
     served_chats = []
@@ -92,7 +93,7 @@ async def gungabn(client, message: Message, _):
         served_chats.append(int(chat["chat_id"]))
     time_expected = len(served_chats)
     time_expected = get_readable_time(time_expected)
-    mystic = await message.reply_text(_["gban_8"].format(mention, time_expected))
+    mystic = await status_card(message.chat.id, _["gban_8"].format(mention, time_expected))
     number_of_chats = 0
     for chat_id in served_chats:
         try:
@@ -103,7 +104,7 @@ async def gungabn(client, message: Message, _):
         except Exception:
             pass
     await remove_banned_user(user_id)
-    await message.reply_text(_["gban_9"].format(mention, number_of_chats))
+    await reply_note(message, _["gban_9"].format(mention, number_of_chats))
     await mystic.delete()
 
 
@@ -112,8 +113,8 @@ async def gungabn(client, message: Message, _):
 async def gbanned_list(client, message: Message, _):
     counts = await get_banned_count()
     if counts == 0:
-        return await message.reply_text(_["gban_10"])
-    mystic = await message.reply_text(_["gban_11"])
+        return await reply_note(message, _["gban_10"])
+    mystic = await status_card(message.chat.id, _["gban_11"])
     msg = "Gbanned Users:\n\n"
     count = 0
     users = await get_banned_users()

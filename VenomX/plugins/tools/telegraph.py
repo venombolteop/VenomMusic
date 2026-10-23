@@ -2,6 +2,7 @@ import os
 from pyrogram import filters
 from VenomX import app
 import requests
+from VenomX.utils.rich_msg import reply_note, status_card
 from VenomX.utils.rich_msg import (
     pemoji,
     rich_esc,
@@ -27,7 +28,7 @@ def upload_file(file_path):
 @app.on_message(filters.command(["tgm", "tgt", "telegraph", "tl"]))
 async def get_link_group(client, message):
     if not message.reply_to_message:
-        return await message.reply_text(
+        return await reply_note(message, 
             "Pʟᴇᴀꜱᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇᴅɪᴀ ᴛᴏ ᴜᴘʟᴏᴀᴅ ᴏɴ Tᴇʟᴇɢʀᴀᴘʜ"
         )
 
@@ -41,7 +42,7 @@ async def get_link_group(client, message):
         file_size = media.document.file_size
 
     if file_size > 200 * 1024 * 1024:
-        return await message.reply_text("⚠️ Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴇᴅɪᴀ ꜰɪʟᴇ ᴜɴᴅᴇʀ 200MB.")
+        return await reply_note(message, "⚠️ Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴇᴅɪᴀ ꜰɪʟᴇ ᴜɴᴅᴇʀ 200MB.")
 
     try:
         text = await message.reply("Pʀᴏᴄᴇꜱꜱɪɴɢ...")
