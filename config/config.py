@@ -39,10 +39,10 @@ MONGO_DB_URI = getenv("MONGO_DB_URI", None)
 
 CLEANMODE_DELETE_MINS = int(
     getenv("CLEANMODE_MINS", "5")
-)  # Remember to give value in Seconds
+)  # Remember to give value in Minutes
 
 
-# Custom max audio(music) duration for voice chat. set DURATION_LIMIT in variables with your own time(mins), Default to 60 mins.
+# Custom max audio(music) duration for voice chat. set DURATION_LIMIT in variables with your own time(mins), Default to 5400 minutes (= effectively no limit).
 
 DURATION_LIMIT_MIN = int(
     getenv("DURATION_LIMIT", "5400")
@@ -139,7 +139,7 @@ SUPPORT_GROUP = getenv(
 PRIVATE_BOT_MODE = getenv("PRIVATE_BOT_MODE", "False")
 
 
-# Instant Play / Streaming Mode (default OFF: download first for smooth playback)
+# Instant Play / Streaming Mode (default ON: try direct stream URLs before falling back to a full download)
 INSTANT_PLAY = getenv("INSTANT_PLAY", "True")
 # Media API used for instant (no-download) playback: serves a stable stream permalink
 VENOM_API_URL = getenv("VENOM_API_URL", "http://127.0.0.1:3200")
