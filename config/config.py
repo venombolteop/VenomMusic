@@ -10,9 +10,21 @@ from pyrogram import filters
 load_dotenv()
 
 
+def _required_int(name):
+    raw = getenv(name, "") or ""
+    try:
+        return int(raw)
+    except ValueError:
+        print(
+            f"[ERROR] - {name} is missing or not a valid integer. "
+            "Set it in your environment / .env file and restart the bot."
+        )
+        sys.exit(1)
+
+
 # Get it from my.telegram.org
 
-API_ID = int(getenv("API_ID", ""))
+API_ID = _required_int("API_ID")
 
 API_HASH = getenv("API_HASH", "")
 
