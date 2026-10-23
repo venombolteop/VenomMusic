@@ -225,6 +225,7 @@ class Call:
             )
 
         await assistant.play(chat_id, stream, config=call_config)
+        self._schedule_idle_leave(assistant, chat_id)
 
     async def seek_stream(self, chat_id, file_path, to_seek, duration, mode):
         assistant = await group_assistant(self, chat_id)
@@ -430,6 +431,7 @@ class Call:
         await music_on(chat_id)
         if video:
             await add_active_video_chat(chat_id)
+        self._schedule_idle_leave(assistant, chat_id)
 
     async def warm_join(self, chat_id):
         """Resolve the peer and the active group call ahead of the real join.
@@ -463,10 +465,14 @@ class Call:
         if task and not task.done():
             task.cancel()
 
-    def _schedule_idle_leave(self, client, chat_id):
+    def _schedule_idle_leave(self, client, chat_id, delay=None):
+        # Feature toggle (AUTO_LEAVING_ASSISTANT) with the timer from
+        # AUTO_LEAVE_ASSISTANT_TIME; disabled by default, like upstream.
+        if getattr(config, "AUTO_LEAVING_ASSISTANT", "False") != str(True):
+            return
         self._cancel_idle_leave(chat_id)
         _idle_leave_tasks[chat_id] = asyncio.create_task(
-            self._delayed_leave(client, chat_id)
+            self._delayed_leave(client, chat_id, delay)
         )
 
     async def change_stream(self, client, chat_id):
