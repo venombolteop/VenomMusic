@@ -188,6 +188,7 @@ playlist_22: "🔗 Please provide a YouTube song/playlist URL or song name to ad
 playlist_23: "🗑️ All songs have been deleted from your playlist."
 playlist_24: "🪄 The song has been deleted from your playlist."
 playlist_25: "⏱️ Please wait\n🗑️ Deleting your playlist...."
+playlist_26: "🚫 Radio/Mix playlist links can't be queued by the bot.\n\nPlease send a real playlist link or just the song name instead."
 
 
 saavn_1: "😞 Sorry! Currently, the bot is unable to play the Saavn Podcast URL."
