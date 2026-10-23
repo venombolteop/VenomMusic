@@ -196,7 +196,7 @@ async def stream(
         # A playlist that yields zero entries (Radio/Mix links cannot be
         # fetched) used to leave both the status card and the user hanging.
         if streamtype == "playlist":
-            raise AssistantErr(_["play_3"])
+            raise AssistantErr(_["playlist_26"])
         return
     if video:
         if not await is_video_allowed(chat_id):
@@ -361,7 +361,7 @@ async def stream(
             # Radio/Mix playlists resolve to nothing — a silent return used to
             # leave the user staring at a dead status card with no feedback, so
             # surface the failure so the play handler shows an error card.
-            raise AssistantErr(_["play_3"])
+            raise AssistantErr(_["playlist_26"])
         else:
             link = await Ayushbin(msg)
             lines = msg.count("\n")
