@@ -13,7 +13,7 @@ from pyrogram.types import InlineKeyboardMarkup, Voice
 import config
 from config import lyrical
 from VenomX import app
-
+from ..utils.rich_msg import edit_any, pemoji
 from ..utils.formatters import convert_bytes, get_readable_time, seconds_to_min
 from ..utils.premium import stop_btn
 
@@ -152,17 +152,23 @@ class Telegram:
                     total_size = convert_bytes(total)
                     completed_size = convert_bytes(current)
                     speed = convert_bytes(speed)
+                    bar = int(float(percentage[:5]) / 10)
+                    progress_line = (
+                        f"{pemoji('📥')} ᴘʀᴏɢʀᴇss: {percentage[:5]}%\n"
+                        f"{'▰' * bar}{'▱' * (10 - bar)}"
+                    )
                     text = f"""
-**{app.mention} Telagram Media Downloader**
+**{app.mention} ᴛᴇʟᴇɢʀᴀᴍ ᴍᴇᴅɪᴀ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ**
+
+{progress_line}
 
 **Total file size:** {total_size}
-**Completed:** {completed_size} 
-**Percentage:** {percentage[:5]}%
+**Completed:** {completed_size}
 
 **Speed:** {speed}/s
 **Elapsed Time:** {eta}"""
                     try:
-                        await mystic.edit_text(text, reply_markup=upl)
+                        await edit_any(mystic, text, reply_markup=upl)
                     except Exception:
                         pass
                     left_time[message.id] = datetime.now() + timedelta(
@@ -178,12 +184,13 @@ class Telegram:
                     file_name=fname,
                     progress=progress,
                 )
-                await mystic.edit_text(
-                    "Sucessfully Downloaded\n Processing File Now..."
+                await edit_any(
+                    mystic,
+                    " Sucessfully Downloaded\n Processing File Now..."
                 )
                 downloader.pop(message.id, None)
             except Exception:
-                await mystic.edit_text(_["tg_2"])
+                await edit_any(mystic, _["tg_2"])
 
         if len(downloader) > 10:
             timers = []
@@ -194,7 +201,7 @@ class Telegram:
                 eta = get_readable_time(low)
             except Exception:
                 eta = "Unknown"
-            await mystic.edit_text(_["tg_1"].format(eta))
+            await edit_any(mystic, _["tg_1"].format(eta))
             return False
 
         task = asyncio.create_task(down_load(), name=f"download_{message.chat.id}")

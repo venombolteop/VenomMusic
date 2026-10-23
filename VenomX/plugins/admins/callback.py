@@ -47,7 +47,7 @@ from VenomX.utils.inline.play import (
     stream_markup,
     telegram_markup,
 )
-from VenomX.utils.rich_msg import edit_rich
+from VenomX.utils.rich_msg import edit_any, edit_rich, send_note
 from VenomX.utils.rich_panels import show_main, show_menu
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.stream.stream import stream
@@ -193,18 +193,14 @@ async def admin_callback(client, CallbackQuery, _):
         await CallbackQuery.answer()
         await music_off(chat_id)
         await Ayush.pause_stream(chat_id)
-        await CallbackQuery.message.reply_text(
-            _["admin_2"].format(mention), disable_web_page_preview=True
-        )
+        await send_note(chat_id, _["admin_2"].format(mention))
     elif command == "Resume":
         if await is_music_playing(chat_id):
             return await CallbackQuery.answer(_["admin_3"], show_alert=True)
         await CallbackQuery.answer()
         await music_on(chat_id)
         await Ayush.resume_stream(chat_id)
-        await CallbackQuery.message.reply_text(
-            _["admin_4"].format(mention), disable_web_page_preview=True
-        )
+        await send_note(chat_id, _["admin_4"].format(mention))
     elif command == "Stop" or command == "End":
         try:
             check = db.get(chat_id)
@@ -215,31 +211,25 @@ async def admin_callback(client, CallbackQuery, _):
         await CallbackQuery.answer()
         await Ayush.stop_stream(chat_id)
         await set_loop(chat_id, 0)
-        await CallbackQuery.message.reply_text(
-            _["admin_9"].format(mention), disable_web_page_preview=True
-        )
+        await send_note(chat_id, _["admin_9"].format(mention))
     elif command == "Mute":
         if await is_muted(chat_id):
             return await CallbackQuery.answer(_["admin_5"], show_alert=True)
         await CallbackQuery.answer()
         await mute_on(chat_id)
         await Ayush.mute_stream(chat_id)
-        await CallbackQuery.message.reply_text(
-            _["admin_6"].format(mention), disable_web_page_preview=True
-        )
+        await send_note(chat_id, _["admin_6"].format(mention))
     elif command == "Unmute":
         if not await is_muted(chat_id):
             return await CallbackQuery.answer(_["admin_7"], show_alert=True)
         await CallbackQuery.answer()
         await mute_off(chat_id)
         await Ayush.unmute_stream(chat_id)
-        await CallbackQuery.message.reply_text(
-            _["admin_8"].format(mention), disable_web_page_preview=True
-        )
+        await send_note(chat_id, _["admin_8"].format(mention))
     elif command == "Loop":
         await CallbackQuery.answer()
         await set_loop(chat_id, 3)
-        await CallbackQuery.message.reply_text(_["admin_25"].format(mention, 3))
+        await send_note(chat_id, _["admin_25"].format(mention, 3))
 
     elif command == "Pp":
         playing = db.get(chat_id)
@@ -249,16 +239,12 @@ async def admin_callback(client, CallbackQuery, _):
             await CallbackQuery.answer()
             await music_off(chat_id)
             await Ayush.pause_stream(chat_id)
-            await raw.reply_text(
-                _["admin_2"].format(mention), disable_web_page_preview=True
-            )
+            await send_note(chat_id, _["admin_2"].format(mention))
         else:
             await CallbackQuery.answer()
             await music_on(chat_id)
             await Ayush.resume_stream(chat_id)
-            await raw.reply_text(
-                _["admin_4"].format(mention), disable_web_page_preview=True
-            )
+            await send_note(chat_id, _["admin_4"].format(mention))
             paused = False
         if playing and playing[0].get("markup") == "rich" and playing[0].get("rich_mid") == raw.id:
             await refresh_after_toggle(chat_id, raw.id, paused)
@@ -277,9 +263,7 @@ async def admin_callback(client, CallbackQuery, _):
         await CallbackQuery.answer()
         random.shuffle(check)
         check.insert(0, popped)
-        await CallbackQuery.message.reply_text(
-            _["admin_23"].format(mention), disable_web_page_preview=True
-        )
+        await send_note(chat_id, _["admin_23"].format(mention))
     elif command in ["Skip", "Replay"]:
         check = db.get(chat_id)
         txt = f"» Track {command.lower()}ed by {mention} !"
@@ -291,18 +275,14 @@ async def admin_callback(client, CallbackQuery, _):
                     await auto_clean(popped)
                 if not check:
                     await _rich_status_edit(CallbackQuery, txt, chat_id)
-                    await CallbackQuery.message.reply_text(
-                        _["admin_10"].format(mention), disable_web_page_preview=True
-                    )
+                    await send_note(chat_id, _["admin_10"].format(mention))
                     try:
                         return await Ayush.stop_stream(chat_id)
                     except Exception:
                         return
             except Exception:
                 await _rich_status_edit(CallbackQuery, txt, chat_id)
-                await CallbackQuery.message.reply_text(
-                    _["admin_10"].format(mention), disable_web_page_preview=True
-                )
+                await send_note(chat_id, _["admin_10"].format(mention))
                 return await Ayush.stop_stream(chat_id)
         elif command == "Replay":
             db[chat_id][0]["played"] = 0
@@ -319,13 +299,11 @@ async def admin_callback(client, CallbackQuery, _):
         if "live_" in queued:
             n, link = await Platform.youtube.video(videoid, True)
             if n == 0:
-                return await CallbackQuery.message.reply_text(
-                    _["admin_11"].format(title)
-                )
+                return await send_note(chat_id, _["admin_11"].format(title))
             try:
                 await Ayush.skip_stream(chat_id, link, video=status)
             except Exception:
-                return await CallbackQuery.message.reply_text(_["call_7"])
+                return await send_note(chat_id, _["call_7"])
             img = await gen_thumb(videoid)
             await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=img)
             await _rich_status_edit(CallbackQuery, txt, chat_id)
@@ -353,7 +331,7 @@ async def admin_callback(client, CallbackQuery, _):
             except Exception:
                 if mystic:
                     return await mystic.edit_text(_["call_7"])
-                return await CallbackQuery.message.reply_text(_["call_7"])
+                return await send_note(chat_id, _["call_7"])
             img = await gen_thumb(videoid)
             await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=img)
             await _rich_status_edit(CallbackQuery, txt, chat_id)
@@ -363,14 +341,14 @@ async def admin_callback(client, CallbackQuery, _):
             try:
                 await Ayush.skip_stream(chat_id, videoid, video=status)
             except Exception:
-                return await CallbackQuery.message.reply_text(_["call_7"])
+                return await send_note(chat_id, _["call_7"])
             await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=STREAM_IMG_URL)
             await _rich_status_edit(CallbackQuery, txt, chat_id)
         else:
             try:
                 await Ayush.skip_stream(chat_id, queued, video=status)
             except Exception:
-                return await CallbackQuery.message.reply_text(_["call_7"])
+                return await send_note(chat_id, _["call_7"])
             if videoid == "telegram":
                 thumb = (
                     TELEGRAM_AUDIO_URL
@@ -424,7 +402,12 @@ async def admin_callback(client, CallbackQuery, _):
                 )
             to_seek = duration_played + duration_to_skip + 1
         await CallbackQuery.answer()
-        mystic = await CallbackQuery.message.reply_text(_["admin_32"])
+        rich_mid = await send_note(chat_id, _["admin_32"])
+        if rich_mid:
+            from VenomX.utils.rich_msg import RichMystic
+            mystic = RichMystic(chat_id, rich_mid)
+        else:
+            mystic = await CallbackQuery.message.reply_text(_["admin_32"])
         if "vid_" in file_path:
             n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
             if n == 0:
@@ -444,7 +427,7 @@ async def admin_callback(client, CallbackQuery, _):
         else:
             db[chat_id][0]["played"] += duration_to_skip
         string = _["admin_33"].format(seconds_to_min(to_seek))
-        await mystic.edit_text(f"{string}\n\nChanges Done by: {mention} !")
+        await edit_any(mystic, f"{string}\n\nChanges Done by: {mention} !")
 
 
 @app.on_callback_query(filters.regex("MusicStream") & ~BANNED_USERS)
@@ -468,9 +451,15 @@ async def play_music(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    mystic = await CallbackQuery.message.reply_text(
-        _["play_2"].format(channel) if channel else _["play_1"]
+    mid_st = await send_note(
+        chat_id, _["play_2"].format(channel) if channel else _["play_1"]
     )
+    from VenomX.utils.rich_msg import RichMystic
+    mystic = RichMystic(chat_id, mid_st) if mid_st else None
+    if mystic is None:
+        mystic = await CallbackQuery.message.reply_text(
+            _["play_2"].format(channel) if channel else _["play_1"]
+        )
     try:
         details, track_id = await Platform.youtube.track(vidid, True)
     except Exception:
@@ -546,9 +535,15 @@ async def play_playlists_cb(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    mystic = await CallbackQuery.message.reply_text(
-        _["play_2"].format(channel) if channel else _["play_1"]
+    mid_st = await send_note(
+        chat_id, _["play_2"].format(channel) if channel else _["play_1"]
     )
+    from VenomX.utils.rich_msg import RichMystic
+    mystic = RichMystic(chat_id, mid_st) if mid_st else None
+    if mystic is None:
+        mystic = await CallbackQuery.message.reply_text(
+            _["play_2"].format(channel) if channel else _["play_1"]
+        )
     videoid = lyrical.get(videoid)
     video = True if mode == "v" else None
     ffplay = True if fplay == "f" else None
@@ -724,8 +719,9 @@ async def stop_download(client, CallbackQuery: CallbackQuery, _):
             except Exception:
                 pass
             await CallbackQuery.answer("Downloading Cancelled", show_alert=True)
-            return await CallbackQuery.edit_message_text(
-                f"Downloading cancelled by {CallbackQuery.from_user.mention}"
+            return await edit_any(
+                CallbackQuery.message,
+                f"Downloading cancelled by {CallbackQuery.from_user.mention}",
             )
         except Exception:
             return await CallbackQuery.answer(

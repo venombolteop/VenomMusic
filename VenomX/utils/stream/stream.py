@@ -27,6 +27,7 @@ from VenomX.utils.exceptions import AssistantErr
 from VenomX.utils.formatters import time_to_seconds
 from VenomX.utils.inline.playlist import close_markup
 from VenomX.utils.pastebin import Ayushbin
+from VenomX.utils.rich_msg import edit_any
 from VenomX.utils.rich_panels import (
     notice_card,
     refresh_panel,
@@ -642,8 +643,10 @@ async def stream(
                 "audio",
             )
             position = len(db.get(chat_id)) - 1
-            await app.send_message(
+            await notice_card(
+                _,
                 original_chat_id,
+                "Qᴜᴇᴜᴇ",
                 _["queue_4"].format(position, title[:30], duration_min, user_name),
             )
         else:
@@ -686,8 +689,10 @@ async def stream(
                 "video" if video else "audio",
             )
             position = len(db.get(chat_id)) - 1
-            await app.send_message(
+            await notice_card(
+                _,
                 original_chat_id,
+                "Qᴜᴇᴜᴇ",
                 _["queue_4"].format(position, title[:30], duration_min, user_name),
             )
         else:
@@ -733,8 +738,10 @@ async def stream(
                 "video" if video else "audio",
             )
             position = len(db.get(chat_id)) - 1
-            await app.send_message(
+            await notice_card(
+                _,
                 original_chat_id,
+                "Qᴜᴇᴜᴇ",
                 _["queue_4"].format(position, title[:30], duration_min, user_name),
             )
         else:
@@ -786,8 +793,9 @@ async def stream(
                 "video" if video else "audio",
             )
             position = len(db.get(chat_id)) - 1
-            await mystic.edit_text(
-                _["queue_4"].format(position, title[:30], duration_min, user_name)
+            await edit_any(
+                mystic,
+                _["queue_4"].format(position, title[:30], duration_min, user_name),
             )
         else:
             if not forceplay:

@@ -413,3 +413,53 @@ async def status_card(chat_id: int, text: str) -> RichMystic:
     """Send a rich 'working on it...' card and return its adapter handle."""
     mid = await send_rich(chat_id, f"<p>{rich_esc(text)}</p>")
     return RichMystic(chat_id, mid)
+
+
+def ids_of(m) -> tuple[int | None, int | None]:
+    """(chat_id, message_id) for a RichMystic or a pyrogram Message."""
+    chat_id = getattr(m, "chat_id", None)
+    if chat_id is None:
+        chat_id = getattr(getattr(m, "chat", None), "id", None)
+    return chat_id, getattr(m, "id", None)
+
+
+async def send_note(chat_id: int, text: str, heading: str | None = None) -> int | None:
+    """One-off rich notice card (admin actions, statuses, log lines)."""
+    body = ""
+    if heading:
+        body += rich_heading(f"{pemoji('🎵')} {rich_esc(heading)}", level=4)
+    body += f"<p>{rich_esc(text)}</p>"
+    body += rich_button_row(
+        rich_button(f"{pemoji('❌')} ᴄʟᴏsᴇ", callback_data="close", style="danger"),
+    )
+    return await send_rich(chat_id, body)
+
+
+async def edit_any(mystic, text: str, reply_markup=None) -> bool:
+    """Rich-edit a message; pyrogram edit_text is the failure fallback.
+
+    Accepts a RichMystic or a pyrogram Message so every edit site can stay
+    row-blind: first try the Bot API rich edit, then the classic edit.
+    """
+    chat_id, mid = ids_of(mystic)
+    if chat_id and mid:
+        try:
+            if await edit_rich(chat_id, mid, f"<p>{rich_esc(text)}</p>"):
+                return True
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        await mystic.edit_text(text, reply_markup=reply_markup,
+                               disable_web_page_preview=True)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+async def reply_rich(message, text: str, reply_markup=None) -> int | None:
+    """Reply with a rich card; returns the new message id (or None)."""
+    try:
+        return await send_rich(message.chat.id, f"<p>{rich_esc(text)}</p>",
+                               reply_markup=reply_markup)
+    except Exception:  # noqa: BLE001
+        return None

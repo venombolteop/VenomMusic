@@ -41,6 +41,7 @@ from VenomX.utils.database import (
 )
 from VenomX.utils.exceptions import AssistantErr
 from VenomX.utils.rich_panels import spawn_now_playing
+from VenomX.utils.rich_msg import RichMystic, send_rich
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
 
@@ -531,10 +532,7 @@ class Call:
             if "live_" in queued:
                 n, link = await Platform.youtube.video(videoid, True)
                 if n == 0:
-                    return await app.send_message(
-                        original_chat_id,
-                        text=_["call_7"],
-                    )
+                    return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 is_remote = _needs_proxy(link)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
                 if video:
@@ -567,17 +565,15 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
-                    return await app.send_message(
-                        original_chat_id,
-                        text=_["call_7"],
-                    )
+                    return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 mid_np = await spawn_now_playing(
                     _, chat_id, None, title, check[0]["dur"], user,
                     thumb=await gen_thumb(videoid),
                 )
             elif "vid_" in queued:
                 video = True if str(streamtype) == "video" else False
-                mystic = await app.send_message(original_chat_id, _["call_8"])
+                rich_mid = await send_rich(original_chat_id, f"<p>{_['call_8']}</p>")
+                mystic = RichMystic(original_chat_id, rich_mid)
                 # Same fast path stream() uses: the media API permalink streams
                 # without a download. The yt-dlp direct URL below is IP-bound to
                 # the proxy and answers 403, so it only ever fell through to a
@@ -629,10 +625,7 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
-                    return await app.send_message(
-                        original_chat_id,
-                        text=_["call_7"],
-                    )
+                    return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 if 'mystic' in locals():
                     await mystic.delete()
                 mid_np = await spawn_now_playing(
@@ -679,10 +672,7 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
-                    return await app.send_message(
-                        original_chat_id,
-                        text=_["call_7"],
-                    )
+                    return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 mid_np = await spawn_now_playing(
                     _, chat_id, None, title, check[0]["dur"], user,
                     thumb=config.STREAM_IMG_URL,
@@ -731,10 +721,7 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
-                    return await app.send_message(
-                        original_chat_id,
-                        text=_["call_7"],
-                    )
+                    return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 if videoid == "telegram":
                     mid_np = await spawn_now_playing(
                         _, chat_id, None, title, check[0]["dur"], user,
