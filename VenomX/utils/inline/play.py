@@ -2,11 +2,20 @@
 # All rights reserved.
 #
 
+import html as html_
 import math
 
 from pyrogram.types import InlineKeyboardButton
 
 from VenomX.utils.formatters import time_to_seconds
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    rich_heading,
+    rich_md,
+)
 from VenomX.utils.premium import (
     back_btn,
     close_btn,
@@ -247,6 +256,66 @@ def slider_markup(_, videoid, user_id, query, query_type, channel, fplay):
         ],
     ]
     return buttons
+
+
+def track_markup_rich(_, videoid, user_id, channel, fplay):
+    rows = rich_button_row(
+        rich_button(
+            _["P_B_1"],
+            f"MusicStream {videoid}|{user_id}|a|{channel}|{fplay}",
+            style="success",
+        ),
+        rich_button(
+            _["P_B_2"],
+            f"MusicStream {videoid}|{user_id}|v|{channel}|{fplay}",
+            style="primary",
+        ),
+    )
+    rows += rich_button_row(
+        rich_button(
+            _["CLOSE_BUTTON"],
+            f"forceclose {videoid}|{user_id}",
+            style="danger",
+        )
+    )
+    return rows
+
+
+def slider_markup_rich(_, videoid, user_id, query, query_type, channel, fplay):
+    q = html_.escape(str(query)[:20], quote=True)
+    rows = rich_button_row(
+        rich_button(
+            _["P_B_1"],
+            f"MusicStream {videoid}|{user_id}|a|{channel}|{fplay}",
+            style="success",
+        ),
+        rich_button(
+            _["P_B_2"],
+            f"MusicStream {videoid}|{user_id}|v|{channel}|{fplay}",
+            style="primary",
+        ),
+    )
+    rows += rich_button_row(
+        rich_button(
+            "◀", f"slider B|{query_type}|{q}|{user_id}|{channel}|{fplay}",
+            style="primary",
+        ),
+        rich_button(
+            _["CLOSE_BUTTON"], f"forceclose {q}|{user_id}", style="danger"
+        ),
+        rich_button(
+            "▶", f"slider F|{query_type}|{q}|{user_id}|{channel}|{fplay}",
+            style="primary",
+        ),
+    )
+    return rows
+
+
+def play_card_html(_, text_md, markup_rows):
+    body = rich_heading(f"{pemoji('🎼')} ᴠᴇɴᴏᴍ ᴘʟᴀʏ ꜱᴇᴀʀᴄʜ", level=3)
+    body += f'<blockquote>{rich_md(text_md)}</blockquote>'
+    body += markup_rows
+    return body
 
 
 def panel_markup_1(_, videoid, chat_id):

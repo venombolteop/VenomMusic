@@ -10,7 +10,7 @@ import time as _time
 
 from pyrogram import filters
 from pyrogram.errors import ChatWriteForbidden
-from pyrogram.types import InlineKeyboardMarkup, Message
+from pyrogram.types import Message
 
 import config
 from config import BANNED_USERS, lyrical
@@ -21,12 +21,13 @@ from VenomX.utils.database import is_video_allowed
 from VenomX.utils.decorators.play import PlayWrapper
 from VenomX.utils.formatters import formats
 from VenomX.utils.inline.play import (
-    playlist_markup,
-    slider_markup,
-    track_markup,
+    play_card_html,
+    slider_markup_rich,
+    track_markup_rich,
 )
 from VenomX.utils.inline.playlist import botplaylist_markup
 from VenomX.utils.logger import play_logs
+from VenomX.utils.rich_msg import send_rich
 from VenomX.utils.stream.stream import stream
 from VenomX.utils.notify import notify_owner
 
@@ -549,14 +550,6 @@ async def play_commnd(
                 random.choices(string.ascii_uppercase + string.digits, k=10)
             )
             lyrical[ran_hash] = plist_id
-            buttons = playlist_markup(
-                _,
-                ran_hash,
-                message.from_user.id,
-                plist_type,
-                "c" if channel else "g",
-                "f" if fplay else "d",
-            )
             await mystic.delete()
             # No playlist confirmation message. It named the source and the
             # person who asked, said nothing the queue does not already show,
@@ -573,7 +566,7 @@ async def play_commnd(
             )
         else:
             if slider:
-                buttons = slider_markup(
+                slider_rows = slider_markup_rich(
                     _,
                     track_id,
                     message.from_user.id,
@@ -582,36 +575,38 @@ async def play_commnd(
                     "c" if channel else "g",
                     "f" if fplay else "d",
                 )
-                await mystic.delete()
-                await message.reply_photo(
-                    photo=details["thumb"],
-                    caption=_["play_11"].format(
-                        details["title"].title(),
-                        details["duration_min"],
+                if not await send_rich(
+                    message.chat.id,
+                    play_card_html(
+                        _,
+                        _["play_11"].format(
+                            details["title"].title(),
+                            details["duration_min"],
+                        ),
+                        slider_rows,
                     ),
-                    reply_markup=InlineKeyboardMarkup(buttons),
-                    has_spoiler=True,
-                )
+                ):
+                    return await mystic.edit_text(_["general_6"])
+                await mystic.delete()
                 return await play_logs(
                     message,
                     streamtype=f"Searched on Youtube",
                     thumbnail=details.get("thumb"),
                 )
             else:
-                buttons = track_markup(
+                track_rows = track_markup_rich(
                     _,
                     track_id,
                     message.from_user.id,
                     "c" if channel else "g",
                     "f" if fplay else "d",
                 )
+                if not await send_rich(
+                    message.chat.id,
+                    play_card_html(_, cap, track_rows),
+                ):
+                    return await mystic.edit_text(_["general_6"])
                 await mystic.delete()
-                await message.reply_photo(
-                    photo=img,
-                    caption=cap,
-                    reply_markup=InlineKeyboardMarkup(buttons),
-                    has_spoiler=True,
-                )
                 return await play_logs(
                     message,
                     streamtype=f"URL Searched Inline",

@@ -16,11 +16,14 @@ from VenomX import app, Platform
 from VenomX.misc import db
 from VenomX.utils import Ayushbin, get_channeplayCB, seconds_to_min
 from VenomX.utils.database import get_cmode, is_active_chat, is_music_playing
+from VenomX.utils.decorators import ActualAdminCB
 from VenomX.utils.decorators.language import language, languageCB
 from VenomX.utils.inline.queue import queue_back_markup, queue_markup
 from VenomX.utils.rich_msg import (
     edit_rich,
     pemoji,
+    rich_button,
+    rich_button_row,
     rich_esc,
     rich_heading,
     rich_img,
@@ -79,23 +82,82 @@ def plain_list_text(got):
     return msg
 
 
-def queue_list_html(_, got, buttons_html):
-    body = rich_heading(
-        f'{pemoji("🗂")} ᴠᴇɴᴏᴍ ᴍᴜsɪᴄ ǫᴜᴇᴜᴇ ( {len(got)} )', level=3
+def _short(text, n=40):
+    text = str(text or "").title()
+    return text if len(text) <= n else text[: n - 1] + "…"
+
+
+def _track_link(item):
+    link = item.get("url")
+    if link:
+        return link
+    vidid = str(item.get("vidid") or "")
+    if "index_" in vidid or "live_" in vidid:
+        return None
+    if vidid and vidid not in ("telegram", "soundcloud"):
+        return f"https://youtu.be/{vidid}"
+    return None
+
+
+def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
+    """Yukki-style queue card: aside now-playing plus a bordered track table.
+
+    Every up-next row carries a danger delete button; hidden rows are
+    revealed with a single show-more callback button.
+    """
+    total = len(got)
+    upnext = max(total - 1, 0)
+    if shown < 1:
+        shown = 15
+    if shown > upnext:
+        shown = upnext
+
+    body = rich_heading(f'{pemoji("🗂")} ᴠᴇɴᴏᴍ ᴍᴜsɪᴄ ǫᴜᴇᴜᴇ ( {total} )', level=3)
+    now = got[0]
+    now_url = _track_link(now)
+    now_title = _short(now.get("title"))
+    now_head = f'<a href="{now_url}">{rich_esc(now_title)}</a>' if now_url else rich_esc(now_title)
+    body += (
+        f'<aside>{pemoji("🔴")} <b>ᴏɴ ɴᴏᴡ ᴘʟᴀʏɪɴɢ</b><br>{now_head}<br>'
+        f'{pemoji("⏱")} {rich_esc(now.get("dur") or "--:--")}  •  '
+        f'{pemoji("👤")} {rich_esc(now.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")}</aside>'
     )
-    body += "<p>🕸 ᴏɴ ᴄᴏᴜʀsᴇ — ᴡʜᴀᴛ's ᴄᴏᴏᴋɪɴɢ ɴᴇxᴛ</p>"
-    for n, x in enumerate(got, 1):
-        if n == 1:
-            body += (
-                f'<p>{pemoji("🔴")} <b>{rich_esc(x["title"]).title()}</b>'
-                f' · {rich_esc(x["dur"])} · <i>{rich_esc(x["by"])}</i> — ᴘʟᴀʏɪɴɢ</p>'
+
+    if upnext > 0:
+        body += f'<p>{pemoji("🎼")} <b>ᴜᴘ ɴᴇxᴛ</b> ( {upnext} )</p>'
+        body += '<table bordered striped compact>'
+        body += (
+            f'<tr><th>#</th><th>{pemoji("🎵")} ᴛʀᴀᴄᴋ</th><th>⏱</th>'
+            f'<th>👤</th><th>🗑</th></tr>'
+        )
+        for i in range(1, shown + 1):
+            x = got[i]
+            row_url = _track_link(x)
+            row_title = _short(x.get("title"))
+            track_cell = (
+                f'<a href="{row_url}">{rich_esc(row_title)}</a>'
+                if row_url
+                else rich_esc(row_title)
             )
-        else:
             body += (
-                f'<p>{pemoji("🎵")} <b>{n}.</b> '
-                f'<b>{rich_esc(x["title"]).title()}</b>'
-                f' · {rich_esc(x["dur"])} · <i>{rich_esc(x["by"])}</i></p>'
+                f'<tr><td>{i}</td><td>{track_cell}</td>'
+                f'<td>{rich_esc(x.get("dur") or "--:--")}</td>'
+                f'<td>{rich_esc(x.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")}</td>'
+                f'<td><tg-button type="callback_data" style="danger" '
+                f'data="qdel {what}|{i}">✕</tg-button></td></tr>'
             )
+        body += "</table>"
+        if upnext > shown:
+            body += rich_button_row(
+                rich_button(
+                    f'{pemoji("➕")} ꜱʜᴏᴡ ᴍᴏʀᴇ ( {upnext - shown} )',
+                    f"qmore {what}",
+                    style="primary",
+                )
+            )
+    else:
+        body += f'<footer>{pemoji("✨")} ᴛʜᴇ ᴜᴘ-ɴᴇxᴛ ǫᴜᴇᴜᴇ ɪꜱ ᴇᴍᴘᴛʏ</footer>'
+
     body += buttons_html
     return body
 
@@ -208,12 +270,10 @@ async def queued_tracks(client, CallbackQuery: CallbackQuery, _):
     got = db.get(chat_id)
     if not got:
         return await CallbackQuery.answer(_["queue_2"], show_alert=True)
-    if len(got) == 1:
-        return await CallbackQuery.answer(_["queue_5"], show_alert=True)
     await CallbackQuery.answer()
     basic[videoid] = False
     buttons = queue_back_markup(_, what)
-    body = queue_list_html(_, got, buttons)
+    body = queue_list_html(_, got, buttons, what=what)
     chat_id = CallbackQuery.message.chat.id
     mid = CallbackQuery.message.id
     from VenomX.utils.rich_panels import mark_panel_closed
@@ -230,6 +290,60 @@ async def queued_tracks(client, CallbackQuery: CallbackQuery, _):
         + f'<p>{rich_esc(_["queue_3"].format(link))}</p>'
         + buttons,
     )
+
+
+@app.on_callback_query(filters.regex(r"^qdel ") & ~BANNED_USERS)
+@ActualAdminCB
+async def qdel_card(client, CallbackQuery, _):
+    try:
+        what, number = CallbackQuery.data.split(None, 1)[1].split("|")
+        number = int(number)
+    except Exception:
+        try:
+            await CallbackQuery.answer()
+        except Exception:
+            pass
+        return
+    try:
+        room, channel = await get_channeplayCB(_, what, CallbackQuery)
+    except Exception:
+        return
+    got = db.get(room)
+    if not got:
+        return await CallbackQuery.answer(_["queue_2"], show_alert=True)
+    await CallbackQuery.answer()
+    if number > 0 and number < len(got):
+        got.pop(number)
+    buttons = queue_back_markup(_, what)
+    body = queue_list_html(_, got, buttons, what=what)
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
+    from VenomX.utils.rich_panels import mark_panel_closed
+
+    mark_panel_closed(chat_id, mid)
+    await edit_rich(chat_id, mid, body)
+
+
+@app.on_callback_query(filters.regex(r"^qmore ") & ~BANNED_USERS)
+@languageCB
+async def qmore_card(client, CallbackQuery, _):
+    what = CallbackQuery.data.split(None, 1)[1].strip()
+    try:
+        room, channel = await get_channeplayCB(_, what, CallbackQuery)
+    except Exception:
+        return
+    got = db.get(room)
+    if not got:
+        return await CallbackQuery.answer(_["queue_2"], show_alert=True)
+    await CallbackQuery.answer()
+    buttons = queue_back_markup(_, what)
+    body = queue_list_html(_, got, buttons, what=what, shown=len(got))
+    chat_id = CallbackQuery.message.chat.id
+    mid = CallbackQuery.message.id
+    from VenomX.utils.rich_panels import mark_panel_closed
+
+    mark_panel_closed(chat_id, mid)
+    await edit_rich(chat_id, mid, body)
 
 
 @app.on_callback_query(filters.regex("queue_back_timer") & ~BANNED_USERS)

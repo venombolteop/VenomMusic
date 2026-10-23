@@ -41,10 +41,13 @@ from VenomX.utils.inline.play import (
     panel_markup_1,
     panel_markup_2,
     panel_markup_3,
+    play_card_html,
     slider_markup,
+    slider_markup_rich,
     stream_markup,
     telegram_markup,
 )
+from VenomX.utils.rich_msg import edit_rich
 from VenomX.utils.rich_panels import show_main, show_menu
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.stream.stream import stream
@@ -638,6 +641,14 @@ async def slider_queries(client, CallbackQuery, _):
         title, duration_min, thumbnail, vidid = await Platform.youtube.slider(
             query, query_type
         )
+        rows = slider_markup_rich(_, vidid, user_id, query, query_type, cplay, fplay)
+        body = play_card_html(
+            _,
+            _["play_11"].format(title.title(), duration_min),
+            rows,
+        )
+        if await edit_rich(CallbackQuery.message.chat.id, CallbackQuery.message.id, body):
+            return
         buttons = slider_markup(_, vidid, user_id, query, query_type, cplay, fplay)
         med = InputMediaPhoto(
             media=thumbnail,
@@ -661,6 +672,14 @@ async def slider_queries(client, CallbackQuery, _):
         title, duration_min, thumbnail, vidid = await Platform.youtube.slider(
             query, query_type
         )
+        rows = slider_markup_rich(_, vidid, user_id, query, query_type, cplay, fplay)
+        body = play_card_html(
+            _,
+            _["play_11"].format(title.title(), duration_min),
+            rows,
+        )
+        if await edit_rich(CallbackQuery.message.chat.id, CallbackQuery.message.id, body):
+            return
         buttons = slider_markup(_, vidid, user_id, query, query_type, cplay, fplay)
         med = InputMediaPhoto(
             media=thumbnail,
