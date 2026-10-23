@@ -1,7 +1,6 @@
 async-lru
 aiofiles
 aiohttp
-asyncio
 beautifulsoup4
 dnspython
 ffmpeg-python
