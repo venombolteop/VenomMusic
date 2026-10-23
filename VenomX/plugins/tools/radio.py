@@ -29,6 +29,7 @@ from VenomX.utils.database import (
 )
 from VenomX.utils.logger import play_logs
 from VenomX.utils.stream.stream import stream
+from VenomX.utils.rich_msg import reply_note, status_card
 
 RADIO_STATION = {
     "Air Bilaspur": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio110/playlist.m3u8",
@@ -51,7 +52,7 @@ valid_stations = "\n".join([f"`{name}`" for name in sorted(RADIO_STATION.keys())
     & ~BANNED_USERS
 )
 async def radio(client, message: Message):
-    msg = await message.reply_text("⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ᴍᴏᴍᴇɴᴛ....")
+    msg = await status_card(message.chat.id, "⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ᴍᴏᴍᴇɴᴛ....")
     try:
         try:
             userbot = await get_assistant(message.chat.id)
@@ -140,25 +141,25 @@ async def radio(client, message: Message):
             if message.from_user.id not in SUDOERS:
                 admins = adminlist.get(message.chat.id)
                 if not admins:
-                    return await message.reply_text(_["admin_18"])
+                    return await reply_note(message, _["admin_18"])
                 else:
                     if message.from_user.id not in admins:
-                        return await message.reply_text(_["play_4"])
+                        return await reply_note(message, _["play_4"])
         if message.command[0][0] == "c":
             chat_id = await get_cmode(message.chat.id)
             if chat_id is None:
-                return await message.reply_text(_["setting_12"])
+                return await reply_note(message, _["setting_12"])
             try:
                 chat = await app.get_chat(chat_id)
             except BaseException:
-                return await message.reply_text(_["cplay_4"])
+                return await reply_note(message, _["cplay_4"])
             channel = chat.title
         else:
             chat_id = message.chat.id
             channel = None
 
         video = None
-        mystic = await message.reply_text(
+        mystic = await status_card(message.chat.id, 
             _["play_2"].format(channel) if channel else _["play_1"]
         )
         try:

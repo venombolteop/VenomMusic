@@ -1,4 +1,5 @@
 from VenomX import app
+from VenomX.utils.rich_msg import reply_note, status_card
 from pyrogram import filters
 from pyrogram.enums import ParseMode
 
@@ -40,7 +41,7 @@ async def getid(client, message):
             text += f"**[ᴜsᴇʀ ɪᴅ:](tg://user?id={user_id})** `{user_id}`\n"
 
         except Exception:
-            return await message.reply_text("❌ ᴛʜɪs ᴜsᴇʀ ᴅᴏᴇsɴ'ᴛ ᴇxɪsᴛ.", quote=True)
+            return await reply_note(message, "❌ ᴛʜɪs ᴜsᴇʀ ᴅᴏᴇsɴ'ᴛ ᴇxɪsᴛ.", quote=True)
 
     text += f"**[ᴄʜᴀᴛ ɪᴅ:](https://t.me/{chat.username})** `{chat.id}`\n\n"
 
@@ -60,7 +61,7 @@ async def getid(client, message):
         text += f"ɪᴅ ᴏғ ᴛʜᴇ ʀᴇᴘʟɪᴇᴅ ᴄʜᴀᴛ/ᴄʜᴀɴɴᴇʟ, ɪs `{reply.sender_chat.id}`"
         print(reply.sender_chat)
 
-    await message.reply_text(
+    await reply_note(message, 
         text,
         disable_web_page_preview=True,
         parse_mode=ParseMode.DEFAULT,
