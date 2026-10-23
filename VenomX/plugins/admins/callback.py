@@ -160,12 +160,15 @@ async def pages_markup(client, CallbackQuery, _):
             buttons = panel_markup_1(_, videoid, chat_id)
         if pages == 0:
             buttons = panel_markup_3(_, videoid, chat_id)
+    if not buttons:
+        return await CallbackQuery.answer(_["general_2"], show_alert=True)
     try:
         await CallbackQuery.edit_message_reply_markup(
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except Exception:
         return
+
 
 
 @app.on_callback_query(filters.regex("ADMIN") & ~BANNED_USERS)
@@ -285,6 +288,8 @@ async def admin_callback(client, CallbackQuery, _):
                 await send_note(chat_id, _["admin_10"].format(mention))
                 return await Ayush.stop_stream(chat_id)
         elif command == "Replay":
+            if not check:
+                return await CallbackQuery.answer(_["admin_21"], show_alert=True)
             db[chat_id][0]["played"] = 0
 
         await CallbackQuery.answer()
