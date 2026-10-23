@@ -60,7 +60,7 @@ async def edit_or_reply(mystic, text):
 async def export_database(client, message):
     if message.from_user.id not in OWNER_ID:
         return
-    if MONGO_DB_URI is None:
+    if not MONGO_DB_URI:
         unavailable = "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
         await send_rich(message.chat.id, f"<p>{unavailable}</p>")
         return
@@ -125,7 +125,7 @@ async def export_database(client, message):
 async def import_database(client, message):
     if message.from_user.id not in OWNER_ID:
         return
-    if MONGO_DB_URI is None:
+    if not MONGO_DB_URI:
         unavailable = "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
         await send_rich(message.chat.id, f"<p>{unavailable}</p>")
         return

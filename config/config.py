@@ -22,7 +22,7 @@ BOT_TOKEN = getenv("BOT_TOKEN", "")
 
 
 # Database to save your chats and stats... 
-MONGO_DB_URI = getenv("MONGO_DB_URI", "")
+MONGO_DB_URI = getenv("MONGO_DB_URI", None)
 
 
 CLEANMODE_DELETE_MINS = int(
@@ -48,7 +48,7 @@ SONG_DOWNLOAD_DURATION = int(
 
 
 # You'll need a Private Group ID for this.
-LOGGER_ID = int(getenv("LOGGER_ID", ""))
+LOGGER_ID = int(getenv("LOGGER_ID") or 0)
 
 
 # Your User ID.
@@ -270,8 +270,8 @@ STREAM_IMG_URL = getenv(
     "https://te.legra.ph/file/248e6858de3f2e37393c1.jpg",
 )
 
-SOUNCLOUD_IMG_URL = getenv(
-    "SOUNCLOUD_IMG_URL",
+SOUNDCLOUD_IMG_URL = getenv(
+    "SOUNDCLOUD_IMG_URL",
     "https://te.legra.ph/file/1b78431fe8de0e497c188.jpg",
 )
 
@@ -390,11 +390,11 @@ if STREAM_IMG_URL:
             sys.exit()
 
 
-if SOUNCLOUD_IMG_URL:
-    if SOUNCLOUD_IMG_URL != "https://te.legra.ph/file/1b78431fe8de0e497c188.jpg":
-        if not re.match("(?:http|https)://", SOUNCLOUD_IMG_URL):
+if SOUNDCLOUD_IMG_URL:
+    if SOUNDCLOUD_IMG_URL != "https://te.legra.ph/file/1b78431fe8de0e497c188.jpg":
+        if not re.match("(?:http|https)://", SOUNDCLOUD_IMG_URL):
             print(
-                "[ERROR] - Your SOUNCLOUD_IMG_URL url is wrong. Please ensure that it starts with https://"
+                "[ERROR] - Your SOUNDCLOUD_IMG_URL url is wrong. Please ensure that it starts with https://"
             )
             sys.exit()
 
