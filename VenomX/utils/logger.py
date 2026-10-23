@@ -1,62 +1,77 @@
 
 # All rights reserved.
+#
+# Logger play-log — classic tree card, sent as photo (thumbnail) + caption.
+
+from pyrogram.enums import ParseMode
+
 from config import LOG, LOGGER_ID
 from VenomX import app
 from VenomX.utils.database import is_on_off
-from VenomX.utils.rich_msg import (
-    pemoji,
-    rich_button_row,
-    rich_esc,
-    rich_heading,
-    rich_kv,
-    rich_note,
-    rich_url_button,
-    send_rich,
-)
+from VenomX.utils.rich_msg import rich_esc
+
+
+def _or_dash(value):
+    value = str(value or "").strip()
+    return value if value else "—"
 
 
 async def play_logs(message, streamtype, thumbnail=None):
-    if await is_on_off(LOG):
-        if message.chat.username:
-            chatusername = f"@{message.chat.username}"
-            chat_link = f"https://t.me/{message.chat.username}"
-        else:
-            chatusername = "Private Group"
-            chat_link = None
+    if not await is_on_off(LOG):
+        return
+    if message.chat.id == LOGGER_ID:
+        return
 
-        user = message.from_user
-        username = f"@{user.username}" if user.username else "No Username"
+    user = message.from_user
+    try:
+        query = message.text.split(None, 1)[1]
+    except Exception:
+        query = message.text or "N/A"
+    query = _or_dash(query)[:120]
+
+    if message.chat.username:
+        username = f"@{message.chat.username}"
+        chat_link = f"https://t.me/{message.chat.username}"
+        chat_name = (
+            f'<a href="{chat_link}">'
+            f"{rich_esc(message.chat.title or 'Unknown')}</a>"
+        )
+    else:
+        username = "—"
+        chat_name = rich_esc(message.chat.title or "Private Group")
+
+    bot_name = rich_esc(getattr(app, "name", None) or "VenomMusic")
+
+    text = (
+        "╔══════════╗\n"
+        f"  🎵 {bot_name} ᴘʟᴀʏ ʟᴏɢ\n"
+        "╚══════════╝\n\n"
+        "🏰 ᴄʜᴀᴛ ɪɴꜰᴏ\n"
+        f"├ 🏷 ᴄʜᴀᴛ : {chat_name}\n"
+        f"├ 🆔 ᴄʜᴀᴛ ɪᴅ : <code>{_or_dash(message.chat.id)}</code>\n"
+        f"└ 🔗 ᴜsᴇʀɴᴀᴍᴇ : {rich_esc(username)}\n\n"
+        "👤 ʀᴇǫᴜᴇꜱᴛᴇᴅ ʙʏ\n"
+        f"├ 🧑 ɴᴀᴍᴇ : {user.mention}\n"
+        f"├ 🆔 ᴜꜱᴇʀ ɪᴅ : <code>{_or_dash(user.id)}</code>\n"
+        f"└ 🔗 ᴜsᴇʀɴᴀᴍᴇ : {rich_esc('@' + user.username) if user.username else '—'}\n\n"
+        "🎶 ᴛʀᴀᴄᴋ ᴅᴇᴛᴀɪʟs\n"
+        f"├ 🔎 ᴏᴜᴇʀʏ : {rich_esc(query)}\n"
+        f"└ 📡 ꜱᴛʀᴇᴀᴍ : {rich_esc(str(streamtype))}\n\n"
+        "⚡ ᴍᴏᴅᴇ : ᴅɪʀᴇᴄᴛ ꜱᴛʀᴇᴀᴍ · ᴘʀᴇᴍɪᴜᴍ ᴜɪ"
+    )
+
+    if thumbnail and str(thumbnail).startswith(("http://", "https://")):
         try:
-            query = message.text.split(None, 1)[1]
+            await app.send_photo(
+                LOGGER_ID,
+                photo=str(thumbnail),
+                caption=text,
+                parse_mode=ParseMode.HTML,
+            )
+            return
         except Exception:
-            query = message.text or "N/A"
-
-        chat_title = message.chat.title or "Unknown"
-
-        # Rich-native log card: heading, optional thumb, callout info block
-        # with highlighted values, footer and a centered chat link button.
-        # No tree art and no markdown — rich HTML renders none of that.
-        html = rich_heading("🎵 ᴠᴇɴᴏᴍ ᴘʟᴀʏ ʟᴏɢ", level=4)
-        thumb = str(thumbnail) if thumbnail else ""
-        if thumb.startswith(("http://", "https://")):
-            html += f'<img src="{thumb}"/>'
-        info = (
-            f"{pemoji('🏰')} {rich_kv('Chat:', chat_title)}<br>"
-            f"{pemoji('🆔')} {rich_kv('ID:', message.chat.id)}<br>"
-            f"{pemoji('🔗')} {rich_kv('Username:', chatusername)}<br>"
-            f"{pemoji('👤')} {rich_esc(user.mention)}<br>"
-            f"{pemoji('🆔')} {rich_kv('ID:', user.id)}<br>"
-            f"{pemoji('🔗')} {rich_kv('Username:', username)}<br>"
-            f"{pemoji('🔎')} {rich_kv('Query:', str(query)[:120])}<br>"
-            f"{pemoji('📡')} {rich_kv('Stream:', str(streamtype))}"
-        )
-        html += rich_note(info)
-        html += f"<footer>{app.mention} · ᴅɪʀᴇᴄᴛ ꜱᴛʀᴇᴀᴍ</footer>"
-        target = chat_link or f"https://t.me/{str(chatusername).lstrip('@')}"
-        html += rich_button_row(
-            rich_url_button("🏷 ᴏᴘᴇɴ ᴄʜᴀᴛ", target, style="primary"),
-            align="center",
-        )
-
-        if message.chat.id != LOGGER_ID:
-            await send_rich(LOGGER_ID, html)
+            pass
+    try:
+        await app.send_message(LOGGER_ID, text, parse_mode=ParseMode.HTML)
+    except Exception:
+        pass
