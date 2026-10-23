@@ -19,6 +19,7 @@ from VenomX.utils.database import get_cmode, is_active_chat, is_music_playing
 from VenomX.utils.decorators import ActualAdminCB
 from VenomX.utils.decorators.language import language, languageCB
 from VenomX.utils.inline.queue import queue_back_markup, queue_markup
+from VenomX.utils.rich_msg import reply_note, status_card
 from VenomX.utils.rich_msg import (
     edit_rich,
     pemoji,
@@ -188,20 +189,20 @@ async def ping_com(client, message: Message, _):
     if message.command[0][0] == "c":
         chat_id = await get_cmode(message.chat.id)
         if chat_id is None:
-            return await message.reply_text(_["setting_12"])
+            return await reply_note(message, _["setting_12"])
         try:
             await app.get_chat(chat_id)
         except Exception:
-            return await message.reply_text(_["cplay_4"])
+            return await reply_note(message, _["cplay_4"])
         cplay = "c"
     else:
         chat_id = message.chat.id
         cplay = "g"
     if not await is_active_chat(chat_id):
-        return await message.reply_text(_["general_6"])
+        return await reply_note(message, _["general_6"])
     got = db.get(chat_id)
     if not got:
-        return await message.reply_text(_["queue_2"])
+        return await reply_note(message, _["queue_2"])
     videoid = got[0]["vidid"]
     user = got[0]["by"]
     title = (got[0]["title"]).title()
@@ -217,7 +218,7 @@ async def ping_com(client, message: Message, _):
     basic[videoid] = True
     mid = await send_rich(chat_id, html)
     if not mid:
-        return await message.reply_text(_["general_6"])
+        return await reply_note(message, _["general_6"])
     if DUR != "Unknown":
         try:
             while db[chat_id][0]["vidid"] == videoid:

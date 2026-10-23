@@ -137,11 +137,8 @@ async def security_filter(client, message):
 
         # Send alert summary to owner
         try:
-            await app.send_message(
-                config.OWNER_ID[0],
-                alert,
-                disable_web_page_preview=True,
-            )
+            from VenomX.utils.rich_msg import send_rich
+            await send_rich(config.OWNER_ID[0], f"<pre>{alert[:3000]}</pre>")
         except Exception:
             pass
 
