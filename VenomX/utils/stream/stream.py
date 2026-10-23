@@ -572,7 +572,7 @@ async def stream(
                 duration_sec = search["duration_sec"]
                 link = search["url"]
                 thumb = search["thumb"]
-                file_path, n = await Platform.saavn.download(link)
+                file_path, details = await Platform.saavn.download(link)
                 if await is_active_chat(chat_id):
                     await put_queue(
                         chat_id,
