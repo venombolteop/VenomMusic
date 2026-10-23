@@ -172,7 +172,15 @@ async def start_comm(client, message: Message, _):
             query = (str(name)).replace("info_", "", 1)
             query = f"https://www.youtube.com/watch?v={query}"
             results = VideosSearch(query, limit=1)
-            for result in (await results.next())["result"]:
+            search_result = (await results.next()).get("result") or []
+            if not search_result:
+                await edit_rich(
+                    chat_id,
+                    mid,
+                    f"<p>{rich_esc('❌ ᴜɴᴀʙʟᴇ ᴛᴏ ꜰɪɴᴅ ᴛʜᴀᴛ ᴛʀᴀᴄᴋ ᴏɴ ʏᴏᴜᴛᴜʙᴇ.')}</p>",
+                )
+                return
+            for result in search_result:
                 title = result["title"]
                 duration = result["duration"]
                 views = result["viewCount"]["short"]
