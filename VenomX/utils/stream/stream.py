@@ -193,6 +193,10 @@ async def stream(
         str(result)[:80] if result else "None",
     )
     if not result:
+        # A playlist that yields zero entries (Radio/Mix links cannot be
+        # fetched) used to leave both the status card and the user hanging.
+        if streamtype == "playlist":
+            raise AssistantErr(_["play_3"])
         return
     if video:
         if not await is_video_allowed(chat_id):
