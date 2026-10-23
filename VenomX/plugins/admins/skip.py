@@ -50,42 +50,38 @@ async def skip(cli, message: Message, _, chat_id):
         if state.isnumeric():
             state = int(state)
             check = db.get(chat_id)
-            if check:
-                count = len(check)
-                if count > 2:
-                    count = int(count - 1)
-                    if 1 <= state <= count:
-                        for x in range(state):
-                            popped = None
-                            try:
-                                popped = check.pop(0)
-                                if popped.get("mystic"):
-                                    try:
-                                        await popped.get("mystic").delete()
-                                    except Exception:
-                                        pass
-                            except Exception:
-                                return await reply_note(message, _["admin_16"])
-                            if popped:
-                                await auto_clean(popped)
-                            if not check:
-                                try:
-                                    await reply_note(message, 
-                                        _["admin_10"].format(
-                                            message.from_user.first_name
-                                        ),
-                                        disable_web_page_preview=True,
-                                    )
-                                    await Ayush.stop_stream(chat_id)
-                                except Exception:
-                                    return
-                                break
-                    else:
-                        return await reply_note(message, _["admin_15"].format(count))
-                else:
-                    return await reply_note(message, _["admin_14"])
-            else:
+            if not check:
                 return await reply_note(message, _["queue_2"])
+            count = len(check)
+            if count > 2:
+                count = int(count - 1)
+            if not (1 <= state <= count):
+                return await reply_note(message, _["admin_15"].format(count))
+            for x in range(state):
+                popped = None
+                try:
+                    popped = check.pop(0)
+                    if popped.get("mystic"):
+                        try:
+                            await popped.get("mystic").delete()
+                        except Exception:
+                            pass
+                except Exception:
+                    return await reply_note(message, _["admin_16"])
+                if popped:
+                    await auto_clean(popped)
+                if not check:
+                    try:
+                        await reply_note(message,
+                            _["admin_10"].format(
+                                message.from_user.first_name
+                            ),
+                            disable_web_page_preview=True,
+                        )
+                        await Ayush.stop_stream(chat_id)
+                    except Exception:
+                        return
+                    return
         else:
             return await reply_note(message, _["admin_13"])
     else:
