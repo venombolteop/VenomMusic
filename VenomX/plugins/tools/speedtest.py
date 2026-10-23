@@ -9,6 +9,7 @@ import socket
 from strings import command
 from VenomX import app
 from VenomX.misc import SUDOERS
+from VenomX.utils.rich_msg import edit_any
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ async def _safe_edit(m, text):
     if m is None or not text:
         return
     try:
-        await m.edit_text(text)
+        await edit_any(m, text)
     except Exception as e:
         logger.debug(f"[SPEEDTEST] edit skipped: {type(e).__name__}: {e}")
 
@@ -182,7 +183,7 @@ async def speedtest_function(client, message):
                 has_spoiler=True,
             )
         else:
-            await m.edit_text(output)
+            await edit_any(m, output)
     except Exception as e:
         logger.warning(f"[SPEEDTEST] send failed: {e}")
         await _safe_edit(m, output)

@@ -18,6 +18,7 @@ from VenomX.utils.database import (
     is_active_chat,
     is_autoend,
 )
+from VenomX.utils.rich_msg import send_rich
 
 autoend = {}
 
@@ -59,10 +60,7 @@ async def auto_end():
                     except Exception:
                         language = get_string("en")
                     try:
-                        await app.send_message(
-                            chat_id,
-                            language["misc_1"],
-                        )
+                        await send_rich(chat_id, f"<p>{language['misc_1']}</p>")
                     except Exception:
                         pass
 

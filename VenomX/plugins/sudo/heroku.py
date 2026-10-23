@@ -33,6 +33,7 @@ from VenomX.utils.database import (
 from VenomX.utils.decorators import AdminActual, language
 from VenomX.utils.decorators.language import language
 from VenomX.utils.pastebin import Ayushbin
+from VenomX.utils.rich_msg import send_note, send_rich
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -270,11 +271,9 @@ async def update_(client, message, _):
         served_chats = await get_active_chats()
         for x in served_chats:
             try:
-                await app.send_message(
-                    chat_id=int(x),
-                    text="{0} Is updated herself\n\nYou can start playing after 15-20 Seconds".format(
-                        app.mention
-                    ),
+                await send_rich(
+                    int(x),
+                    f"<p>{app.mention} Is updated herself<br>You can start playing after 15-20 Seconds</p>",
                 )
                 await remove_active_chat(x)
                 await remove_active_video_chat(x)
@@ -298,9 +297,9 @@ async def update_(client, message, _):
             await response.edit(
                 f"{nrs.text}\n\nSomething went wrong, Please check logs"
             )
-            return await app.send_message(
-                chat_id=config.LOGGER_ID,
-                text="An exception occurred #updater due to : <code>{0}</code>".format(
+            return await send_note(
+                config.LOGGER_ID,
+                "An exception occurred #updater due to : <code>{0}</code>".format(
                     err
                 ),
             )
@@ -346,9 +345,9 @@ async def restart_(client, message):
     ac_chats = await get_active_chats()
     for x in ac_chats:
         try:
-            await app.send_message(
-                chat_id=int(x),
-                text=f"{app.mention} Is restarting...\n\nYou can start playing after 15-20 seconds",
+            await send_rich(
+                int(x),
+                f"<p>{app.mention} Is restarting...<br>You can start playing after 15-20 seconds</p>",
             )
             await remove_active_chat(x)
             await remove_active_video_chat(x)

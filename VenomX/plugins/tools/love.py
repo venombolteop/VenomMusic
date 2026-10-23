@@ -6,6 +6,13 @@ import random
 from pyrogram import filters
 
 from VenomX import app
+from VenomX.utils.rich_msg import (
+    pemoji,
+    rich_button,
+    rich_button_row,
+    rich_esc,
+    send_rich,
+)
 
 
 def get_random_message(love_percentage):
@@ -36,7 +43,7 @@ def get_random_message(love_percentage):
 
 
 @app.on_message(filters.command("love", prefixes="/"))
-def love_command(client, message):
+async def love_command(client, message):
     command, *args = message.text.split(" ")
     if len(args) >= 2:
         name1 = args[0].strip()
@@ -48,7 +55,17 @@ def love_command(client, message):
         response = f"{name1}💕 + {name2}💕 = {love_percentage}%\n\n{love_message}"
     else:
         response = "Please enter two names after /love command."
-    app.send_message(message.chat.id, response)
+    mid = await send_rich(
+        message.chat.id,
+        rich_esc(response)
+        + rich_button_row(
+            rich_button(
+                f"{pemoji('💕')} ᴅᴏ ᴍᴀᴛᴄʜ ᴀɢᴀɪɴ",
+                callback_data="close",
+                style="success",
+            ),
+        ),
+    )
 
 
 __MODULE__ = "Lᴏᴠᴇ"
