@@ -100,7 +100,7 @@ def _track_link(item):
     return None
 
 
-def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
+def queue_list_html(_, got, buttons_html, what="g", shown: int = 19):
     """Yukki-style queue card: aside now-playing plus a bordered track table.
 
     Table matches the Yukki layout: # / Track (link) / duration, each row
@@ -110,7 +110,7 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 15):
     total = len(got)
     upnext = max(total - 1, 0)
     if shown < 1:
-        shown = 15
+        shown = 19
     if shown > upnext:
         shown = upnext
 
@@ -280,13 +280,13 @@ async def queued_tracks(client, CallbackQuery: CallbackQuery, _):
     mark_panel_closed(chat_id, mid)
     # Rich messages cap near 4k chars: shrink the visible page before ever
     # falling back to a pastebin, so the table stays visible for long queues.
-    shown = 15
-    while shown >= 4:
+    shown = 19
+    while shown >= 8:
         body = queue_list_html(_, got, buttons, what=what, shown=shown)
-        if len(body) <= 3900:
+        if len(body) <= 6800:
             break
-        shown -= 3
-    if len(body) <= 3900:
+        shown -= 5
+    if len(body) <= 6800:
         await edit_rich(chat_id, mid, body)
         return
     link = await Ayushbin(plain_list_text(got))
@@ -349,12 +349,12 @@ async def qmore_card(client, CallbackQuery, _):
     from VenomX.utils.rich_panels import mark_panel_closed
 
     mark_panel_closed(chat_id, mid)
-    shown = 15
-    while shown >= 4:
+    shown = 19
+    while shown >= 8:
         body = queue_list_html(_, got, buttons, what=what, shown=shown)
-        if len(body) <= 3900:
+        if len(body) <= 6800:
             break
-        shown -= 3
+        shown -= 5
     await edit_rich(chat_id, mid, body)
 
 
