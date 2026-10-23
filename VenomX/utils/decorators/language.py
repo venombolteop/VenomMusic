@@ -6,6 +6,7 @@ from pyrogram.enums import ChatType
 from strings import get_string
 from VenomX.misc import SUDOERS
 from VenomX.utils.database import get_lang, is_commanddelete_on, is_maintenance
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 def language(mystic):
@@ -18,7 +19,7 @@ def language(mystic):
         if not await is_maintenance():
             if message.from_user.id not in SUDOERS:
                 if message.chat.type == ChatType.PRIVATE:
-                    return await message.reply_text(language["maint_4"])
+                    return await reply_note(message, language["maint_4"])
                 return
         if await is_commanddelete_on(message.chat.id):
             try:

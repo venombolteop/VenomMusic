@@ -20,6 +20,7 @@ from VenomX.utils.database import get_instant_play, get_loop
 from VenomX.utils.decorators import AdminRightsCheck
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 async def _start_lyrics_for_skip(chat_id, title, duration):
@@ -44,7 +45,7 @@ async def skip(cli, message: Message, _, chat_id):
     if not len(message.command) < 2:
         loop = await get_loop(chat_id)
         if loop != 0:
-            return await message.reply_text(_["admin_12"])
+            return await reply_note(message, _["admin_12"])
         state = message.command[1]
         if state.isnumeric():
             state = int(state)
@@ -64,12 +65,12 @@ async def skip(cli, message: Message, _, chat_id):
                                     except Exception:
                                         pass
                             except Exception:
-                                return await message.reply_text(_["admin_16"])
+                                return await reply_note(message, _["admin_16"])
                             if popped:
                                 await auto_clean(popped)
                             if not check:
                                 try:
-                                    await message.reply_text(
+                                    await reply_note(message, 
                                         _["admin_10"].format(
                                             message.from_user.first_name
                                         ),
@@ -80,13 +81,13 @@ async def skip(cli, message: Message, _, chat_id):
                                     return
                                 break
                     else:
-                        return await message.reply_text(_["admin_15"].format(count))
+                        return await reply_note(message, _["admin_15"].format(count))
                 else:
-                    return await message.reply_text(_["admin_14"])
+                    return await reply_note(message, _["admin_14"])
             else:
-                return await message.reply_text(_["queue_2"])
+                return await reply_note(message, _["queue_2"])
         else:
-            return await message.reply_text(_["admin_13"])
+            return await reply_note(message, _["admin_13"])
     else:
         check = db.get(chat_id)
         popped = None
@@ -100,7 +101,7 @@ async def skip(cli, message: Message, _, chat_id):
                     except Exception:
                         pass
             if not check:
-                await message.reply_text(
+                await reply_note(message, 
                     _["admin_10"].format(message.from_user.first_name),
                     disable_web_page_preview=True,
                 )
@@ -110,7 +111,7 @@ async def skip(cli, message: Message, _, chat_id):
                     return
         except Exception:
             try:
-                await message.reply_text(
+                await reply_note(message, 
                     _["admin_10"].format(message.from_user.first_name),
                     disable_web_page_preview=True,
                 )
@@ -128,14 +129,14 @@ async def skip(cli, message: Message, _, chat_id):
     if "live_" in queued:
         n, link = await Platform.youtube.video(videoid, True)
         if n == 0:
-            return await message.reply_text(_["admin_11"].format(title))
+            return await reply_note(message, _["admin_11"].format(title))
         try:
             await Ayush.skip_stream(chat_id, link, video=status)
             asyncio.create_task(
                 _start_lyrics_for_skip(chat_id, title, check[0]["dur"])
             )
         except Exception:
-            return await message.reply_text(_["call_7"])
+            return await reply_note(message, _["call_7"])
         mid_np = await spawn_now_playing(
             _, chat_id, None, title, duration_min, user,
             thumb=await gen_thumb(videoid),
@@ -150,7 +151,7 @@ async def skip(cli, message: Message, _, chat_id):
         )
         n = 1 if stream_link else 0
         if n == 0:
-            mystic = await message.reply_text(_["call_8"], disable_web_page_preview=True)
+            mystic = await status_card(message.chat.id, _["call_8"], disable_web_page_preview=True)
             try:
                 stream_link, direct = await Platform.youtube.download(
                     videoid,
@@ -173,7 +174,7 @@ async def skip(cli, message: Message, _, chat_id):
         except Exception:
             if mystic:
                 return await mystic.edit_text(_["call_7"])
-            return await message.reply_text(_["call_7"])
+            return await reply_note(message, _["call_7"])
         mid_np = await spawn_now_playing(
             _, chat_id, videoid, title, duration_min, user,
             thumb=await gen_thumb(videoid),
@@ -184,7 +185,7 @@ async def skip(cli, message: Message, _, chat_id):
         try:
             await Ayush.skip_stream(chat_id, videoid, video=status)
         except Exception:
-            return await message.reply_text(_["call_7"])
+            return await reply_note(message, _["call_7"])
         mid_np = await spawn_now_playing(
             _, chat_id, None, title, duration_min, user,
             thumb=config.STREAM_IMG_URL,
@@ -193,7 +194,7 @@ async def skip(cli, message: Message, _, chat_id):
         try:
             await Ayush.skip_stream(chat_id, queued, video=status)
         except Exception:
-            return await message.reply_text(_["call_7"])
+            return await reply_note(message, _["call_7"])
         if videoid == "telegram":
             mid_np = await spawn_now_playing(
                 _, chat_id, None, title, check[0]["dur"], user,

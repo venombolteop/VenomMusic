@@ -27,6 +27,7 @@ from VenomX.utils.rich_msg import (
     rich_esc,
     rich_heading,
     rich_img,
+    reply_note,
     send_rich,
 )
 
@@ -53,7 +54,7 @@ def PlayWrapper(command):
 
         if PRIVATE_BOT_MODE == str(True):
             if not await is_served_private_chat(message.chat.id):
-                await message.reply_text(
+                await reply_note(message, 
                     "**PRIVATE MUSIC BOT**\n\nOnly For Authorized chats from the owner ask my owner to allow your chat first."
                 )
                 return await app.leave_chat(message.chat.id)
@@ -77,7 +78,7 @@ def PlayWrapper(command):
         if audio_telegram is None and video_telegram is None and url is None:
             if len(message.command) < 2:
                 if "stream" in message.command:
-                    return await message.reply_text(_["str_1"])
+                    return await reply_note(message, _["str_1"])
                 buttons = botplaylist_markup(_)
                 return await send_rich(
                     message.chat.id,
@@ -89,11 +90,11 @@ def PlayWrapper(command):
         if message.command[0][0] == "c":
             chat_id = await get_cmode(message.chat.id)
             if chat_id is None:
-                return await message.reply_text(_["setting_12"])
+                return await reply_note(message, _["setting_12"])
             try:
                 chat = await app.get_chat(chat_id)
             except Exception:
-                return await message.reply_text(_["cplay_4"])
+                return await reply_note(message, _["cplay_4"])
             channel = chat.title
         else:
             chat_id = message.chat.id
@@ -101,7 +102,7 @@ def PlayWrapper(command):
         try:
             is_call_active = (await app.get_chat(chat_id)).is_call_active
             if not is_call_active:
-                return await message.reply_text(
+                return await reply_note(message, 
                     "**No active video chat found **\n\nPlease make sure you started the voicechat."
                 )
         except Exception:
@@ -113,10 +114,10 @@ def PlayWrapper(command):
             if message.from_user.id not in SUDOERS:
                 admins = adminlist.get(message.chat.id)
                 if not admins:
-                    return await message.reply_text(_["admin_18"])
+                    return await reply_note(message, _["admin_18"])
                 else:
                     if message.from_user.id not in admins:
-                        return await message.reply_text(_["play_4"])
+                        return await reply_note(message, _["play_4"])
         if message.command[0][0] == "v":
             video = True
         else:
@@ -126,7 +127,7 @@ def PlayWrapper(command):
                 video = True if message.command[0][1] == "v" else None
         if message.command[0][-1] == "e":
             if not await is_active_chat(chat_id):
-                return await message.reply_text(_["play_18"])
+                return await reply_note(message, _["play_18"])
             fplay = True
         else:
             fplay = None
