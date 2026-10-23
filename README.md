@@ -357,7 +357,7 @@ sudo systemctl restart venommusic        # apply .env/code changes
 
 | Variable | Default | Description |
 |:---------|:-------:|:------------|
-| `DURATION_LIMIT` | `5400` | Max track length (seconds) for VC playback |
+| `DURATION_LIMIT` | `5400` | Max track length (minutes) for VC playback |
 | `SONG_DOWNLOAD_DURATION_LIMIT` | `5400` | Max duration for `/song` `/video` downloads |
 | `PLAYLIST_FETCH_LIMIT` | `255` | Max tracks fetched per playlist |
 | `VIDEO_STREAM_LIMIT` | `999` | Concurrent video calls allowed |
