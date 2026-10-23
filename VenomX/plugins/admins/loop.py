@@ -10,6 +10,7 @@ from strings import command
 from VenomX import app
 from VenomX.utils.database.memorydatabase import get_loop, set_loop
 from VenomX.utils.decorators import AdminRightsCheck
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 @app.on_message(command("LOOP_COMMAND") & filters.group & ~BANNED_USERS)
@@ -17,7 +18,7 @@ from VenomX.utils.decorators import AdminRightsCheck
 async def admins(cli, message: Message, _, chat_id):
     usage = _["admin_24"]
     if len(message.command) != 2:
-        return await message.reply_text(usage)
+        return await reply_note(message, usage)
     state = message.command[1].strip()
     if state.isnumeric():
         state = int(state)
@@ -28,18 +29,18 @@ async def admins(cli, message: Message, _, chat_id):
             if int(state) > 10:
                 state = 10
             await set_loop(chat_id, state)
-            return await message.reply_text(
+            return await reply_note(message, 
                 _["admin_25"].format(message.from_user.first_name, state)
             )
         else:
-            return await message.reply_text(_["admin_26"])
+            return await reply_note(message, _["admin_26"])
     elif state.lower() == "enable":
         await set_loop(chat_id, 10)
-        return await message.reply_text(
+        return await reply_note(message, 
             _["admin_25"].format(message.from_user.first_name, 10)
         )
     elif state.lower() == "disable":
         await set_loop(chat_id, 0)
-        return await message.reply_text(_["admin_27"])
+        return await reply_note(message, _["admin_27"])
     else:
-        return await message.reply_text(usage)
+        return await reply_note(message, usage)

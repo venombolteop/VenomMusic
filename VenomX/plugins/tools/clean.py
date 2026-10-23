@@ -5,11 +5,12 @@ from pyrogram import filters
 
 from VenomX import app
 from VenomX.misc import SUDOERS
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 @app.on_message(filters.command("clean") & SUDOERS)
 async def clean(_, message):
-    A = await message.reply_text("🧹 ᴄʟᴇᴀɴɪɴɢ ᴛᴇᴍᴘ ᴅɪʀᴇᴄᴛᴏʀɪᴇs...")
+    A = await status_card(message.chat.id, "🧹 ᴄʟᴇᴀɴɪɴɢ ᴛᴇᴍᴘ ᴅɪʀᴇᴄᴛᴏʀɪᴇs...")
     dir = "downloads"
     dir1 = "cache"
     shutil.rmtree(dir)

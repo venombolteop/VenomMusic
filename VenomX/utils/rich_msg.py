@@ -475,6 +475,21 @@ async def edit_any(mystic, text: str, reply_markup=None) -> bool:
         return False
 
 
+async def reply_note(message, text: str, **kw) -> int | None:
+    """Reply to a command with a rich notice card; plain reply is the fallback."""
+    try:
+        mid = await send_rich(message.chat.id, f"<p>{rich_esc(text)}</p>")
+        if not mid and kw.get("reply_markup") is not None:
+            await message.reply_text(text, **kw)
+        return mid
+    except Exception:  # noqa: BLE001
+        try:
+            await message.reply_text(text, **kw)
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
+
 async def reply_rich(message, text: str, reply_markup=None) -> int | None:
     """Reply with a rich card; returns the new message id (or None)."""
     try:

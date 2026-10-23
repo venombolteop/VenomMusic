@@ -13,6 +13,7 @@ from VenomX import app
 from VenomX.utils.database import get_authuser_names
 from VenomX.utils.decorators import language
 from VenomX.utils.formatters import alpha_to_int
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 @app.on_message(command("RELOAD_COMMAND") & filters.group & ~BANNED_USERS)
@@ -29,8 +30,8 @@ async def reload_admin_cache(client, message: Message, _):
         for user in authusers:
             user_id = await alpha_to_int(user)
             adminlist[chat_id].append(user_id)
-        await message.reply_text(_["admin_20"])
+        await reply_note(message, _["admin_20"])
     except Exception:
-        await message.reply_text(
+        await reply_note(message, 
             "Failed to reload admincache make sure bot is an admin in your chat"
         )
