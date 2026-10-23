@@ -47,7 +47,7 @@ from VenomX.utils.inline.play import (
     stream_markup,
     telegram_markup,
 )
-from VenomX.utils.rich_msg import edit_any, edit_rich, send_note
+from VenomX.utils.rich_msg import edit_any, edit_rich, send_note, status_card
 from VenomX.utils.rich_panels import show_main, show_menu
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.stream.stream import stream
@@ -311,10 +311,9 @@ async def admin_callback(client, CallbackQuery, _):
             n, stream_link = await Platform.youtube.stream_url(
                 videoid, videoid=True, video=status
             )
+            mystic = None
             if n == 0:
-                mystic = await CallbackQuery.message.reply_text(
-                    _["call_8"], disable_web_page_preview=True
-                )
+                mystic = await status_card(chat_id, _["call_8"])
                 try:
                     stream_link, direct = await Platform.youtube.download(
                         videoid,
@@ -324,8 +323,6 @@ async def admin_callback(client, CallbackQuery, _):
                     )
                 except Exception:
                     return await mystic.edit_text(_["call_7"])
-            else:
-                mystic = None
             try:
                 await Ayush.skip_stream(chat_id, stream_link, video=status)
             except Exception:
@@ -402,12 +399,7 @@ async def admin_callback(client, CallbackQuery, _):
                 )
             to_seek = duration_played + duration_to_skip + 1
         await CallbackQuery.answer()
-        rich_mid = await send_note(chat_id, _["admin_32"])
-        if rich_mid:
-            from VenomX.utils.rich_msg import RichMystic
-            mystic = RichMystic(chat_id, rich_mid)
-        else:
-            mystic = await CallbackQuery.message.reply_text(_["admin_32"])
+        mystic = await status_card(chat_id, _["admin_32"])
         if "vid_" in file_path:
             n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
             if n == 0:

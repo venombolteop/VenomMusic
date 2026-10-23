@@ -1,19 +1,26 @@
 from VenomX import app
-from VenomX.utils.rich_msg import reply_note, status_card
+from VenomX.utils.rich_msg import (
+    reply_note,
+    rich_esc,
+    send_rich,
+    status_card,
+)
 from pyrogram import filters
 from pyrogram.enums import ParseMode
 
 
 @app.on_message(filters.command("me"))
-def ids(_, message):
+async def ids(_, message):
     reply = message.reply_to_message
     if reply:
-        message.reply_text(
-            f"ʏᴏᴜʀ ɪᴅ: {message.from_user.id}\n{reply.from_user.first_name}'s ɪᴅ: {reply.from_user.id}\nᴄʜᴀᴛ ɪᴅ: {message.chat.id}"
+        await send_rich(
+            message.chat.id,
+            f"<p>ʏᴏᴜʀ ɪᴅ: {message.from_user.id}<br>{reply.from_user.first_name}'s ɪᴅ: {reply.from_user.id}<br>ᴄʜᴀᴛ ɪᴅ: {message.chat.id}</p>",
         )
     else:
-        message.reply(
-            f"ʏᴏᴜʀ ɪᴅ: {message.from_user.id}\nᴄʜᴀᴛ ɪᴅ: {message.chat.id}"
+        await send_rich(
+            message.chat.id,
+            f"<p>ʏᴏᴜʀ ɪᴅ: {message.from_user.id}<br>ᴄʜᴀᴛ ɪᴅ: {message.chat.id}</p>",
         )
 
 ####

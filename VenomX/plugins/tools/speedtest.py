@@ -9,7 +9,7 @@ import socket
 from strings import command
 from VenomX import app
 from VenomX.misc import SUDOERS
-from VenomX.utils.rich_msg import edit_any
+from VenomX.utils.rich_msg import edit_any, status_card
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ async def testspeed(m):
 
 @app.on_message(command("SPEEDTEST_COMMAND") & SUDOERS)
 async def speedtest_function(client, message):
-    m = await message.reply_text("⚡ ʀᴜɴɴɪɴɢ sᴘᴇᴇᴅᴛᴇsᴛ")
+    m = await status_card(message.chat.id, "⚡ ʀᴜɴɴɪɴɢ sᴘᴇᴇᴅᴛᴇsᴛ")
 
     result = await testspeed(m)
     if not result:

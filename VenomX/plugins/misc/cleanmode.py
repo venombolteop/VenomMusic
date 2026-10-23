@@ -108,7 +108,7 @@ async def braodcast_message(client, message, _):
                 m = (
                     await app.forward_messages(i, y, x)
                     if message.reply_to_message
-                    else await app.send_message(i, text=query, send_direct=True)
+                    else await send_rich(i, f"<p>{rich_esc(query)}</p>")
                 )
                 if "-pin" in message.text:
                     try:
@@ -148,7 +148,7 @@ async def braodcast_message(client, message, _):
                 m = (
                     await app.forward_messages(i, y, x)
                     if message.reply_to_message
-                    else await app.send_message(i, text=query, send_direct=True)
+                    else await send_rich(i, f"<p>{rich_esc(query)}</p>")
                 )
                 if "-pin" in message.text:
                     try:
