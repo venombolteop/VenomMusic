@@ -77,6 +77,7 @@ async def put_queue(
 
     userstats[user_id].append(
         {
+            "vidid": vidid,
             "chat_id": chat_id,
             "title": title,
         }

@@ -50,7 +50,7 @@ def dbb():
 def sudo():
     global SUDOERS
     OWNER = config.OWNER_ID
-    if config.MONGO_DB_URI is None:
+    if not config.MONGO_DB_URI:
         for user_id in OWNER:
             SUDOERS.add(user_id)
     else:
@@ -74,7 +74,7 @@ def sudo():
 
 def heroku():
     global HAPP
-    if is_heroku:
+    if is_heroku():
         if config.HEROKU_API_KEY and config.HEROKU_APP_NAME:
             try:
                 Heroku = heroku3.from_key(config.HEROKU_API_KEY)

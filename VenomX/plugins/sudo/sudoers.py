@@ -17,7 +17,7 @@ from VenomX.utils.rich_msg import reply_note, status_card
 @app.on_message(command("ADDSUDO_COMMAND") & filters.user(OWNER_ID))
 @language
 async def useradd(client, message: Message, _):
-    if MONGO_DB_URI is None:
+    if not MONGO_DB_URI:
         return await reply_note(message, 
             "**Due to privacy issues, You can't manage sudoers when you are on Venom Database.\n\n Please fill Your MONGO_DB_URI in your vars to use this features**"
         )
@@ -55,7 +55,7 @@ async def useradd(client, message: Message, _):
 @app.on_message(command("DELSUDO_COMMAND") & filters.user(OWNER_ID))
 @language
 async def userdel(client, message: Message, _):
-    if MONGO_DB_URI is None:
+    if not MONGO_DB_URI:
         return await reply_note(message, 
             "**Due to privacy issues, You can't manage sudoers when you are on Venom Database.\n\n Please fill Your MONGO_DB_URI in your vars to use this features**"
         )
