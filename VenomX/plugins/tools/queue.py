@@ -19,6 +19,7 @@ from VenomX.utils.database import get_cmode, is_active_chat, is_music_playing
 from VenomX.utils.decorators import ActualAdminCB
 from VenomX.utils.decorators.language import language, languageCB
 from VenomX.utils.inline.queue import queue_back_markup, queue_markup
+from VenomX.utils.logger import LOGGER
 from VenomX.utils.rich_msg import reply_note, status_card
 from VenomX.utils.rich_msg import (
     edit_rich,
@@ -117,12 +118,12 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 19):
     body = rich_heading(f'{pemoji("🗂")} ᴍᴜsɪᴄ ǫᴜᴇᴜᴇ', level=3)
     now = got[0]
     now_url = _track_link(now)
-    now_title = _short(now.get("title"))
+    now_title = _short(now.get("title"), 30)
     now_head = f'<a href="{now_url}">{rich_esc(now_title)}</a>' if now_url else rich_esc(now_title)
     body += (
         f'<aside>{pemoji("🔴")} <b>ɴᴏᴡ ᴘʟᴀʏɪɴɢ</b><br>{now_head}<br>'
-        f'{pemoji("⏱")} {rich_esc(now.get("dur") or "--:--")}  •  '
-        f'{pemoji("👤")} {rich_esc(now.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")}</aside>'
+        f'{pemoji("⏱")} {rich_esc(str(now.get("dur") or "--:--").replace(" ", ""))}  •  '
+        f'{pemoji("👤")} {rich_esc(_short(now.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ", 14))}</aside>'
     )
 
     if upnext > 0:
@@ -132,7 +133,9 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 19):
         for i in range(1, shown + 1):
             x = got[i]
             row_url = _track_link(x)
-            row_title = _short(x.get("title"))
+            row_title = _short(x.get("title"), 30)
+            by = _short(x.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ", 14)
+            dur = str(x.get("dur") or "--:--").replace(" ", "")
             track_cell = (
                 f'<a href="{row_url}">{rich_esc(row_title)}</a>'
                 if row_url
@@ -140,8 +143,8 @@ def queue_list_html(_, got, buttons_html, what="g", shown: int = 19):
             )
             body += (
                 f'<tr><td>{i}</td><td>{track_cell}</td>'
-                f'<td>{rich_esc(x.get("dur") or "--:--")}</td>'
-                f'<td>{rich_esc(x.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")}</td>'
+                f'<td>{rich_esc(dur)}</td>'
+                f'<td>{rich_esc(by)}</td>'
                 f'<td><tg-button type="callback_data" style="danger" '
                 f'data="qdel {what}|{i}">✕</tg-button></td></tr>'
             )
@@ -355,7 +358,13 @@ async def qmore_card(client, CallbackQuery, _):
         if len(body) <= 6800:
             break
         shown -= 5
-    await edit_rich(chat_id, mid, body)
+    ok = await edit_rich(chat_id, mid, body)
+    if not ok:
+        LOGGER(_LOG).warning(
+            "[QUEUE] show-more edit failed chat=%s mid=%s len=%d",
+            chat_id, mid, len(body),
+        )
+        await CallbackQuery.answer("⚠️ ǫᴜᴇᴜᴇ ᴛᴏᴏ ʙɪɢ ꜰᴏʀ ʀɪᴄʜ ᴇᴅɪᴛ", show_alert=True)
 
 
 @app.on_callback_query(filters.regex("queue_back_timer") & ~BANNED_USERS)
