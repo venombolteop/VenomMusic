@@ -25,9 +25,7 @@ API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 _EMOJI_DB_PATH = Path(
     os.environ.get(
         "PREMIUM_EMOJI_DB",
-        os.path.join(os.path.dirname(__file__), "smart_emoji_db.json")
-        if os.path.exists(os.path.join(os.path.dirname(__file__), "smart_emoji_db.json"))
-        else "/home/ubuntu/wel/smart_emoji_db.json",
+        os.path.join(os.path.dirname(__file__), "smart_emoji_db.json"),
     )
 )
 try:
