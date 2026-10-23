@@ -125,12 +125,16 @@ def _body(_, title: str, duration_min: str, user_name: str, thumb=None) -> str:
     thumb_url = str(thumb) if thumb else ""
     if thumb_url.startswith(("http://", "https://")):
         body += rich_img(thumb_url)
-    info = (
-        f"<br/>{pemoji('🎵')} <b>ᴛɪᴛʟᴇ :</b> <mark>{rich_esc(str(title)[:32])}</mark>"
-        f"<br/>{pemoji('⏱')} <b>ᴅᴜʀᴀᴛɪᴏɴ :</b> <mark>{rich_esc(duration_min)} ᴍɪɴꜱ</mark>"
-        f"<br/>{pemoji('🎤')} <b>ꜱᴛʀᴇᴀᴍᴇᴅ ʙʏ :</b> {rich_esc(user_name)}"
+    body += "<hr/>"
+    # Pull-quote card: centered track info with highlighted values.
+    body += (
+        "<aside>"
+        f"{pemoji('🎵')} <b>{rich_esc(str(title)[:34])}</b><br>"
+        f"{pemoji('⏱')} <mark>{rich_esc(duration_min)} ᴍɪɴꜱ</mark>"
+        f"  ·  {pemoji('🎤')} {rich_esc(user_name)}"
+        "</aside>"
     )
-    body += rich_note(info)
+    body += f"<footer>{pemoji('📡')} ᴠᴇɴᴏᴍ ᴘʀᴇᴍɪᴜᴍ ᴠᴏɪᴄᴇ ꜱᴛʀᴇᴀᴍ</footer>"
     body += rich_button_row(
         rich_url_button(f"{pemoji('💬')} ꜱᴜᴘᴘᴏʀᴛ", "https://t.me/venom_chatting"),
         align="center",
