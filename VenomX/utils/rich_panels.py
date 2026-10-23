@@ -17,11 +17,13 @@ from VenomX.utils.rich_msg import (
     RichMystic,
     edit_rich,
     pemoji,
+    rich_note,
     rich_url_button,
     rich_button,
     rich_button_row,
     rich_esc,
     rich_heading,
+    rich_kv,
     rich_img,
     send_rich,
 )
@@ -96,20 +98,24 @@ def _rows(chat_id: int, videoid, elapsed: float, total_sec: float, playing: bool
     bar_label = f"{pemoji('⏳')} {played_txt} {bar} {dur_txt}"
     rows = rich_button_row(
         rich_button(bar_label, callback_data="GetTimer", style=_bar_style(pct)),
+        align="center",
     )
 
     rows += rich_button_row(
         rich_button(f"{pemoji('🗂')} Qᴜᴇᴜᴇ", callback_data=f"GetQueued {chat_id}|{videoid}", style="success"),
         rich_button(f"{pemoji('➕')} ᴘʟᴀʏʟɪꜱᴛ", callback_data=f"add_playlist {videoid}", style="primary"),
+        align="center",
     )
     rows += rich_button_row(
         rich_button(f"{pemoji('⚙')} ᴍᴇɴᴜ", callback_data=f"PanelMarkup {videoid}|{chat_id}", style="primary"),
         rich_button(f"{pemoji('❌')} ᴄʟᴏꜱᴇ", callback_data="close", style="danger"),
+        align="center",
     )
     rows += rich_button_row(
         _toggle_button(chat_id),
         rich_button(f"{pemoji('⏩')} sᴋɪᴘ", callback_data=f"ADMIN Skip|{chat_id}", style=_ctl_style()),
         rich_button(f"{pemoji('🛑')} sᴛᴏᴘ", callback_data=f"ADMIN Stop|{chat_id}", style="danger"),
+        align="center",
     )
     return rows
 
@@ -119,13 +125,15 @@ def _body(_, title: str, duration_min: str, user_name: str, thumb=None) -> str:
     thumb_url = str(thumb) if thumb else ""
     if thumb_url.startswith(("http://", "https://")):
         body += rich_img(thumb_url)
-    body += (
-        f"<p>{pemoji('🎵')} <b>ᴛɪᴛʟᴇ :</b> {rich_esc(str(title)[:32])}\n"
-        f"{pemoji('⏱')} <b>ᴅᴜʀᴀᴛɪᴏɴ :</b> {rich_esc(duration_min)} ᴍɪɴꜱ\n"
-        f"{pemoji('🎤')} <b>ꜱᴛʀᴇᴀᴍᴇᴅ ʙʏ :</b> {rich_esc(user_name)}</p>"
+    info = (
+        f"<br/>{pemoji('🎵')} <b>ᴛɪᴛʟᴇ :</b> <mark>{rich_esc(str(title)[:32])}</mark>"
+        f"<br/>{pemoji('⏱')} <b>ᴅᴜʀᴀᴛɪᴏɴ :</b> <mark>{rich_esc(duration_min)} ᴍɪɴꜱ</mark>"
+        f"<br/>{pemoji('🎤')} <b>ꜱᴛʀᴇᴀᴍᴇᴅ ʙʏ :</b> {rich_esc(user_name)}"
     )
+    body += rich_note(info)
     body += rich_button_row(
         rich_url_button(f"{pemoji('💬')} ꜱᴜᴘᴘᴏʀᴛ", "https://t.me/venom_chatting"),
+        align="center",
     )
     return body
 
@@ -281,9 +289,10 @@ async def notice_card(
     if thumb:
         html += rich_img(thumb)
     if body_text:
-        html += f"<p>{rich_esc(body_text)}</p>"
+        html += rich_note(rich_esc(body_text).replace("\n", "<br>"))
     html += rich_button_row(
         rich_button(f"{pemoji('❌')} ᴄʟᴏꜱᴇ", callback_data="close", style="danger"),
+        align="center",
     )
     return await _send_card(chat_id, html)
 
@@ -340,6 +349,7 @@ def menu_pages_rows(_, videoid, chat_id: int, page: int) -> str:
         rich_button(f"{pemoji('⬅')} ᴘʀᴇᴠ", callback_data=f"Pages Back|{page}|{videoid}|{chat_id}", style="primary"),
         rich_button(f"{pemoji('🚀')} ʙᴀᴄᴋ", callback_data=fuzzy, style="primary"),
         rich_button(f"{pemoji('➡')} ɴᴇxᴛ", callback_data=f"Pages Forw|{page}|{videoid}|{chat_id}", style="primary"),
+        align="center",
     )
     if page == 0:
         rows = (
