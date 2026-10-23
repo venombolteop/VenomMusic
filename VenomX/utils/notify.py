@@ -59,9 +59,13 @@ async def notify_owner(tag: str, error: Exception, context: str = ""):
             for k in stale:
                 _dedup.pop(k, None)
 
+        from VenomX.utils.rich_msg import send_note
+
         for owner_id in OWNER_ID:
             try:
-                await app.send_message(owner_id, msg, parse_mode="html")
+                mid = await send_note(owner_id, msg, heading=f"ᴇʀʀᴏʀ · {tag}")
+                if not mid:
+                    await app.send_message(owner_id, msg, parse_mode="html")
             except Exception:
                 pass
     except Exception:

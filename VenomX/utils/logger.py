@@ -3,6 +3,7 @@
 from config import LOG, LOGGER_ID
 from VenomX import app
 from VenomX.utils.database import is_on_off
+from VenomX.utils.rich_msg import send_rich
 
 
 async def play_logs(message, streamtype, thumbnail=None):
@@ -49,20 +50,23 @@ async def play_logs(message, streamtype, thumbnail=None):
 ⚡ **Mode:** Direct Stream · Premium UI
 """
         if message.chat.id != LOGGER_ID:
+            from VenomX.utils.rich_msg import rich_esc
+
             try:
-                if thumbnail:
-                    await app.send_photo(
-                        chat_id=LOGGER_ID,
-                        photo=thumbnail,
-                        caption=logger_text,
-                        has_spoiler=True,
+                if thumbnail and str(thumbnail).startswith(("http://", "https://")):
+                    html = (
+                        f"<img src=\"{thumbnail}\"/>"
+                        f"<p>{rich_esc(logger_text)}</p>"
                     )
                 else:
-                    await app.send_message(
-                        chat_id=LOGGER_ID,
-                        text=logger_text,
-                        disable_web_page_preview=True,
-                    )
+                    html = f"<p>{rich_esc(logger_text)}</p>"
+                html += (
+                    "<tg-button-row>"
+                    f'<tg-button type="url" style="primary" '
+                    f'url="{chat_link or f"https://t.me/{chatusername.lstrip(chr(64))}"}">'
+                    "🏷 Chat</tg-button></tg-button-row>"
+                )
+                await send_rich(LOGGER_ID, html)
             except Exception:
                 try:
                     await app.send_message(
