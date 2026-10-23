@@ -9,6 +9,7 @@ from VenomX import Platform, app
 from VenomX.utils.channelplay import get_channeplayCB
 from VenomX.utils.decorators.language import languageCB
 from VenomX.utils.stream.stream import stream
+from VenomX.utils.rich_msg import reply_note, status_card
 
 
 @app.on_callback_query(filters.regex("LiveStream") & ~BANNED_USERS)
@@ -33,7 +34,7 @@ async def play_live_stream(client, CallbackQuery, _):
         await CallbackQuery.answer()
     except Exception:
         pass
-    mystic = await CallbackQuery.message.reply_text(
+    mystic = await status_card(CallbackQuery.message.chat.id, 
         _["play_2"].format(channel) if channel else _["play_1"]
     )
     try:

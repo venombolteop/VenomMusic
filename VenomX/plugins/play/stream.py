@@ -15,6 +15,7 @@ from VenomX.core.call import Ayush
 from VenomX.utils.decorators.play import PlayWrapper
 from VenomX.utils.logger import play_logs
 from VenomX.utils.stream.stream import stream
+from VenomX.utils.rich_msg import reply_note, send_rich, status_card
 
 
 @app.on_message(command("STREAM_COMMAND") & filters.group & ~BANNED_USERS)
@@ -32,7 +33,7 @@ async def stream_command(
 ):
     if url:
         try:
-            mystic = await message.reply_text(
+            mystic = await status_card(message.chat.id, 
                 _["play_2"].format(channel) if channel else _["play_1"]
             )
         except ChatWriteForbidden:
@@ -44,7 +45,7 @@ async def stream_command(
                 "There's an issue with the bot. please report it to my Owner and ask them to check logger group"
             )
             text = "Please Turn on voice chat.. Bot is unable to stream urls.."
-            return await app.send_message(config.LOGGER_ID, text)
+            return await send_rich(config.LOGGER_ID, f"<p>{text}</p>")
         except Exception as e:
             return await mystic.edit_text(_["general_3"].format(type(e).__name__))
         await mystic.edit_text(_["str_2"])
@@ -66,4 +67,4 @@ async def stream_command(
             return await mystic.edit_text(err)
         return await play_logs(message, streamtype="M3u8 or Index Link")
     else:
-        await message.reply_text(_["str_1"])
+        await reply_note(message, _["str_1"])
