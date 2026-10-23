@@ -36,6 +36,7 @@ from VenomX.utils.formatters import get_readable_time
 from VenomX.utils.functions import MARKDOWN, WELCOMEHELP
 from VenomX.utils.inline import private_panel, start_pannel
 from VenomX.utils.rich_msg import (
+    edit_any,
     edit_rich,
     pemoji,
     rich_button,
@@ -43,6 +44,7 @@ from VenomX.utils.rich_msg import (
     rich_esc,
     rich_heading,
     rich_img,
+    send_note,
     send_rich,
 )
 
@@ -63,7 +65,7 @@ async def start_comm(client, message: Message, _):
             body += await paginate_modules(0, chat_id, close=True)
             return await send_rich(chat_id, body)
         if name[0:4] == "song":
-            await message.reply_text(_["song_2"])
+            await send_rich(chat_id, f"<p>{rich_esc(_['song_2'])}</p>")
             return
         if name == "mkdwn_help":
             await send_rich(
@@ -143,7 +145,7 @@ async def start_comm(client, message: Message, _):
                 sender_id = message.from_user.id
                 sender_mention = message.from_user.mention
                 sender_name = message.from_user.first_name
-                return await app.send_message(
+                return await send_note(
                     config.LOGGER_ID,
                     f"{message.from_user.mention} Has just started bot to check <code>Sudolist </code>\n\n**User Id:** {sender_id}\n**User Name:** {sender_name}",
                 )
@@ -156,7 +158,7 @@ async def start_comm(client, message: Message, _):
                 await Platform.telegram.send_split_text(message, lyrics)
                 return
             else:
-                await message.reply_text("Failed to get lyrics ")
+                await send_rich(chat_id, "<p>Failed to get lyrics </p>")
                 return
         if name[0:3] == "del":
             await del_plist_msg(client=client, message=message, _=_)
@@ -196,7 +198,7 @@ async def start_comm(client, message: Message, _):
             if await is_on_off(config.LOG):
                 sender_id = message.from_user.id
                 sender_name = message.from_user.first_name
-                return await app.send_message(
+                return await send_note(
                     config.LOGGER_ID,
                     f"🚀 {message.from_user.mention} Has just started bot ot check <code> Video information  </code>\n\n👤 **User Id:** {sender_id}\n**User Name** {sender_name}",
                 )
@@ -216,7 +218,7 @@ async def start_comm(client, message: Message, _):
         if await is_on_off(config.LOG):
             sender_id = message.from_user.id
             sender_name = message.from_user.first_name
-            return await app.send_message(
+            return await send_note(
                 config.LOGGER_ID,
                 f"👋 {message.from_user.mention} Has started bot. \n\n🆔 **User id :** {sender_id}\n**User name:** {sender_name}",
             )
@@ -227,7 +229,7 @@ async def start_comm(client, message: Message, _):
 async def testbot(client, message: Message, _):
     uptime = int(time.time() - _boot_)
     chat_id = message.chat.id
-    await message.reply_text(_["start_7"].format(get_readable_time(uptime)))
+    await send_note(chat_id, _["start_7"].format(get_readable_time(uptime)))
 
     return await add_served_chat(message.chat.id)
 
@@ -237,7 +239,8 @@ async def welcome(client, message: Message):
     chat_id = message.chat.id
     if config.PRIVATE_BOT_MODE == str(True):
         if not await is_served_private_chat(message.chat.id):
-            await message.reply_text(
+            await send_note(
+                chat_id,
                 "**ᴛʜɪꜱ ʙᴏᴛ'ꜱ ᴘʀɪᴠᴀᴛᴇ ᴍᴏᴅᴇ ʜᴀꜱ ʙᴇᴇɴ ᴇɴᴀʙʟᴇᴅ ᴏɴʟʏ ᴍʏ ᴏᴡɴᴇʀ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ɪꜰ ᴡᴀɴᴛ ᴛᴏ ᴜꜱᴇ ᴛʜɪꜱ ɪɴ ʏᴏᴜʀ ᴄʜᴀᴛ ꜱᴏ ꜱᴀʏ ᴛᴏ ᴍʏ ᴏᴡɴᴇʀ ᴛᴏ ᴀᴜᴛʜᴏʀɪᴢᴇ ʏᴏᴜʀ ᴄʜᴀᴛ."
             )
             return await app.leave_chat(message.chat.id)
@@ -250,13 +253,14 @@ async def welcome(client, message: Message):
             if member.id == app.id:
                 chat_type = message.chat.type
                 if chat_type != ChatType.SUPERGROUP:
-                    await message.reply_text(_["start_5"])
+                    await send_note(chat_id, _["start_5"])
                     return await app.leave_chat(message.chat.id)
                 if chat_id in await blacklisted_chats():
-                    await message.reply_text(
+                    await send_note(
+                        chat_id,
                         _["start_6"].format(
                             f"https://t.me/{app.username}?start=sudolist"
-                        )
+                        ),
                     )
                     return await app.leave_chat(chat_id)
                 userbot = await get_assistant(message.chat.id)
@@ -266,12 +270,14 @@ async def welcome(client, message: Message):
                 body += out
                 await send_rich(chat_id, body)
             if member.id in config.OWNER_ID:
-                return await message.reply_text(
-                    _["start_3"].format(app.mention, member.mention)
+                return await send_note(
+                    chat_id,
+                    _["start_3"].format(app.mention, member.mention),
                 )
             if member.id in SUDOERS:
-                return await message.reply_text(
-                    _["start_4"].format(app.mention, member.mention)
+                return await send_note(
+                    chat_id,
+                    _["start_4"].format(app.mention, member.mention),
                 )
             return
         except:
