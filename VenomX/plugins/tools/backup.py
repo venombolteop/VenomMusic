@@ -12,6 +12,7 @@ from pyrogram.errors import FloodWait
 from config import BANNED_USERS, MONGO_DB_URI, OWNER_ID
 from VenomX import app
 from VenomX.core.mongo import DB_NAME
+from VenomX.utils.rich_msg import ids_of, send_rich
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -44,16 +45,14 @@ async def drop_db(client, db_name):
 
 
 async def edit_or_reply(mystic, text):
+    chat_id, mid = ids_of(mystic)
+    if chat_id and mid and await send_rich(chat_id, f"<p>{text}</p>"):
+        return None
     try:
         return await mystic.edit_text(text, disable_web_page_preview=True)
     except FloodWait as e:
         await asyncio.sleep(e.value)
         return await mystic.edit_text(text, disable_web_page_preview=True)
-    try:
-        await mystic.delete()
-    except Exception:
-        pass
-    return await app.send_message(mystic.chat.id, disable_web_page_preview=True)
 
 
 @app.on_message(filters.command("export") & ~BANNED_USERS)
@@ -61,9 +60,9 @@ async def export_database(client, message):
     if message.from_user.id not in OWNER_ID:
         return
     if MONGO_DB_URI is None:
-        return await message.reply_text(
-            "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
-        )
+        unavailable = "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
+        await send_rich(message.chat.id, f"<p>{unavailable}</p>")
+        return
     mystic = await message.reply_text("📦 Exporting Your mongodatabase...")
     _mongo_async_ = AsyncIOMotorClient(MONGO_DB_URI)
     databases = await _mongo_async_.list_database_names()
@@ -126,14 +125,16 @@ async def import_database(client, message):
     if message.from_user.id not in OWNER_ID:
         return
     if MONGO_DB_URI is None:
-        return await message.reply_text(
-            "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
-        )
+        unavailable = "**Due to some privacy Issue, You can't Import/Export when you are using Ayush Database\n\n Please Fill Your MONGO_DB_URI in vars to use this features**"
+        await send_rich(message.chat.id, f"<p>{unavailable}</p>")
+        return
 
     if not message.reply_to_message or not message.reply_to_message.document:
-        return await message.reply_text(
-            "You need to reply an exported file to import it."
+        await send_rich(
+            message.chat.id,
+            "<p>You need to reply an exported file to import it.</p>",
         )
+        return
 
     mystic = await message.reply_text("📥 Downloading...")
 
