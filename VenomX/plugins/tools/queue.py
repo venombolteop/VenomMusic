@@ -12,14 +12,13 @@ from pyrogram.types import CallbackQuery, Message
 import config
 from config import BANNED_USERS
 from strings import command
-from VenomX import app, Platform
+from VenomX import app, Platform, LOGGER
 from VenomX.misc import db
 from VenomX.utils import Ayushbin, get_channeplayCB, seconds_to_min
 from VenomX.utils.database import get_cmode, is_active_chat, is_music_playing
 from VenomX.utils.decorators import ActualAdminCB
 from VenomX.utils.decorators.language import language, languageCB
 from VenomX.utils.inline.queue import queue_back_markup, queue_markup
-from VenomX.utils.logger import LOGGER
 from VenomX.utils.rich_msg import reply_note, status_card
 from VenomX.utils.rich_msg import (
     edit_rich,
@@ -33,6 +32,7 @@ from VenomX.utils.rich_msg import (
 )
 
 basic = {}
+_LOG = "Queue"
 
 
 def get_image(videoid):

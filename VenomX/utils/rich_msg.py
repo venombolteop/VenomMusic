@@ -22,8 +22,20 @@ from config import BOT_TOKEN
 
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-_EMOJI_DB_PATH = Path("/home/ubuntu/wel/smart_emoji_db.json")
-_EMOJI_DB = json.loads(_EMOJI_DB_PATH.read_text(encoding="utf-8"))
+_EMOJI_DB_PATH = Path(
+    os.environ.get(
+        "PREMIUM_EMOJI_DB",
+        os.path.join(os.path.dirname(__file__), "smart_emoji_db.json")
+        if os.path.exists(os.path.join(os.path.dirname(__file__), "smart_emoji_db.json"))
+        else "/home/ubuntu/wel/smart_emoji_db.json",
+    )
+)
+try:
+    _EMOJI_DB = json.loads(_EMOJI_DB_PATH.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    # Same graceful degradation as premium.load_db(): panels fall back to
+    # plain unicode emojis when the premium emoji database is not installed.
+    _EMOJI_DB = {}
 
 # Emojis used across the panels that are missing from the DB, mapped to
 # verified equivalents whose ids ARE in the DB (play/pause/stop/nav icons).

@@ -835,7 +835,6 @@ class YouTube:
 
         _walk(data)
         return ids[:limit]
-        return result
 
     async def _api_search(self, query: str, t0: float):
         """Resolve a search query through the media API (warm, ~0.5s).
