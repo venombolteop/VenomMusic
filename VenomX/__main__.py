@@ -25,7 +25,7 @@ async def init():
         return
     if not config.SPOTIFY_CLIENT_ID and not config.SPOTIFY_CLIENT_SECRET:
         LOGGER("VenomX").warning(
-            "No Spotify Vars defined. Your bot won't be able to play spotify queries."
+            "No Spotify vars defined. Spotify links will be resolved without the official API, which can be slower and more fragile."
         )
     try:
         users = await get_gbanned()
