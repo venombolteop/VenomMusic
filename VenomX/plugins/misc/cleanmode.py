@@ -29,7 +29,12 @@ from VenomX.utils.database import (
 )
 from VenomX.utils.decorators.language import language
 from VenomX.utils.formatters import alpha_to_int
-from VenomX.utils.rich_msg import reply_note, status_card
+from VenomX.utils.rich_msg import (
+    reply_note,
+    rich_esc,
+    send_rich,
+    status_card,
+)
 
 AUTO_DELETE = config.CLEANMODE_DELETE_MINS
 AUTO_SLEEP = 5

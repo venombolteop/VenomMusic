@@ -354,7 +354,10 @@ async def stream(
                     thumb=img,
                 )
         if count == 0:
-            return
+            # Radio/Mix playlists resolve to nothing — a silent return used to
+            # leave the user staring at a dead status card with no feedback, so
+            # surface the failure so the play handler shows an error card.
+            raise AssistantErr(_["play_3"])
         else:
             link = await Ayushbin(msg)
             lines = msg.count("\n")

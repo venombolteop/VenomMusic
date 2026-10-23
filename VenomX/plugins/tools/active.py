@@ -7,6 +7,7 @@ from pyrogram.types import Message
 from strings import command
 from VenomX import app
 from VenomX.misc import SUDOERS, db
+from VenomX.utils.rich_msg import reply_note, status_card
 from VenomX.utils.database.memorydatabase import (
     get_active_chats,
     get_active_video_chats,

@@ -68,6 +68,7 @@ async def play_commnd(
         mystic = await status_card(
             message.chat.id,
             _["play_2"].format(channel) if channel else _["play_1"],
+            fallback_message=message,
         )
     except ChatWriteForbidden:
         LOGGER(_PLAY_LOG).warning("[PLAY] ChatWriteForbidden for chat=%s", message.chat.id)
