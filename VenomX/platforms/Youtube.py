@@ -761,6 +761,27 @@ class YouTube:
             result = [key for key in playlist.split("\n") if key]
         except Exception:
             result = []
+
+        # Radio/Mix lists (RD...) are not real playlist pages — yt-dlp comes
+        # back with zero entries because the page is JS-driven. Attaching the
+        # list to a plain watch URL instead hands yt-dlp the mix through the
+        # watch page, which it can enumerate. Try that before giving up.
+        if not result and match and str(match.group(1)).startswith("RD"):
+            watch_link = f"https://www.youtube.com/watch?list={match.group(1)}"
+            _log("info", "playlist() empty for mix %s — retrying via watch page", match.group(1))
+            mix_cmd = (
+                f"{shlex.quote(yt_dlp_binary())} {proxy_part}{cookie_part}{pot_part}"
+                f"-i --extractor-args 'youtube:player_client=android,tv'"
+                f' --get-id --flat-playlist --playlist-end {limit} --skip-download "{watch_link}" '
+                f"2>/dev/null"
+            )
+            mix_raw = await shell_cmd(mix_cmd)
+            try:
+                result = [key for key in mix_raw.split("\n") if key]
+            except Exception:
+                result = []
+            _log("info", "playlist() mix retry got %d items in %.1fs", len(result), time.monotonic() - t0)
+
         _log("info", "playlist() OK in %.1fs got %d items", time.monotonic() - t0, len(result))
         return result
 
