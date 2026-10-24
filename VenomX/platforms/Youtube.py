@@ -744,6 +744,12 @@ class YouTube:
         if "&" in link:
             link = link.split("&")[0]
 
+        list_id = str(match.group(1)) if match else None
+        if list_id:
+            api_result = await self._api_playlist(list_id, limit)
+            if api_result:
+                return api_result
+
         proxy_part = f"--proxy {shlex.quote(PROXY)} " if PROXY else ""
         cookie_path = cookies()
         cookie_part = f"--cookies {shlex.quote(cookie_path)} " if cookie_path else ""
@@ -834,6 +840,65 @@ class YouTube:
                     _walk(value)
 
         _walk(data)
+        return ids[:limit]
+
+    async def _api_playlist(self, list_id: str, limit: int) -> list:
+        """Enumerate a playlist through the media API's walker (fast path).
+
+        The API already holds a signed-in session and its own pot tokens;
+        its /v1/playlist endpoints answer from a cached snapshot, and it walks
+        mixes (RD…) too. Ids come back in playlist order, unavailable videos
+        dropped. Empty list on any problem — the yt-dlp path below is the
+        fallback and must still work.
+        """
+        url = (getattr(config, "VENOM_API_URL", "") or "").strip()
+        if not url:
+            return []
+        t0 = time.monotonic()
+        headers = {"accept": "application/json"}
+        if getattr(config, "VENOM_API_KEY", ""):
+            headers["x-api-key"] = config.VENOM_API_KEY
+        ids: list = []
+        cursor = None
+        try:
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as session:
+                while len(ids) < limit:
+                    if cursor:
+                        payload = {"cursor": cursor,
+                                   "limit": min(100, limit - len(ids))}
+                        path = "/v1/playlist/items"
+                    else:
+                        payload = {"id": list_id, "limit": min(100, limit)}
+                        path = "/v1/playlist/info"
+                    async with session.post(
+                        url.rstrip("/") + path,
+                        json=payload,
+                        headers=headers,
+                    ) as resp:
+                        if resp.status != 200:
+                            _log("debug", "playlist API %s answered %d",
+                                 path, resp.status)
+                            return []
+                        data = await resp.json(content_type=None)
+                    if not isinstance(data, dict):
+                        return []
+                    for item in data.get("videos") or data.get("items") or []:
+                        if item.get("id") and item.get("available", True):
+                            ids.append(item["id"])
+                    pg = data.get("pagination") or {}
+                    cursor = pg.get("next_cursor")
+                    if not (cursor and pg.get("has_more")):
+                        break
+        except Exception as e:
+            _log("warning", "playlist API failed: %s: %s",
+                 type(e).__name__, e)
+            return []
+        if not ids:
+            return []
+        _log("info", "playlist() OK via media API in %.1fs got %d items (%s)",
+             time.monotonic() - t0, len(ids), list_id)
         return ids[:limit]
 
     async def _api_search(self, query: str, t0: float):
