@@ -7,10 +7,12 @@
 import os
 import re
 
+import aiohttp
 import yt_dlp
 from pyrogram import enums, filters
 from pyrogram.types import Message
 
+import config
 from config import (
     BANNED_USERS,
     PROXY_URL,
@@ -164,6 +166,72 @@ def config_placeholder_thumb():
     return "https://i.ibb.co/7zYzRJw/a8800c683dee8d9919d24dbdde5eed6a-1.jpg"
 
 
+def _api_audio_url():
+    return (getattr(config, "VENOM_API_URL", "") or "").strip()
+
+
+async def _api_audio_download(chat_id: int, mid: int, vidid: str, title: str):
+    """MP3 fast path through the media server's /v1/download.
+
+    The server plays from its warm cache when it can, so a popular track
+    arrives without touching YouTube at all. Returns the written file path,
+    or None when the API is unreachable or refuses the request — the caller
+    then renders the whole file with yt-dlp exactly as before.
+    """
+    import logging
+
+    url = _api_audio_url()
+    if not url:
+        return None
+    headers = {"accept": "application/octet-stream"}
+    if getattr(config, "VENOM_API_KEY", ""):
+        headers["x-api-key"] = config.VENOM_API_KEY
+    payload = {
+        "url": f"https://www.youtube.com/watch?v={vidid}",
+        "type": "audio",
+        "convert": "mp3",
+    }
+    os.makedirs("downloads", exist_ok=True)
+    safe = re.sub(r"\W+", " ", title).strip().replace(" ", "_")[:60] or vidid
+    dest = os.path.join("downloads", f"{vidid}_{safe}.mp3")
+    try:
+        timeout = aiohttp.ClientTimeout(total=280)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                url.rstrip("/") + "/v1/download",
+                json=payload,
+                headers=headers,
+            ) as resp:
+                if resp.status != 200:
+                    logging.getLogger("VenomX.plugins.tools.songs").debug(
+                        "API download answered %d; falling back to yt-dlp",
+                        resp.status,
+                    )
+                    return None
+                written = 0
+                with open(dest, "wb") as _fh:
+                    async for chunk in resp.content.iter_chunked(65536):
+                        _fh.write(chunk)
+                        written += len(chunk)
+        if written < 1024:
+            os.remove(dest)
+            return None
+        logging.getLogger("VenomX.plugins.tools.songs").info(
+            "API audio download: %d bytes from warm cache (%s)", written, vidid
+        )
+        return dest
+    except Exception:
+        logging.getLogger("VenomX.plugins.tools.songs").warning(
+            "API audio download failed for %s; falling back to yt-dlp", vidid,
+            exc_info=True,
+        )
+        try:
+            os.remove(dest)
+        except OSError:
+            pass
+        return None
+
+
 @app.on_callback_query(filters.regex(pattern=r"song_helper") & ~BANNED_USERS)
 @languageCB
 async def song_helper_cb(client, CallbackQuery, _):
@@ -295,22 +363,29 @@ async def song_download_cb(client, CallbackQuery, _):
             chat_id=chat_id, action=enums.ChatAction.UPLOAD_VIDEO
         )
 
-        if stype == "video":
-            file_path = await Platform.youtube.download(
-                yturl,
-                None,
-                songvideo=True,
-                format_id=format_id,
-                title=title,
-            )
-        else:
-            file_path = await Platform.youtube.download(
-                yturl,
-                None,
-                songaudio=True,
-                format_id=format_id,
-                title=title,
-            )
+        file_path = None
+        if stype == "audio":
+            # The media API usually has popular tracks on a warm disk cache,
+            # so its /v1/download is faster than a local yt-dlp run. Any
+            # failure falls through to the local path below.
+            file_path = await _api_audio_download(chat_id, mid, vidid, title)
+        if file_path is None:
+            if stype == "video":
+                file_path = await Platform.youtube.download(
+                    yturl,
+                    None,
+                    songvideo=True,
+                    format_id=format_id,
+                    title=title,
+                )
+            else:
+                file_path = await Platform.youtube.download(
+                    yturl,
+                    None,
+                    songaudio=True,
+                    format_id=format_id,
+                    title=title,
+                )
     except Exception as e:
         return await edit_rich(chat_id, mid, f"<p>{rich_esc(_['song_9'].format(e))}</p>")
 
