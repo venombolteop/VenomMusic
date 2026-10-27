@@ -50,7 +50,7 @@ async def main() -> int:
 
     async with VenomApi() as api:
         print(f"  base_url: {api.base_url}")
-        print(f"  api_key : {'set' if api.api_key else 'not set (the API is open)'}\n")
+        print(f"  api_key : {'set' if api.api_key else 'NOT SET — the API answers 401 on everything but /health'}\n")
 
         # ── health ────────────────────────────────────────────────────────
         try:
@@ -113,6 +113,12 @@ async def main() -> int:
             check("link stream_url uses the /stream route",
                   "/stream/" in (data.get("stream_url") or ""),
                   str(data.get("stream_url")))
+            # The client sends convert=mp3, so the permalink must carry it —
+            # /stream's raw default is the source container, not mp3.
+            if api.api_key:
+                check("link stream_url carries the key for headerless players",
+                      "key=" in (data.get("stream_url") or ""),
+                      str(data.get("stream_url")))
             print(f"        title     : {data.get('title')}")
             print(f"        stream_url: {data.get('stream_url')}")
         except Exception as exc:  # noqa: BLE001
