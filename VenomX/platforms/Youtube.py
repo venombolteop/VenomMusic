@@ -911,13 +911,17 @@ class YouTube:
         if not url:
             return None
         try:
+            _headers = {"accept": "application/json"}
+            _key = (getattr(config, "VENOM_API_KEY", "") or "").strip()
+            if _key:
+                _headers["x-api-key"] = _key
             async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=6)
             ) as session:
                 async with session.post(
                     f"{url.rstrip('/')}/v1/search",
                     json={"q": query, "limit": 5},
-                    headers={"accept": "application/json"},
+                    headers=_headers,
                 ) as resp:
                     if resp.status != 200:
                         return None

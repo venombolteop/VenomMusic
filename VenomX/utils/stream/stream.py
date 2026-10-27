@@ -156,6 +156,12 @@ async def _api_stream_url(vidid, video):
     local_url = f"{_VENOM_API_URL.rstrip('/')}/stream/{vidid}"
     if video:
         local_url += f"?type=video&height={_video_height()}"
+    # Playback engines (ffmpeg/PyTGCalls) cannot set custom headers on the URL
+    # they are handed, so the key rides the query string — the API accepts it
+    # on the permalink surfaces for exactly this shape of caller.
+    _key = (getattr(config, "VENOM_API_KEY", "") or "").strip()
+    if _key:
+        local_url += ("&" if "?" in local_url else "?") + f"key={_key}"
     # Checking it inline would mean waiting for the first bytes, and on a track
     # the API has never fetched that is the whole cold-start cost — exactly the
     # delay this path exists to remove. Hand the URL over and verify behind the

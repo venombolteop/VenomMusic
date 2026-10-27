@@ -33,10 +33,11 @@ the public internet.
 Config
 ------
     VENOM_API_URL   base URL, default https://api.tomatofist.com
-    VENOM_API_KEY   optional. The API is open and needs no key; send one only if
-                    you want per-account usage counted against a plan.
-
-No key is required, and nothing here reads a Telegram session, a cookie jar, or
+    VENOM_API_KEY   required on every endpoint but /health. The API answers
+                    401 without one; the header form is sent here, and
+                    permalinks handed to players carry ?key= instead, because
+                    ffmpeg and PyTGCalls cannot set headers on the URL they
+                    are pointed at.No path here reads a Telegram session, a cookie jar, or
 yt-dlp's arguments — that is the API's business, not the caller's.
 """
 
@@ -181,10 +182,19 @@ class VenomApi:
         if height:
             params["height"] = height
         if kind == "audio":
-            # The permalink defaults to mp3 already; naming it keeps the
-            # returned URL self-describing.
+            # The API's own default is the source container (its best lane,
+            # m4a/opus — no re-encode). Requesting mp3 names it explicitly so
+            # the returned link stays self-describing, and the permalink
+            # carries ?convert=mp3 to match.
             params["convert"] = "mp3"
-        return await self._json("GET", "/v1/link", params=params)
+        data = await self._json("GET", "/v1/link", params=params)
+        # The returned URL is handed to players, which cannot set headers on
+        # it — so the key rides the query string, the form the API accepts on
+        # permalinks for exactly this kind of caller.
+        su = data.get("stream_url") or ""
+        if self.api_key and "/stream/" in su and "key=" not in su:
+            data["stream_url"] = su + ("&" if "?" in su else "?") + "key=" + self.api_key
+        return data
 
     async def stream_url(self, url: str, kind: str = "audio",
                          height: int | None = None) -> Optional[str]:
