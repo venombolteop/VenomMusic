@@ -37,6 +37,35 @@ def _log(level, msg, *a, **kw):
     getattr(logger, level)(f"[{_LOG_TAG}] {msg}", *a, **kw)
 
 
+def _query_variants(q: str) -> list:
+    """Rephrase a misremembered/lyric-style title into progressively broader
+    searches.
+
+    Users type half-remembered lines like "aaye haaye jawani le doobi" while
+    the actual title is only "Jawaani Le Doobi". Word-trimming recovers that
+    with no external knowledge base: the full phrase comes first so anything
+    that resolved before keeps resolving identically.
+    """
+    words = q.split()
+    if len(words) < 3:
+        return [q]
+    n = len(words)
+    seen, out = set(), []
+    # Filler words usually sit in front, so lead-trims come before tail-trims.
+    for cut in range(1, n):
+        if n - cut >= 2:
+            v = " ".join(words[cut:])
+            if v not in seen:
+                seen.add(v)
+                out.append(v)
+        if n - cut >= 2:
+            v = " ".join(words[: n - cut])
+            if v not in seen:
+                seen.add(v)
+                out.append(v)
+    return [q] + out
+
+
 def yt_dlp_binary():
     """Locate the yt-dlp binary even if it's outside the process PATH.
 
@@ -969,13 +998,26 @@ class YouTube:
             return api_details
         try:
             _log("info", "track() search query, trying VideosSearch...")
-            results = VideosSearch(link, limit=1, timeout=_YT_SEARCH_TIMEOUT)
-            search_result = await asyncio.wait_for(
-                results.next(), timeout=_YT_SEARCH_TIMEOUT + 5
-            )
-            items = search_result.get("result", [])
-            if not items:
-                _log("warning", "track() VideosSearch empty, falling back to _track()")
+            # Word-trim ladder: a half-remembered line often has no exact
+            # YouTube match, but chopping it down does ("aaye haaye jawani
+            # le doobi" -> "jawani le doobi").
+            for variant in _query_variants(link):
+                results = VideosSearch(variant, limit=1, timeout=_YT_SEARCH_TIMEOUT)
+                search_result = await asyncio.wait_for(
+                    results.next(), timeout=_YT_SEARCH_TIMEOUT + 5
+                )
+                items = search_result.get("result", [])
+                if items:
+                    if variant != link:
+                        _log(
+                            "info",
+                            "track() VideosSearch recovered after trim %r -> %r",
+                            link[:60],
+                            variant[:60],
+                        )
+                    break
+            else:
+                _log("warning", "track() VideosSearch empty for all %d query variants, falling back to _track()", len(_query_variants(link)))
                 return await self._track(link)
             result = items[0]
             title = result["title"]
@@ -1049,7 +1091,19 @@ class YouTube:
         }
         try:
             with YoutubeDL(options) as ydl:
-                info_dict = ydl.extract_info(f"ytsearch: {q}", download=False)
+                variants = _query_variants(q)
+                info_dict = None
+                for variant in variants:
+                    info_dict = ydl.extract_info(f"ytsearch: {variant}", download=False)
+                    if info_dict and info_dict.get("entries"):
+                        if variant != q:
+                            _log(
+                                "info",
+                                "_track() recovered after trim %r -> %r",
+                                q[:60],
+                                variant[:60],
+                            )
+                        break
                 elapsed = time.monotonic() - t0
                 if not info_dict or not info_dict.get("entries"):
                     _log("error", "_track() no entries in %.1fs for: %s", elapsed, q[:80])
