@@ -49,7 +49,9 @@ def _restart_cmd() -> str:
     """
     name = str(config.SERVICE_NAME or "").strip()
     if name and shutil.which("systemctl"):
-        return f"systemctl restart {name}"
+        # The bot runs as the unprivileged unit user; -n fails fast instead of
+        # hanging on a password prompt, and sudoers grants only these units.
+        return f"sudo -n systemctl restart {name}"
     return f"kill -9 {os.getpid()} && python3 -m VenomX"
 
 
@@ -319,7 +321,9 @@ async def update_(client, message, _):
                 ),
             )
     else:
-        os.system("pip3 install --no-cache-dir -U -r requirements.txt")
+        os.system(
+            "./venv/bin/pip install --no-cache-dir -U -r requirements.txt"
+        )
         os.system(_restart_cmd())
         exit()
 
