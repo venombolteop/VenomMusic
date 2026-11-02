@@ -92,7 +92,25 @@ def yt_dlp_binary():
     return "yt-dlp"
 
 
+def _valid_netscape(path: str) -> bool:
+    try:
+        with open(path) as f:
+            header = f.read(200)
+    except Exception as e:
+        _log("warning", "failed to read cookie file %s: %s", path, e)
+        return False
+    return "# Netscape HTTP Cookie File" in header or "# HTTP Cookie File" in header
+
+
 def cookies():
+    # Explicit path wins: typically VENOM_COOKIES pointing at the media API's
+    # yt-dlp-refreshed cookie file, which stays warm without any cron job.
+    env_path = str(getattr(config, "YT_COOKIES", "") or "").strip()
+    if env_path and os.path.isfile(env_path):
+        if _valid_netscape(env_path):
+            _log("info", "using cookie file: %s", env_path)
+            return env_path
+        _log("warning", "VENOM_COOKIES file is not a Netscape cookie file: %s", env_path)
     folder_path = f"{os.getcwd()}/cookies"
     if not os.path.isdir(folder_path):
         _log("warning", "cookies folder not found at %s", folder_path)
@@ -103,13 +121,7 @@ def cookies():
         return None
     for cookie_txt_file in txt_files:
         cookie_txt_file = os.path.join(folder_path, cookie_txt_file)
-        try:
-            with open(cookie_txt_file) as f:
-                header = f.read(200)
-        except Exception as e:
-            _log("warning", "failed to read cookie file %s: %s", cookie_txt_file, e)
-            continue
-        if "# Netscape HTTP Cookie File" in header or "# HTTP Cookie File" in header:
+        if _valid_netscape(cookie_txt_file):
             _log("info", "using cookie file: %s", cookie_txt_file)
             return cookie_txt_file
     _log("warning", "no valid Netscape cookie file found")

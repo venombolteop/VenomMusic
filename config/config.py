@@ -51,6 +51,10 @@ DURATION_LIMIT_MIN = int(
 
 # Proxy URL for YouTube/yt-dlp requests (leave empty to disable)
 PROXY_URL = getenv("PROXY_URL", "")
+# Optional absolute path to a Netscape cookie file. Shared with the local
+# venom-media-api (/var/lib/venom-api/cookies/youtube.txt) so the bot benefits
+# from the same refreshed session cookies it keeps warm for itself.
+YT_COOKIES = getenv("VENOM_COOKIES", "")
 
 
 # Duration Limit for downloading Songs in MP3 or MP4 format from bot
