@@ -14,7 +14,7 @@ psutil
 pytube
 pykeyboard
 py-tgcalls==3.0.0
-ntgcalls==3.0.0
+ntgcalls==3.0.6
 python-dotenv
 pyyaml
 requests
