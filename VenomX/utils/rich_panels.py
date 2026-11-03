@@ -120,16 +120,58 @@ def _rows(chat_id: int, videoid, elapsed: float, total_sec: float, playing: bool
     return rows
 
 
-def _body(_, title: str, duration_min: str, user_name: str, thumb=None) -> str:
+def _next_html(chat_id: int) -> str:
+    """One-line preview of the queued track after the current one.
+
+    Empty queue renders a gentle nudge to add something instead of nothing.
+    """
+    try:
+        got = db.get(chat_id)
+        if not got or len(got) < 2:
+            return f"<footer>{pemoji('✨')} ᴜᴘ ɴᴇxᴛ: ᴛʜᴇ ǫᴜᴇᴜᴇ ɪꜱ ᴇᴍᴘᴛʏ — ꜱᴇɴᴅ ᴀ ꜱᴏɴɢ</footer>"
+        nxt = got[1]
+        title = rich_esc(str(nxt.get("title") or "Unknown")[:30])
+        dur = str(nxt.get("dur") or "--:--").replace(" ", "")
+        by = rich_esc(str(nxt.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")[:16])
+        arg = str(nxt.get("vidid") or "")
+        if arg not in ("telegram", "soundcloud") and "index_" not in arg and "live_" not in arg and arg:
+            link = f'<a href="https://youtu.be/{arg}">{title}</a>'
+        else:
+            link = title
+        return (
+            f"<p>{pemoji('➡')} <b>ᴜᴘ ɴᴇxᴛ</b>: {link}<br>"
+            f"{pemoji('⏱')} {dur}  ·  {pemoji('👤')} {by}</p>"
+        )
+    except Exception:
+        return ""
+
+
+def _body(
+    _: dict | None,
+    title: str,
+    duration_min: str,
+    user_name: str,
+    thumb=None,
+    videoid=None,
+) -> str:
     body = rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ɴᴏᴡ ᴘʟᴀʏɪɴɢ', level=4)
     thumb_url = str(thumb) if thumb else ""
     if thumb_url.startswith(("http://", "https://")):
         body += rich_img(thumb_url)
     body += "<hr/>"
+    # Title links out to the track when it is a servable youtube id.
+    title_txt = rich_esc(str(title)[:34])
+    if (
+        videoid
+        and str(videoid) not in ("telegram", "soundcloud")
+        and "index_" not in str(videoid)
+        and "live_" not in str(videoid)
+    ):
+        title_txt = f'<a href="https://youtu.be/{videoid}">{title_txt}</a>'
     # Pull-quote card: centered track info with highlighted values.
     body += (
         "<aside>"
-        f"{pemoji('🎵')} <b>{rich_esc(str(title)[:34])}</b><br>"
+        f"{pemoji('🎵')} <b>{title_txt}</b><br>"
         f"{pemoji('⏱')} <mark>{rich_esc(duration_min)} ᴍɪɴꜱ</mark>"
         f"  ·  {pemoji('🎤')} {rich_esc(user_name)}"
         "</aside>"
@@ -185,7 +227,7 @@ async def spawn_now_playing(
     except Exception:
         total_sec = 0
     thumb = await _maxres(videoid, thumb)
-    body = _body(_, title, duration_min, user_name, thumb)
+    body = _body(_, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id)
     mid = await _send_card(chat_id, body + _rows(chat_id, videoid, 0, total_sec))
     if not mid:
         return None
@@ -245,7 +287,12 @@ async def refresh_panel(chat_id: int, message_id: int, paused: bool = False) -> 
     title = (playing[0].get("title") or "").title()
     duration_min = playing[0].get("dur") or "--:--"
     user_name = playing[0].get("by") or "venom"
-    body = cached[0] if cached else _body(None, title, duration_min, user_name)
+    body = (
+        cached[0]
+        if cached
+        else _body(None, title, duration_min, user_name, videoid=videoid)
+        + _next_html(chat_id)
+    )
     played = float(playing[0].get("played", 0) or 0)
     return await edit_rich(
         chat_id, message_id, body + _rows(chat_id, videoid, played, total_sec, playing=not paused)
@@ -276,7 +323,7 @@ async def snapshot_card(chat_id: int) -> int | None:
     duration_min = playing[0].get("dur") or "--:--"
     user_name = playing[0].get("by") or "venom"
     thumb = await _maxres(videoid, None)
-    body = _body(None, title, duration_min, user_name, thumb)
+    body = _body(None, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id)
     played = float(playing[0].get("played", 0) or 0)
     return await _send_card(chat_id, body + _rows(chat_id, videoid, played, total_sec))
 
@@ -318,7 +365,7 @@ async def _ensure_body(_, chat_id: int, mid: int, videoid) -> tuple[str, float]:
         duration_min = playing[0].get("dur") or "--:--"
         user_name = playing[0].get("by") or "venom"
     thumb = await _maxres(videoid, None)
-    return _body(_, title, duration_min, user_name, thumb), total_sec
+    return _body(_, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id), total_sec
 
 
 async def show_menu(_, chat_id: int, mid: int, videoid, page: int) -> bool:
@@ -404,7 +451,7 @@ async def reattach_from_db(_, chat_id: int, mid: int) -> bool:
     duration_min = playing[0].get("dur") or "--:--"
     user_name = playing[0].get("by") or "venom"
     thumb = await _maxres(videoid, None)
-    body = _body(_, title, duration_min, user_name, thumb)
+    body = _body(_, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id)
     played = float(playing[0].get("played", 0) or 0)
     ok = await edit_rich(chat_id, mid, body + _rows(chat_id, videoid, played, total_sec))
     if ok:
