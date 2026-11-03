@@ -53,16 +53,24 @@ loop = asyncio.get_running_loop()
 
 
 def _logger_user(user) -> str:
-    """Identity block for logger messages: mention, username, id.
+    """Identity block for logger messages: name, username, id.
 
-    The old messages printed only the first name, which is easily spoofed
-    and unsearchable; a username pinpoints the account (and is absent for
-    often-ephemeral impersonators, which is worth seeing at a glance).
+    Rich-message notes cannot render <a href="tg://user…"> mentions (the tag
+    shows up as raw text), so the name links to the t.me profile when a
+    username exists and stays plain text otherwise. The username is the
+    searchable identifier; printing only the first name was spoofable.
     """
-    uname = f"@{rich_esc(user.username)}" if user.username else "ɴᴏ ᴜꜱᴇʀɴᴀᴍᴇ"
+    name = rich_esc(user.first_name or "ᴜɴᴋɴᴏᴡɴ")
+    if user.username:
+        _uname_str = rich_esc(user.username)
+        user_line = f'<a href="https://t.me/{_uname_str}">{name}</a>'
+        uname_line = f"@{_uname_str}"
+    else:
+        user_line = name
+        uname_line = "ɴᴏ ᴜꜱᴇʀɴᴀᴍᴇ"
     return (
-        f"<p>{pemoji('👤')} ᴜꜱᴇʀ: {user.mention}</p>"
-        f"<p>{pemoji('🔗')} ᴜꜱᴇʀɴᴀᴍᴇ: {uname}</p>"
+        f"<p>{pemoji('👤')} ᴜꜱᴇʀ: {user_line}</p>"
+        f"<p>{pemoji('🔗')} ᴜꜱᴇʀɴᴀᴍᴇ: {uname_line}</p>"
         f"<p>{pemoji('🆔')} ɪᴅ: <code>{user.id}</code></p>"
     )
 
@@ -76,7 +84,6 @@ async def start_comm(client, message: Message, _):
         name = message.text.split(None, 1)[1]
         if name[0:4] == "help":
             body = rich_img(START_IMG_URL) if config.START_IMG_URL else ""
-            body += rich_heading(f'{pemoji("🧮")} ᴠᴇɴᴏᴍ ɴᴇxᴜs ʜᴇʟᴘ', level=4)
             body += f"<p>{rich_esc(_['help_1'])}</p>"
             body += await paginate_modules(0, chat_id, close=True)
             return await send_rich(chat_id, body)
@@ -150,7 +157,6 @@ async def start_comm(client, message: Message, _):
             videoid, msg = got
             thumbnail = await Platform.youtube.thumbnail(videoid, True)
             body = rich_img(thumbnail)
-            body += rich_heading(f'{pemoji("📊")} ᴠᴇɴᴏᴍ ᴘᴇʀꜱᴏɴᴀʟ ꜱᴛᴀᴛꜱ', level=4)
             body += f"<p>{msg}</p>"
             await edit_rich(chat_id, mid, body)
             return
@@ -208,7 +214,6 @@ async def start_comm(client, message: Message, _):
                 link = result["link"]
                 published = result["publishedTime"]
             body = rich_img(thumbnail)
-            body += rich_heading(f'{pemoji("🔍")} ᴠᴇɴᴏᴍ ᴛʀᴀᴄᴋ ɪɴꜰᴏ', level=4)
             body += (
                 f"<p><b>{rich_esc(title)}</b></p>"
                 f"<p>{pemoji('⏳')} <b>ᴅᴜʀᴀᴛɪᴏɴ</b>: {rich_esc(duration)} ᴍɪɴꜱ\n"
@@ -236,7 +241,6 @@ async def start_comm(client, message: Message, _):
             OWNER = None
         out = private_panel(_, app.username, OWNER)
         body = rich_img(START_IMG_URL) if config.START_IMG_URL else ""
-        body += rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ᴍᴜꜱɪᴄ ʜᴜʙ', level=4)
         body += f"<p>{rich_esc(_['start_1'].format(app.mention))}</p>"
         body += out
         await send_rich(chat_id, body)
@@ -290,8 +294,7 @@ async def welcome(client, message: Message):
                     return await app.leave_chat(chat_id)
                 userbot = await get_assistant(message.chat.id)
                 out = start_pannel(_)
-                body = rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ᴀʀʀɪᴠᴇᴅ ɪɴ ᴠɪʙᴇ!', level=4)
-                body += f"<p>{rich_esc(_['start_2'].format(app.mention, userbot.username, userbot.id))}</p>"
+                body = f"<p>{rich_esc(_['start_2'].format(app.mention, userbot.username, userbot.id))}</p>"
                 body += out
                 await send_rich(chat_id, body)
             if member.id in config.OWNER_ID:

@@ -103,8 +103,7 @@ async def settings_back_markup(client, CallbackQuery: CallbackQuery, _):
             OWNER = OWNER_ID[0]
         except Exception:
             OWNER = None
-        body = rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ᴍᴜꜱɪᴄ ʜᴜʙ', level=4)
-        body += f"<p>{rich_esc(_['start_1'].format(app.mention))}</p>"
+        body = f"<p>{rich_esc(_['start_1'].format(app.mention))}</p>"
         body += private_panel(_, app.username, OWNER)
         try:
             await edit_rich(
