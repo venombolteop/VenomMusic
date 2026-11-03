@@ -1,7 +1,7 @@
 # All rights reserved.
 #
 
-"""Client for the Venom media API (https://api.tomatofist.com).
+"""Client for the Venom media API (local service, see VENOM_API_URL).
 
 Why this exists
 ---------------
@@ -32,7 +32,7 @@ the public internet.
 
 Config
 ------
-    VENOM_API_URL   base URL, default https://api.tomatofist.com
+    VENOM_API_URL   base URL, default http://127.0.0.1:3200 (local media API)
     VENOM_API_KEY   required on every endpoint but /health. The API answers
                     401 without one; the header form is sent here, and
                     permalinks handed to players carry ?key= instead, because
@@ -51,7 +51,7 @@ import aiohttp
 
 from ..logging import LOGGER
 
-DEFAULT_BASE_URL = "https://api.tomatofist.com"
+DEFAULT_BASE_URL = "http://127.0.0.1:3200"
 
 
 class VenomApiError(Exception):

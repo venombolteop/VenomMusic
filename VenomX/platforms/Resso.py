@@ -1,6 +1,7 @@
 # All rights reserved.
 #
 
+import asyncio
 import re
 
 import aiohttp
@@ -60,7 +61,8 @@ class Resso:
             return False
 
         results = VideosSearch(search, limit=1)
-        for result in (await results.next())["result"]:
+        payload = await asyncio.wait_for(results.next(), 15)
+        for result in payload["result"]:
             title = result["title"]
             ytlink = result["link"]
             vidid = result["id"]

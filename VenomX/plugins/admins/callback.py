@@ -1,6 +1,7 @@
 
 # All rights reserved.
 #
+import glob
 import random
 
 from pyrogram import filters
@@ -313,21 +314,27 @@ async def admin_callback(client, CallbackQuery, _):
             await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=img)
             await _rich_status_edit(CallbackQuery, txt, chat_id)
         elif "vid_" in queued:
-            n, stream_link = await Platform.youtube.stream_url(
-                videoid, videoid=True, video=status
-            )
+            # Same order as the /skip command: the API permalink is stable
+            # (raw googlevideo URLs are bound to the proxy exit IP and 403).
+            from VenomX.utils.stream.stream import _api_stream_url
+
+            stream_link = await _api_stream_url(videoid, bool(status))
             mystic = None
-            if n == 0:
-                mystic = await status_card(chat_id, _["call_8"])
-                try:
-                    stream_link, direct = await Platform.youtube.download(
-                        videoid,
-                        mystic,
-                        videoid=True,
-                        video=status,
-                    )
-                except Exception:
-                    return await mystic.edit_text(_["call_7"])
+            if not stream_link:
+                n, stream_link = await Platform.youtube.stream_url(
+                    videoid, videoid=True, video=status
+                )
+                if n == 0:
+                    mystic = await status_card(chat_id, _["call_8"])
+                    try:
+                        stream_link, direct = await Platform.youtube.download(
+                            videoid,
+                            mystic,
+                            videoid=True,
+                            video=status,
+                        )
+                    except Exception:
+                        return await mystic.edit_text(_["call_7"])
             try:
                 await Ayush.skip_stream(chat_id, stream_link, video=status)
             except Exception:
@@ -406,9 +413,26 @@ async def admin_callback(client, CallbackQuery, _):
         await CallbackQuery.answer()
         mystic = await status_card(chat_id, _["admin_32"])
         if "vid_" in file_path:
-            n, file_path = await Platform.youtube.video(playing[0]["vidid"], True)
-            if n == 0:
-                return await mystic.edit_text(_["admin_30"])
+            # Mirror the /seek command: cached file, then the stable API
+            # permalink, then the raw-extract ladders. Direct googlevideo URLs
+            # are bound to the proxy exit IP and can 403 at playback.
+            video = True if str(playing[0]["streamtype"]) == "video" else False
+            _vidid = playing[0]["vidid"]
+            _cached = glob.glob(f"downloads/{_vidid}.*")
+            if _cached:
+                file_path = _cached[0]
+            else:
+                from VenomX.utils.stream.stream import _api_stream_url
+
+                file_path = await _api_stream_url(_vidid, video)
+                if not file_path:
+                    n, file_path = await Platform.youtube.stream_url(
+                        _vidid, videoid=True, video=video
+                    )
+                    if n == 0:
+                        n, file_path = await Platform.youtube.video(_vidid, True)
+                        if n == 0:
+                            return await mystic.edit_text(_["admin_30"])
         try:
             await Ayush.seek_stream(
                 chat_id,

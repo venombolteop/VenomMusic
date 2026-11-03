@@ -965,10 +965,29 @@ class YouTube:
                     headers=_headers,
                 ) as resp:
                     if resp.status != 200:
+                        # A dead/misconfigured API degrades every play into the
+                        # slower fallbacks with no user-visible trace: tell the
+                        # owner (notify_owner dedups bursts).
+                        e = Exception(f"/v1/search returned HTTP {resp.status}")
+                        asyncio.create_task(
+                            notify_owner(
+                                "Media API search",
+                                e,
+                                f"query={query[:80]} — falling back to local search",
+                            )
+                        )
+                        _log("warning", "media API search HTTP %s: falling back", resp.status)
                         return None
                     payload = await resp.json()
         except Exception as e:
-            _log("debug", "media API search failed: %s: %s", type(e).__name__, e)
+            _log("warning", "media API search failed: %s: %s", type(e).__name__, e)
+            asyncio.create_task(
+                notify_owner(
+                    "Media API search",
+                    e,
+                    f"query={query[:80]} — falling back to local search (is venom-api.service up?)",
+                )
+            )
             return None
         results = payload.get("results") or []
         if not results:
@@ -984,6 +1003,8 @@ class YouTube:
             "vidid": vidid,
             "duration_min": seconds_to_min(duration_sec),
             "thumb": (item.get("thumbnail") or f"https://i.ytimg.com/vi/{vidid}/hq720.jpg").split("?")[0],
+            # Channel name doubles as the artist hint for /v1/lyrics.
+            "uploader": item.get("channel"),
         }
         _log(
             "info",
@@ -1037,12 +1058,15 @@ class YouTube:
             vidid = result["id"]
             yturl = result["link"]
             thumbnail = result["thumbnails"][0]["url"].split("?")[0]
+            _chan = result.get("channel")
             track_details = {
                 "title": title,
                 "link": yturl,
                 "vidid": vidid,
                 "duration_min": duration_min,
                 "thumb": thumbnail,
+                # Artist hint for /v1/lyrics (py_yt wraps it in a dict).
+                "uploader": (_chan.get("name") if isinstance(_chan, dict) else _chan),
             }
             _log(
                 "info",
@@ -1131,6 +1155,8 @@ class YouTube:
                         else None
                     ),
                     "thumb": details["thumbnails"][0]["url"],
+                    # Artist hint for /v1/lyrics.
+                    "uploader": details.get("uploader") or details.get("channel"),
                 }
                 _log(
                     "info",

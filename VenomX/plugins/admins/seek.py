@@ -59,13 +59,17 @@ async def seek_comm(cli, message: Message, _, chat_id):
         if downloaded:
             file_path = downloaded[0]
         else:
-            n, file_path = await Platform.youtube.stream_url(
-                vidid, videoid=True, video=video
-            )
-            if n == 0:
-                n, file_path = await Platform.youtube.video(vidid, True)
+            from VenomX.utils.stream.stream import _api_stream_url
+
+            file_path = await _api_stream_url(vidid, video)
+            if not file_path:
+                n, file_path = await Platform.youtube.stream_url(
+                    vidid, videoid=True, video=video
+                )
                 if n == 0:
-                    return await reply_note(message, _["admin_30"])
+                    n, file_path = await Platform.youtube.video(vidid, True)
+                    if n == 0:
+                        return await reply_note(message, _["admin_30"])
     try:
         await Ayush.seek_stream(
             chat_id,

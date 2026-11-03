@@ -172,7 +172,12 @@ async def start_comm(client, message: Message, _):
             query = (str(name)).replace("info_", "", 1)
             query = f"https://www.youtube.com/watch?v={query}"
             results = VideosSearch(query, limit=1)
-            search_result = (await results.next()).get("result") or []
+            try:
+                search_result = (
+                    await asyncio.wait_for(results.next(), 15)
+                ).get("result") or []
+            except asyncio.TimeoutError:
+                search_result = []
             if not search_result:
                 await edit_rich(
                     chat_id,

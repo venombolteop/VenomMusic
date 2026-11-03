@@ -119,7 +119,8 @@ class Spotify:
 
     async def _youtube_details(self, info: str):
         results = VideosSearch(info, limit=1)
-        for result in (await results.next())["result"]:
+        payload = await asyncio.wait_for(results.next(), 15)
+        for result in payload["result"]:
             ytlink = result["link"]
             title = result["title"]
             vidid = result["id"]

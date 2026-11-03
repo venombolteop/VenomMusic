@@ -337,25 +337,68 @@ async def song_download_cb(client, CallbackQuery, _):
 
     yturl = f"https://www.youtube.com/watch?v={vidid}"
 
-    _ytdl_opts = {
-        "quiet": True,
-        "extractor_args": {"youtube": {"client": ["web_creator"]}},
-        "remote_components": ["ejs:github"],
-        "http_headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-        },
-    }
-    if PROXY_URL:
-        _ytdl_opts["proxy"] = PROXY_URL
+    import asyncio as _aio
 
-    with yt_dlp.YoutubeDL(_ytdl_opts) as ytdl:
-        x = ytdl.extract_info(yturl, download=False)
+    async def _api_meta():
+        """Title+duration from the local media API (warm, ~0.5s), None on miss."""
+        url = (getattr(config, "VENOM_API_URL", "") or "").strip()
+        if not url:
+            return None
+        try:
+            _headers = {"accept": "application/json"}
+            _key = (getattr(config, "VENOM_API_KEY", "") or "").strip()
+            if _key:
+                _headers["x-api-key"] = _key
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as session:
+                async with session.post(
+                    f"{url.rstrip('/')}/v1/resolve",
+                    json={"url": yturl},
+                    headers=_headers,
+                ) as resp:
+                    if resp.status != 200:
+                        return None
+                    payload = await resp.json()
+        except Exception as e:
+            import logging as _logging
 
-    title = (x["title"]).title()
+            _logging.getLogger("Song").debug("meta via API failed: %s: %s", type(e).__name__, e)
+            return None
+        if not payload.get("title"):
+            return None
+        return payload["title"], payload.get("duration")
+
+    meta = await _api_meta()
+    if meta:
+        title, duration = meta[0].title(), meta[1]
+    else:
+        # Fallback: blocking extract in an executor thread so the bot's loop
+        # is not held up while the API is down.
+        def _ytdl_meta():
+            _ytdl_opts = {
+                "quiet": True,
+                "extractor_args": {"youtube": {"client": ["web_creator"]}},
+                "remote_components": ["ejs:github"],
+                "http_headers": {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            }
+            if PROXY_URL:
+                _ytdl_opts["proxy"] = PROXY_URL
+            _ytdl_opts["cookiefile"] = None
+            from VenomX.platforms.Youtube import cookies
+
+            cp = cookies()
+            if cp:
+                _ytdl_opts["cookiefile"] = cp
+            with yt_dlp.YoutubeDL(_ytdl_opts) as ytdl:
+                x = ytdl.extract_info(yturl, download=False)
+            return (x["title"]).title(), x["duration"]
+
+        title, duration = await _aio.get_running_loop().run_in_executor(None, _ytdl_meta)
     title = re.sub(r"\W+", " ", title)
-
-    duration = x["duration"]
 
     try:
         await edit_rich(chat_id, mid, f"<p>{rich_esc(_['song_11'])}</p>")

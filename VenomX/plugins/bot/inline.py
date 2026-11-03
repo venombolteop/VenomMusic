@@ -2,6 +2,8 @@
 # All rights reserved.
 #
 
+import asyncio
+
 from py_yt import VideosSearch
 from pyrogram.types import (
     InlineKeyboardMarkup,
@@ -24,8 +26,16 @@ async def inline_query_handler(client, query):
         except Exception:
             return
     else:
+        # Inline results need the raw py_yt fields (channel link, view counts),
+        # but a hung search must not leave the inline button spinning: cap it.
         a = VideosSearch(text, limit=20)
-        result = (await a.next()).get("result") or []
+        try:
+            result = (await asyncio.wait_for(a.next(), 15)).get("result") or []
+        except asyncio.TimeoutError:
+            try:
+                return await client.answer_inline_query(query.id, results=answer, cache_time=10)
+            except Exception:
+                return
         for res in result[:15]:
             title = (res["title"]).title()
             duration = res["duration"]

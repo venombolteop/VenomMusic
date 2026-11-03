@@ -9,7 +9,6 @@ import time as _time
 from random import randint
 from typing import Union
 
-import aiohttp
 from pyrogram.types import InlineKeyboardMarkup
 
 import config
