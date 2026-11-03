@@ -52,6 +52,21 @@ from VenomX.utils.rich_msg import (
 loop = asyncio.get_running_loop()
 
 
+def _logger_user(user) -> str:
+    """Identity block for logger messages: mention, username, id.
+
+    The old messages printed only the first name, which is easily spoofed
+    and unsearchable; a username pinpoints the account (and is absent for
+    often-ephemeral impersonators, which is worth seeing at a glance).
+    """
+    uname = f"@{rich_esc(user.username)}" if user.username else "ɴᴏ ᴜꜱᴇʀɴᴀᴍᴇ"
+    return (
+        f"<p>{pemoji('👤')} ᴜꜱᴇʀ: {user.mention}</p>"
+        f"<p>{pemoji('🔗')} ᴜꜱᴇʀɴᴀᴍᴇ: {uname}</p>"
+        f"<p>{pemoji('🆔')} ɪᴅ: <code>{user.id}</code></p>"
+    )
+
+
 @app.on_message(command("START_COMMAND") & filters.private & ~BANNED_USERS)
 @LanguageStart
 async def start_comm(client, message: Message, _):
@@ -143,12 +158,10 @@ async def start_comm(client, message: Message, _):
             await sudoers_list(client=client, message=message, _=_)
             await asyncio.sleep(1)
             if await is_on_off(config.LOG):
-                sender_id = message.from_user.id
-                sender_mention = message.from_user.mention
-                sender_name = message.from_user.first_name
-                return await send_note(
+                return await send_rich(
                     config.LOGGER_ID,
-                    f"{message.from_user.mention} Has just started bot to check <code>Sudolist </code>\n\n**User Id:** {sender_id}\n**User Name:** {sender_name}",
+                    f"<p>{pemoji('🧮')} <b>#Sudolist_Open</b></p>"
+                    + _logger_user(message.from_user),
                 )
             return
         if name[0:3] == "lyr":
@@ -210,11 +223,10 @@ async def start_comm(client, message: Message, _):
             await edit_rich(chat_id, mid, body)
             await asyncio.sleep(1)
             if await is_on_off(config.LOG):
-                sender_id = message.from_user.id
-                sender_name = message.from_user.first_name
-                return await send_note(
+                return await send_rich(
                     config.LOGGER_ID,
-                    f"🚀 {message.from_user.mention} Has just started bot ot check <code> Video information  </code>\n\n👤 **User Id:** {sender_id}\n**User Name** {sender_name}",
+                    f"<p>{pemoji('🚀')} <b>#Track_Info</b> {rich_esc(title)}</p>"
+                    + _logger_user(message.from_user),
                 )
     else:
         try:
@@ -230,11 +242,10 @@ async def start_comm(client, message: Message, _):
         await send_rich(chat_id, body)
 
         if await is_on_off(config.LOG):
-            sender_id = message.from_user.id
-            sender_name = message.from_user.first_name
-            return await send_note(
+            return await send_rich(
                 config.LOGGER_ID,
-                f"👋 {message.from_user.mention} Has started bot. \n\n🆔 **User id :** {sender_id}\n**User name:** {sender_name}",
+                f"<p>{pemoji('👋')} <b>#New_Start</b></p>"
+                + _logger_user(message.from_user),
             )
 
 
