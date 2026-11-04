@@ -1,18 +1,19 @@
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=venom&color=0:39ff14,45:a855f7,100:22d3ee&height=230&section=header&text=VENOM%20%E2%9C%98%20MUSIC&fontSize=56&fontColor=ffffff&fontAlignY=34&desc=The%20Deadliest%20Telegram%20Music%20Bot&descAlignY=55&descSize=18&animation=twinkling" alt="VENOM MUSIC animated banner"/>
+<img width="100%" src="https://capsule-render.vercel.app/api?type=soft&color=0:39ff14,45:a855f7,100:22d3ee&height=240&text=VENOM%20%E2%9C%98%20MUSIC&fontSize=54&fontColor=ffffff&fontAlign=80&fontAlignY=45&desc=Telegram%27s%20Deadliest%20Music%20Bot&descSize=18&descAlign=25&descAlignY=70&stroke=%23111111&strokeWidth=2&animation=fadeIn" alt="VENOM MUSIC banner"/>
 
 <img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg" width="320" height="auto" alt="Venom Music">
 
 <br>
 
-<a href="https://github.com/venombolteop/VenomMusic"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1000&color=7DFF00&center=true&vCenter=true&multiline=true&repeat=true&width=740&height=78&lines=Instant+Play+%E2%9A%A1+%C2%B7+4K+Video+Calls+%F0%9F%8E%AC+%C2%B7+Premium+Emoji+UI+%F0%9F%92%8E;Multi-Assistant+Fleet+%F0%9F%91%A5;Non-Stop+Playback+%E2%80%94+No+Waiting+%2C+Just+Play+%F0%9F%8E%A7" alt="Typing SVG"/></a>
+<a href="https://github.com/venombolteop/VenomMusic"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&pause=1000&color=7DFF00&center=true&vCenter=true&multiline=true&repeat=true&width=760&height=78&lines=Instant+Play+%E2%9A%A1+%C2%B7+4K+Video+Calls+%F0%9F%8E%AC+%C2%B7+Rich+Player+Cards+%F0%9F%8E%A8;Warm+Media+API+Cache+%F0%9F%A7%A0+%C2%B7+Python+3.12+Runtime+%F0%9F%90%8D;Multi-Assistant+Fleet+%F0%9F%91%A5+%C2%B7+Non-Stop+Playback+%F0%9F%8E%A7" alt="Typing SVG"/></a>
 
 
 *A power-packed, feature-rich group voice-chat music bot built for **non-stop playback** — crystal-clear audio, full video streams, premium emoji UI and a battle-tested YouTube pipeline.*
 
 <br>
 
+[![Release](https://img.shields.io/github/v/release/venombolteop/VenomMusic?color=7dff00&logoColor=7dff00&style=for-the-badge&label=v4.0.0)](https://github.com/venombolteop/VenomMusic/releases/latest)
 [![Stars](https://img.shields.io/github/stars/venombolteop/VenomMusic?color=7dff00&logo=github&logoColor=7dff00&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/stargazers)
 [![Forks](https://img.shields.io/github/forks/venombolteop/VenomMusic?color=a855f7&logo=github&logoColor=a855f7&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/network/members)
 [![Issues](https://img.shields.io/github/issues/venombolteop/VenomMusic?color=06b6d4&logo=github&logoColor=06b6d4&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/issues)
@@ -53,6 +54,16 @@
 - [Project Structure](#-project-structure)
 - [Repo Showcase](#-repo-showcase)
 - [Support & Credits](#-support--credits)
+
+---
+
+<br>
+
+**🆕 What's new in v4.0.0**
+
+| 🐍 Python 3.12 | 🧠 Venom Media API cache | 🎨 Bot API 10.3 rich cards | 📡 ntgcalls 3.0.6 |
+|:---:|:---:|:---:|:---:|
+| `venv` + Docker + Heroku aligned | warm search & perma-links, shared warm cookies | queue preview · via-labels · clickable titles | engine fixes, zero break-ups |
 
 ---
 
@@ -246,7 +257,7 @@ flowchart TD
 
 > 📌 **Prefixes:** `/` `!` `%` `,` `@` `#` — English shown; every command is localized for all supported languages.
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" alt="divider"/>
+<img width="100%" src="https://capsule-render.vercel.app/api?type=rounded&color=0:39ff14,45:a855f7,100:22d3ee&height=5" alt="divider"/>
 
 ## 🚀 Deployment
 
@@ -344,7 +355,7 @@ tail -f ~/VenomMusic/bot.log             # live logs
 sudo systemctl restart venommusic        # apply .env/code changes
 ```
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=0:39ff14,45:a855f7,100:22d3ee&height=3" alt="divider"/>
+<img width="100%" src="https://capsule-render.vercel.app/api?type=rounded&color=0:39ff14,45:a855f7,100:22d3ee&height=5" alt="divider"/>
 
 ## ⚙️ Environment Variables
 
@@ -516,6 +527,10 @@ VenomMusic/
 
 <img src="https://github-readme-activity-graph.vercel.app/graph?username=venombolteop&theme=tokyo-night&hide_border=true&bg_color=0d1117&color=7dff00&line=a855f7&point=22d3ee&area=true&area_color=a855f7" width="100%" alt="Activity graph"/>
 
+### 🧑‍🚀 Contributor Radial
+
+<img src="https://github-contributor-stats.vercel.app/api?username=venombolteop&limit=6&theme=tokyonight&hide_border=true&bg_color=0d1117&title_color=7dff00&icon_color=22d3ee" alt="Contributor radial graph" width="60%"/>
+
 ### 🕹️ The Contribution Snake
 
 *It eats the contribution graph — watch it hunt.*
@@ -573,6 +588,6 @@ For bug reports include: bot logs (`bot.log` tail), your deployment type, and re
 
 <br><br>
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:39ff14,45:a855f7,100:22d3ee&height=110&section=footer" alt="animated wave footer"/>
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:22d3ee,45:a855f7,100:39ff14&height=110&section=footer&text=%F0%9F%A7%AC%20play%20something%20loud&fontSize=24&fontColor=ffffff&fontHeightOffset=68" alt="animated wave footer"/>
 
 </div>
