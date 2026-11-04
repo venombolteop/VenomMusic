@@ -178,6 +178,23 @@ _VENOM_API_URL = getattr(config, "VENOM_API_URL", "http://127.0.0.1:3200")
 _FORCE_DOWNLOAD = False
 
 
+def _play_source_tag(stream_link) -> str | None:
+    """Which pipe actually fuels this track — the card prints it "via".
+
+    A media-API permalink (…/stream/<id>) means the Venom Api served the
+    stream; anything else (googlevideo URL or a downloaded file) came through
+    the bot's own yt-dlp. Telegram/soundcloud/saavn entries carry no tag here:
+    the panel falls back to a file-prefix label for those.
+    """
+    if stream_link is None:
+        return None
+    return (
+        "Venom Api"
+        if str(stream_link).startswith(str(_VENOM_API_URL).rstrip("/"))
+        else "YouTube"
+    )
+
+
 async def stream(
     _,
     mystic,
@@ -357,6 +374,10 @@ async def stream(
                     "video" if video else "audio",
                     forceplay=forceplay,
                 )
+                try:
+                    db[chat_id][0]["source"] = _play_source_tag(stream_link)
+                except Exception:
+                    pass
                 img = await gen_thumb(vidid)
                 mid_np = await spawn_now_playing(
                     _, chat_id, vidid, title, duration_min, user_name,
@@ -473,6 +494,10 @@ async def stream(
                 user_id,
                 "video" if video else "audio",
             )
+            try:
+                db[chat_id][-1]["source"] = _play_source_tag(stream_link)
+            except Exception:
+                pass
             position = len(db.get(chat_id)) - 1
             mid_np = await notice_card(
                 _, original_chat_id, "Qᴜᴇᴜᴇ",
@@ -507,6 +532,10 @@ async def stream(
                 "video" if video else "audio",
                 forceplay=forceplay,
             )
+            try:
+                db[chat_id][0]["source"] = _play_source_tag(stream_link)
+            except Exception:
+                pass
             mid_np = await spawn_now_playing(
                 _, chat_id, vidid, title, duration_min, user_name,
                 thumb=await gen_thumb(vidid),

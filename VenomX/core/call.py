@@ -632,6 +632,13 @@ class Call:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
+                try:
+                    # Precise "via" tag for the card — the db entry only gets a
+                    # guess at queue time, this overwrites it with the truth.
+                    from VenomX.utils.stream.stream import _play_source_tag
+                    db[chat_id][0]["source"] = _play_source_tag(stream_link)
+                except Exception:
+                    pass
                 if 'mystic' in locals():
                     await mystic.delete()
                 mid_np = await spawn_now_playing(
@@ -679,6 +686,11 @@ class Call:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
+                try:
+                    from VenomX.utils.stream.stream import _play_source_tag
+                    db[chat_id][0]["source"] = _play_source_tag(play_source)
+                except Exception:
+                    pass
                 mid_np = await spawn_now_playing(
                     _, chat_id, None, title, check[0]["dur"], user,
                     thumb=config.STREAM_IMG_URL,

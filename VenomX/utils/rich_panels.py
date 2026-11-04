@@ -120,6 +120,44 @@ def _rows(chat_id: int, videoid, elapsed: float, total_sec: float, playing: bool
     return rows
 
 
+_SOURCE_STYLE = {
+    "Venom Api": "ᴠᴇɴᴏᴍ ᴀᴘɪ",
+    "YouTube": "ʏᴏᴜᴛᴜʙᴇ",
+    "Telegram": "ᴛᴇʟᴇɢʀᴀᴍ",
+    "SoundCloud": "ꜱᴏᴜɴᴅᴄʟᴏᴜᴅ",
+    "SaaVn": "ꜱᴀᴀᴠɴ",
+}
+
+
+def _source_label(chat_id: int) -> str:
+    """Which pipe is feeding the current track, for the card's "via" footer.
+
+    Precise tags ("Venom Api" vs "YouTube") are written where the stream is
+    actually resolved; for entries queued elsewhere the file prefix decides.
+    """
+    got = db.get(chat_id)
+    if not got:
+        return "ᴠᴇɴᴏᴍ ᴘʀᴇᴍɪᴜᴍ"
+    entry = got[0]
+    tag = str(entry.get("source") or "").strip()
+    if tag:
+        return _SOURCE_STYLE.get(tag, tag)
+    arg = str(entry.get("vidid") or "l" + str(entry.get("file") or ""))
+    if arg == "telegram" or "telegram" in arg:
+        return "ᴛᴇʟᴇɢʀᴀᴍ"
+    if "saavn" in arg:
+        return "ꜱᴀᴀᴠɴ"
+    if "soundcloud" in arg:
+        return "ꜱᴏᴜɴᴅᴄʟᴏᴜᴅ"
+    if "index_" in arg:
+        return "ɪɴᴅᴇx ʟɪɴᴋ"
+    if "live_" in arg:
+        return "ʏᴏᴜᴛᴜʙᴇ ʟɪᴠᴇ"
+    if "vid_" in arg:
+        return "ʏᴏᴜᴛᴜʙᴇ"
+    return "ᴠᴇɴᴏᴍ ᴘʀᴇᴍɪᴜᴍ"
+
+
 def _next_html(chat_id: int) -> str:
     """One-line preview of the queued track after the current one.
 
@@ -153,6 +191,7 @@ def _body(
     user_name: str,
     thumb=None,
     videoid=None,
+    src: str = "",
 ) -> str:
     body = rich_heading(f'{pemoji("🎧")} ᴠᴇɴᴏᴍ ɴᴏᴡ ᴘʟᴀʏɪɴɢ', level=4)
     thumb_url = str(thumb) if thumb else ""
@@ -176,7 +215,7 @@ def _body(
         f"  ·  {pemoji('🎤')} {rich_esc(user_name)}"
         "</aside>"
     )
-    body += f"<footer>{pemoji('📡')} ᴠᴇɴᴏᴍ ᴘʀᴇᴍɪᴜᴍ ᴠᴏɪᴄᴇ ꜱᴛʀᴇᴀᴍ</footer>"
+    body += f"<footer>{pemoji('📡')} ᴘʟᴀʏɪɴɢ ᴠɪᴀ {rich_esc(src or 'ᴠᴇɴᴏᴍ ᴘʀᴇᴍɪᴜᴍ')}</footer>"
     body += rich_button_row(
         rich_url_button(f"{pemoji('💬')} ꜱᴜᴘᴘᴏʀᴛ", "https://t.me/venom_chatting"),
         align="center",
@@ -227,7 +266,7 @@ async def spawn_now_playing(
     except Exception:
         total_sec = 0
     thumb = await _maxres(videoid, thumb)
-    body = _body(_, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id)
+    body = _body(_, title, duration_min, user_name, thumb, videoid, src=_source_label(chat_id)) + _next_html(chat_id)
     mid = await _send_card(chat_id, body + _rows(chat_id, videoid, 0, total_sec))
     if not mid:
         return None
@@ -290,7 +329,7 @@ async def refresh_panel(chat_id: int, message_id: int, paused: bool = False) -> 
     body = (
         cached[0]
         if cached
-        else _body(None, title, duration_min, user_name, videoid=videoid)
+        else _body(None, title, duration_min, user_name, videoid=videoid, src=_source_label(chat_id))
         + _next_html(chat_id)
     )
     played = float(playing[0].get("played", 0) or 0)
@@ -323,7 +362,7 @@ async def snapshot_card(chat_id: int) -> int | None:
     duration_min = playing[0].get("dur") or "--:--"
     user_name = playing[0].get("by") or "venom"
     thumb = await _maxres(videoid, None)
-    body = _body(None, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id)
+    body = _body(None, title, duration_min, user_name, thumb, videoid, src=_source_label(chat_id)) + _next_html(chat_id)
     played = float(playing[0].get("played", 0) or 0)
     return await _send_card(chat_id, body + _rows(chat_id, videoid, played, total_sec))
 
@@ -365,7 +404,7 @@ async def _ensure_body(_, chat_id: int, mid: int, videoid) -> tuple[str, float]:
         duration_min = playing[0].get("dur") or "--:--"
         user_name = playing[0].get("by") or "venom"
     thumb = await _maxres(videoid, None)
-    return _body(_, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id), total_sec
+    return _body(_, title, duration_min, user_name, thumb, videoid, src=_source_label(chat_id)) + _next_html(chat_id), total_sec
 
 
 async def show_menu(_, chat_id: int, mid: int, videoid, page: int) -> bool:
@@ -451,7 +490,7 @@ async def reattach_from_db(_, chat_id: int, mid: int) -> bool:
     duration_min = playing[0].get("dur") or "--:--"
     user_name = playing[0].get("by") or "venom"
     thumb = await _maxres(videoid, None)
-    body = _body(_, title, duration_min, user_name, thumb, videoid) + _next_html(chat_id)
+    body = _body(_, title, duration_min, user_name, thumb, videoid, src=_source_label(chat_id)) + _next_html(chat_id)
     played = float(playing[0].get("played", 0) or 0)
     ok = await edit_rich(chat_id, mid, body + _rows(chat_id, videoid, played, total_sec))
     if ok:
