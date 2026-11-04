@@ -17,7 +17,7 @@
 [![Forks](https://img.shields.io/github/forks/venombolteop/VenomMusic?color=a855f7&logo=github&logoColor=a855f7&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/network/members)
 [![Issues](https://img.shields.io/github/issues/venombolteop/VenomMusic?color=06b6d4&logo=github&logoColor=06b6d4&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/issues)
 [![License](https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge)](./LICENSE)
-[![Python](https://img.shields.io/badge/Written%20in-Python%203.10-facc15?style=for-the-badge&logo=python&logoColor=facc15)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Written%20in-Python%203.12-facc15?style=for-the-badge&logo=python&logoColor=facc15)](https://www.python.org/)
 [![Last Commit](https://img.shields.io/github/last-commit/venombolteop/VenomMusic?color=22d3ee&logo=github&logoColor=22d3ee&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/commits/main)
 [![Repo Size](https://img.shields.io/github/repo-size/venombolteop/VenomMusic?color=ef4444&logo=github&logoColor=ef4444&style=for-the-badge)](https://github.com/venombolteop/VenomMusic)
 [![Views](https://komarev.com/ghpvc/?username=venombolteop&label=PROFILE+VIEWS&color=a855f7&style=for-the-badge)](https://github.com/venombolteop/VenomMusic)
@@ -82,10 +82,13 @@
 ```mermaid
 flowchart TD
     U["👤 User sends /play"] --> B["🤖 Bot Client (pyroblack)<br/>command router"]
-    B --> T["🔎 Track Resolver<br/>py-yt-search / Spotify / Saavn APIs"]
+    B --> API["🧠 Venom Media API (localhost)<br/>warm search + stream resolve cache"]
+    API -->|"✅ hit: permalink in ~0.5 s"| STR
+    API -->|"❌ miss"| T["🔎 Track Resolver<br/>py-yt-search / Spotify / Saavn APIs<br/>word-trim query ladder"]
     T --> E{"Playback Engine"}
     E -->|"INSTANT_PLAY on"| SU["⚡ stream_url()<br/>yt-dlp -g direct URL"]
     E -->|"fallback / instant off"| DL["⬇️ Full Download<br/>yt-dlp + aria2c"]
+    STR["📡 API permalink stream"] --> FF
     SU --> FF
     DL --> FF
     FF["🎚️ FFmpeg<br/>buffer-tuned decode"] --> NT["📡 ntgcalls bridge"]
@@ -95,10 +98,11 @@ flowchart TD
 
 **The playback pipeline in detail:**
 
-1. **Command layer** — `/play` resolves the query via fast search APIs and validates duration limits.
-2. **Extraction layer** — `yt-dlp` fetches a direct media URL (`stream_url()`, ~2–7 s). Cookies authenticate the session, and the `tv/mweb/web` client trio plus progressive itag-18 provide fallbacks.
+1. **Command layer** — `/play` first asks the local **Venom Media API** (warm search/resolve cache — a retry-hit returns a stream permalink in ~0.5 s). On a miss it resolves the query via fast search APIs behind a **word-trim ladder** (retries trimmed phrasings before giving up), so misphrased song names still hit.
+2. **Extraction layer** — `yt-dlp` fetches a direct media URL (`stream_url()`, ~2–7 s). Cookies authenticate the session (`VENOM_COOKIES` — ideally the shared, auto-refreshed cookie file of the local venom-media-api), and the `tv/mweb/web` client trio plus progressive itag-18 provide fallbacks.
 3. **Transport layer** — FFmpeg decodes with tuned buffer parameters and feeds raw frames into `ntgcalls`, which bridges them into Telegram's group call via the assistant account.
 4. **Queue engine** — a `stream_end` event pops the next track from MongoDB-backed queues, so playback continues hands-free until the queue is empty.
+5. **Player UI** — the now-playing card is a **Bot API 10.3 rich message**: queue preview, clickable title, source tag (`playing via venom-api / youtube / telegram / …`) and admin buttons, refreshed in place per track.
 
 ---
 
@@ -252,10 +256,11 @@ flowchart TD
 <summary><b>⚡ TL;DR — VPS in 60 seconds</b></summary>
 
 ```bash
-sudo apt-get update && sudo apt-get install -y python3-pip ffmpeg git
+sudo apt-get update && sudo apt-get install -y python3.12 python3.12-venv ffmpeg git
 git clone https://github.com/venombolteop/VenomMusic && cd VenomMusic
-pip3 install -U -r requirements.txt && cp sample.env .env && nano .env   # fill vars
-bash start
+python3.12 -m venv venv && venv/bin/pip install -U -r requirements.txt
+cp sample.env .env && nano .env   # fill vars
+venv/bin/python -m VenomX
 ```
 
 </details>
@@ -283,14 +288,14 @@ docker run -d --name venommusic \
 **1. System prep**
 ```bash
 sudo apt-get update && sudo apt-get upgrade -y
-sudo apt-get install -y python3-pip ffmpeg git
-sudo pip3 install -U pip
+sudo apt-get install -y python3.12 python3.12-venv ffmpeg git
 ```
 
 **2. Clone & install**
 ```bash
 git clone https://github.com/venombolteop/VenomMusic && cd VenomMusic
-pip3 install -U -r requirements.txt
+python3.12 -m venv venv
+venv/bin/pip install -U pip wheel -r requirements.txt
 ```
 
 **3. Configure**
@@ -301,9 +306,9 @@ nano .env        # fill ALL required variables, Ctrl+O save, Ctrl+X exit
 
 **4. Test-run** *(recommended before systemd)*
 ```bash
-bash start
+venv/bin/python -m VenomX
 ```
-> Prefer tmux so it survives disconnects: `sudo apt install tmux && tmux` → run `bash start` → detach `Ctrl+B` `D`.
+> Prefer tmux so it survives disconnects: `sudo apt install tmux && tmux` → run the command → detach `Ctrl+B` `D`.
 
 **5. Run as a systemd service** *(production-grade, auto-restart on boot/crash)*
 
@@ -318,7 +323,8 @@ Wants=network-online.target
 Type=simple
 User=ubuntu                       # your linux user
 WorkingDirectory=/home/ubuntu/VenomMusic
-ExecStart=/usr/bin/python3 -u -m VenomX
+EnvironmentFile=/home/ubuntu/VenomMusic/.env
+ExecStart=/home/ubuntu/VenomMusic/venv/bin/python -u -m VenomX
 Restart=always
 RestartSec=5
 LimitNOFILE=1048576
@@ -370,8 +376,13 @@ sudo systemctl restart venommusic        # apply .env/code changes
 
 ### Networking & YouTube
 
-| Variable | Description |
-|:---------|:------------|
+| Variable | Default | Description |
+|:---------|:-------:|:------------|
+| `VENOM_API_URL` | `http://127.0.0.1:3200` | Local [venom-media-api](https://github.com/venombolteop/venom-media-api) base URL — warm search/stream cache; leave unset to use bot-only yt-dlp |
+| `VENOM_API_KEY` | — | API key the media API expects on every call (skip if the API runs keyless) |
+| `VENOM_COOKIES` | — | Path to a Netscape **YouTube cookie file** — the shared, auto-refreshed `/var/lib/venom-api/cookies/youtube.txt` of the local API is the most robust choice; also falls back to scanning `cookies/` |
+| `PROXY_URL` | — | socks5/http proxy for all YouTube fetches |
+| `WPC_BROWSER_PATH` | auto-detect | Chromium/Chrome path for the yt-dlp PO-Token provider (needed only when YouTube answers "Sign in to confirm you're not a bot") |
 
 ### Integrations & Misc
 
@@ -410,6 +421,31 @@ Add **more assistant accounts** (`STRING_SESSIONS=A,B,C`). The fleet load-balanc
 </details>
 
 <details>
+<summary><b>🤖 "Sign in to confirm you're not a bot" on YouTube downloads</b></summary>
+
+YouTube is challenging the anonymous session. Fix with a **warm cookie file**:
+
+1. Point `VENOM_COOKIES` at the local venom-media-api's auto-refreshed cookie file (`/var/lib/venom-api/cookies/youtube.txt`), or export your browser cookies into `cookies/cookies.txt` (Netscape format).
+2. If the error persists at streaming time, install a real browser for the PO-Token provider: `python3 -m playwright install chromium` and set `WPC_BROWSER_PATH` to the chrome binary path.
+3. Restart the bot after either change (`sudo systemctl restart venommusic`).
+</details>
+
+<details>
+<summary><b>🔎 Search finds nothing (or wrong "no entries")</b></summary>
+
+The bot retries with progressively trimmed phrasings before failing. Frequent causes:
+- The **word-trim ladder** already covers most typos/misphrases — expect 2–3 s of retries, not instant "nothing".
+- If the local media API is down, the bot falls back to its own yt-dlp search automatically and the owner gets a one-time notify; check `curl http://127.0.0.1:3200/healthz` (if you deploy the API) and the service with `systemctl status venom-api`.
+- A clean **"no results"** (succeeds fast, returns empty) is genuine — YouTube has nothing for that query.
+</details>
+
+<details>
+<summary><b>🧠 Do I need the Venom Media API?</b></summary>
+
+No — it's optional but recommended. Without it the bot streams/extracts everything itself with yt-dlp. With it (localhost, port 3200), search results and stream URLs are served from a warm cache (~0.5 s) and both services share one auto-refreshed YouTube cookie file. Deploy it from [venom-media-api](https://github.com/venombolteop/venom-media-api) and set `VENOM_API_URL` + `VENOM_API_KEY`.
+</details>
+
+<details>
 <summary><b>🔄 How do I apply new code/env changes?</b></summary>
 
 systemd: `sudo systemctl restart venommusic` · tmux: detach and rerun `bash start` · Docker: `docker restart venommusic`.
@@ -424,28 +460,28 @@ VenomMusic/
 ├── app.py                  # Health-check web server (Render/Heroku)
 ├── start                   # Launcher script
 ├── requirements.txt        # Python dependencies
-├── runtime.txt             # Python version (3.10)
+├── runtime.txt             # Python version (3.12)
 ├── Procfile / heroku.yml / render.yaml / Dockerfile
 ├── config/
-│   └── config.py           # Env parsing & constants
-├── strings/                 # Localizations (en, hi, ar, tr, ku)
-├── cookies/
-│   └── cookies.txt          # Netscape-format YouTube cookies
+│   └── config.py           # Env parsing & constants (VENOM_COOKIES, media API, limits)
+├── cookies/                # Optional local Netscape YouTube cookies (see VENOM_COOKIES)
 ├── downloads/ cache/ tempdb/
+├── strings/                # Localizations (en, hi, ar, tr, ku)
 └── VenomX/                  # Core package
     ├── __main__.py          # Entrypoint
     ├── core/
     │   ├── bot.py           # Pyrogram client factory
-    │   ├── call.py          # PyTgCalls/ntgcalls bridge, ffmpeg params, queue engine
+    │   ├── call.py          # ntgcalls bridge, ffmpeg params, queue engine + auto-advance source tags
     │   ├── userbot.py       # Assistant fleet
     │   ├── git.py / mongo.py / dir.py
     ├── platforms/           # Extractors
-    │   ├── Youtube.py       # yt-dlp pipeline + PO Token provider + cookies
+    │   ├── Youtube.py       # yt-dlp pipeline, cookies, word-trim search ladder, media-API search
     │   ├── Spotify.py Apple.py JioSavan.py Resso.py Soundcloud.py Telegram.py Carbon.py
     ├── plugins/             # Handlers grouped by role
     │   ├── play/ admins/ bot/ sudo/ tools/ misc/
     └── utils/
-        ├── stream/          # stream.py, queue.py, autoclear.py
+        ├── stream/          # stream.py (resolve ladder), queue.py, autoclear.py
+        ├── rich_panels.py   # now-playing rich-message card (Bot API 10.3): queue preview, via-labels
         ├── database/ inline/ decorators/ ...
 ```
 
