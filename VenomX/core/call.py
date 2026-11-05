@@ -323,12 +323,14 @@ class Call:
             await asyncio.sleep(1)
             await userbot.join_chat(invitelink)
         except InviteRequestSent:
+            # The assistant can't join until approved — do it on the bot's
+            # side instead of erroring out: after approval the upcoming
+            # retry play should just work on join-request-restricted groups.
             try:
                 await app.approve_chat_join_request(chat_id, userbot.id)
+                await asyncio.sleep(1.5)
             except Exception as e:
                 raise AssistantErr(_["call_3"].format(type(e).__name__))
-            await asyncio.sleep(1)
-            raise AssistantErr(_["call_6"].format(app.mention))
         except UserAlreadyParticipant:
             pass
         except ChannelsTooMuch:
@@ -408,13 +410,33 @@ class Call:
             LOGGER(__name__).info("[Call] join_call: assistant.play done at %.1fs", _t.monotonic() - _j0)
         except Exception:
             await self.join_chat(chat_id)
-            try:
-                await assistant.play(
-                    chat_id=chat_id,
-                    stream=stream,
-                    config=call_config,
+            # A freshly invited assistant may not have seen the group call in
+            # its update stream yet — settle before believing the VC is off.
+            for _settle in (0.6, 2.5):
+                await asyncio.sleep(_settle)
+                try:
+                    await assistant.play(
+                        chat_id=chat_id,
+                        stream=stream,
+                        config=call_config,
+                    )
+                    break
+                except AlreadyJoinedError:
+                    raise AssistantErr(
+                        "**ASSISTANT IS ALREADY IN VOICECHAT **\n\nMusic bot system detected that assistant is already in the voicechat, if the problem continues restart the videochat and try again."
+                    )
+                except TelegramServerError:
+                    raise AssistantErr(
+                        "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
+                    )
+                except Exception as e:
+                    LOGGER(__name__).warning(
+                        f"[Call] retry play after join failed at settle={_settle}: {type(e).__name__}: {e}"
+                    )
+            else:
+                LOGGER(__name__).error(
+                    "[Call] join_call: retries exhausted on chat %s", chat_id
                 )
-            except Exception as e:
                 raise AssistantErr(
                     "**No Active Voice Chat Found**\n\nPlease make sure group's voice chat is enabled. If already enabled, please end it and start fresh voice chat again and if the problem continues, try /restart"
                 )

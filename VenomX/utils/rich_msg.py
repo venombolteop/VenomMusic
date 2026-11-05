@@ -96,6 +96,24 @@ def not_hm(tag: str) -> str:
     return fixed
 
 
+def rich_user_link(user) -> str:
+    """A render-safe user reference for rich messages and queue tags.
+
+    Telegram's pyrogram mention is an <a href="tg://user…"> fragment, which
+    rich-message rendering strips — the raw tag leaks as text on the
+    now-playing card. Names must link to the t.me profile instead, or
+    stay plain text when the user has no username.
+    """
+    try:
+        name = rich_esc(user.first_name or "ᴜɴᴋɴᴏᴡɴ")
+        username = getattr(user, "username", None)
+        if username:
+            return f'<a href="https://t.me/{rich_esc(username)}">{name}</a>'
+        return name
+    except Exception:
+        return "ᴜɴᴋɴᴏᴡɴ"
+
+
 def rich_heading(text: str, level: int = 4) -> str:
     return f"<h{level}>{text}</h{level}>"
 

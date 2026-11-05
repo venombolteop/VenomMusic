@@ -27,7 +27,7 @@ from VenomX.utils.inline.play import (
 )
 from VenomX.utils.inline.playlist import botplaylist_markup
 from VenomX.utils.logger import play_logs
-from VenomX.utils.rich_msg import send_rich
+from VenomX.utils.rich_msg import rich_user_link, send_rich
 from VenomX.utils.stream.stream import stream
 from VenomX.utils.notify import notify_owner
 
@@ -78,7 +78,7 @@ async def play_commnd(
     plist_type = None
     spotify = None
     user_id = message.from_user.id
-    user_name = message.from_user.mention
+    user_name = rich_user_link(message.from_user)
     audio_telegram = (
         (message.reply_to_message.audio or message.reply_to_message.voice)
         if message.reply_to_message

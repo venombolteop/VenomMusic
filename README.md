@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=soft&color=0:39ff14,45:a855f7,100:22d3ee&height=240&text=VENOM%20%E2%9C%98%20MUSIC&fontSize=54&fontColor=ffffff&fontAlign=80&fontAlignY=45&desc=Telegram%27s%20Deadliest%20Music%20Bot&descSize=18&descAlign=25&descAlignY=70&stroke=%23111111&strokeWidth=2&animation=fadeIn" alt="VENOM MUSIC banner"/>
+<img width="100%" src="https://capsule-render.vercel.app/api?type=soft&color=0:39ff14,45:a855f7,100:22d3ee&height=240&text=VENOM%20%E2%9C%98%20MUSIC&fontSize=54&fontColor=ffffff&fontAlign=80&fontAlignY=45&desc=The%20Deadliest%20Telegram%20Music%20Bot&descSize=18&descAlign=25&descAlignY=72" alt="VENOM MUSIC banner"/>
 
 <img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg" width="320" height="auto" alt="Venom Music">
 
@@ -13,7 +13,7 @@
 
 <br>
 
-[![Release](https://img.shields.io/github/v/release/venombolteop/VenomMusic?color=7dff00&logoColor=7dff00&style=for-the-badge&label=v4.0.0)](https://github.com/venombolteop/VenomMusic/releases/latest)
+[![Release](https://img.shields.io/github/v/release/venombolteop/VenomMusic?style=for-the-badge&label=Release&color=7dff00)](https://github.com/venombolteop/VenomMusic/releases/latest)
 [![Stars](https://img.shields.io/github/stars/venombolteop/VenomMusic?color=7dff00&logo=github&logoColor=7dff00&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/stargazers)
 [![Forks](https://img.shields.io/github/forks/venombolteop/VenomMusic?color=a855f7&logo=github&logoColor=a855f7&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/network/members)
 [![Issues](https://img.shields.io/github/issues/venombolteop/VenomMusic?color=06b6d4&logo=github&logoColor=06b6d4&style=for-the-badge)](https://github.com/venombolteop/VenomMusic/issues)

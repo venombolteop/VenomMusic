@@ -9,6 +9,7 @@
 #
 
 import asyncio
+import re
 import time
 
 from VenomX.misc import db
@@ -170,7 +171,10 @@ def _next_html(chat_id: int) -> str:
         nxt = got[1]
         title = rich_esc(str(nxt.get("title") or "Unknown")[:30])
         dur = str(nxt.get("dur") or "--:--").replace(" ", "")
-        by = rich_esc(str(nxt.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")[:16])
+        # Older queue entries carry pyrogram tg:// mentions the rich renderer
+        # strips to raw text; unwrap them so only the name survives.
+        by_raw = str(nxt.get("by") or "ᴛʜᴇ ʜᴏꜱᴛ")[:64]
+        by = rich_esc(re.sub(r'<a href="tg://user[^"]*">(.*?)</a>', r"\1", by_raw))
         arg = str(nxt.get("vidid") or "")
         if arg not in ("telegram", "soundcloud") and "index_" not in arg and "live_" not in arg and arg:
             link = f'<a href="https://youtu.be/{arg}">{title}</a>'
