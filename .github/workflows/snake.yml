@@ -1,4 +1,4 @@
-name: Generate Snake Animation
+name: Generate Snake Animation (venom)
 
 on:
   schedule:
