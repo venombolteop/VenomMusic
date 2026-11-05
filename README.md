@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=soft&color=0:39ff14,45:a855f7,100:22d3ee&height=240&text=VENOM%20%E2%9C%98%20MUSIC&fontSize=54&fontColor=ffffff&fontAlign=80&fontAlignY=45&desc=The%20Deadliest%20Telegram%20Music%20Bot&descSize=18&descAlign=25&descAlignY=72" alt="VENOM MUSIC banner"/>
+<img src="https://capsule-render.vercel.app/api?type=soft&color=0:39ff14,50:a855f7,100:22d3ee&height=160&text=VENOM%20%E2%9C%98%20MUSIC&fontSize=42&fontColor=ffffff&fontAlignY=45&desc=The%20Deadliest%20Telegram%20Music%20Bot&descSize=16&descAlignY=76" alt="VENOM MUSIC banner"/>
 
 <img src="https://te.legra.ph/file/7d9c0fec898bbee09ba95.jpg" width="320" height="auto" alt="Venom Music">
 
@@ -74,7 +74,7 @@
 | | |
 |:---|:---|
 | ⚡ **Instant Play** | Direct-stream URLs start in seconds — download only as a last resort |
-| 🎬 **Audio + Video** | Songs or full music videos, up to 4K, straight into the VC |
+| 🎬 **Audio + Video** | Songs or full music videos — up to 4K where the viewer's Telegram client picks it up |
 | 👥 **Assistant Fleet** | Load-balanced userbots handle join limits automatically |
 | 💎 **Premium Emoji UI** | Custom-emoji buttons, progress bars and animated player cards |
 | 🔁 **Full Player Control** | Skip · loop · shuffle · seek · pause · resume · autoend |
@@ -123,7 +123,7 @@ flowchart TD
 <summary><b>🎧 Playback</b></summary>
 
 - **Instant streaming first** — direct URLs are probed before falling back to full downloads
-- **Video up to 4K** with per-chat configurable audio/video bitrates
+- **Video up to 4K** — the bot streams the full-quality source; each viewer's Telegram client decides what resolution it actually renders (newer desktop/Premium clients can show 4K tiles), with per-chat configurable audio/video bitrates
 - **Loop** a single track or the entire queue, **shuffle**, **seek forward/backward**
 - **Force play** to cut the current track immediately
 - **Auto-end** empty calls and **auto-leave** idle assistants (configurable timers)
@@ -323,8 +323,10 @@ venv/bin/python -m VenomX
 
 **5. Run as a systemd service** *(production-grade, auto-restart on boot/crash)*
 
-Create `/etc/systemd/system/venommusic.service`:
-```ini
+Create `/etc/systemd/system/venommusic.service` — one paste-and-done command that bakes in **your** actual home path (any user, any distro — `/home/ubuntu` is only Oracle's convention, elsewhere it's `/root` or your own user):
+
+```bash
+sudo tee /etc/systemd/system/venommusic.service >/dev/null <<EOF
 [Unit]
 Description=VenomMusic Telegram Music Bot
 After=network-online.target
@@ -332,18 +334,21 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu                       # your linux user
-WorkingDirectory=/home/ubuntu/VenomMusic
-EnvironmentFile=/home/ubuntu/VenomMusic/.env
-ExecStart=/home/ubuntu/VenomMusic/venv/bin/python -u -m VenomX
+User=$USER
+WorkingDirectory=$HOME/VenomMusic
+EnvironmentFile=$HOME/VenomMusic/.env
+ExecStart=$HOME/VenomMusic/venv/bin/python -u -m VenomX
 Restart=always
 RestartSec=5
 LimitNOFILE=1048576
-StandardOutput=append:/home/ubuntu/VenomMusic/bot.log
-StandardError=append:/home/ubuntu/VenomMusic/bot.log
+StandardOutput=append:$HOME/VenomMusic/bot.log
+StandardError=append:$HOME/VenomMusic/bot.log
 
 [Install]
 WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload && sudo systemctl enable --now venommusic
 ```
 
 Enable & control it:
