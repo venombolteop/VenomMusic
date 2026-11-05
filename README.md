@@ -507,34 +507,21 @@ VenomMusic/
 
 <div align="center">
 
-### 🏆 Achievements
+### 💓 Live Pulse
 
-<img src="https://github-profile-trophy.vercel.app/?username=venombolteop&theme=tokyonight&no-frame=true&no-bg=true&row=1&column=7&margin-w=8" width="100%" alt="Trophies"/>
+| Stars | Forks | Contributors | Commits | Issues/Closed | Last Commit |
+|:-----:|:-----:|:------------:|:-------:|:-------------:|:-----------:|
+| ![Stars](https://img.shields.io/github/stars/venombolteop/VenomMusic?style=flat-square&color=39ff14&label=%20) | ![Forks](https://img.shields.io/github/forks/venombolteop/VenomMusic?style=flat-square&color=a855f7&label=%20) | ![Contributors](https://img.shields.io/github/contributors/venombolteop/VenomMusic?style=flat-square&color=22d3ee&label=%20) | ![Commits](https://img.shields.io/github/commit-activity/t/venombolteop/VenomMusic?style=flat-square&color=39ff14&label=%20) | ![Issues](https://img.shields.io/github/issues-closed/venombolteop/VenomMusic?style=flat-square&color=a855f7&label=%20) | ![Last commit](https://img.shields.io/github/last-commit/venombolteop/VenomMusic?style=flat-square&color=22d3ee&label=%20) |
 
-<br>
+*All counters are live — pulled fresh on every README render.*
 
-<table>
-<tr>
-<td width="50%">
+### ⭐ Star History
 
-<img src="https://github-readme-stats.vercel.app/api?username=venombolteop&show_icons=true&theme=tokyonight&hide_border=true&bg_color=0d1117&title_color=7dff00&icon_color=a855f7" width="100%" alt="GitHub stats"/>
+<div align="center">
 
-</td>
-<td width="50%">
+<img src="https://api.star-history.com/svg?repos=venombolteop/VenomMusic&type=Date&theme=dark" alt="Star History Chart" width="90%"/>
 
-<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=venombolteop&layout=compact&theme=tokyonight&hide_border=true&bg_color=0d1117&title_color=7dff00&langs_count=6" width="100%" alt="Top languages"/>
-
-</td>
-</tr>
-</table>
-
-### 📈 Commit Activity
-
-<img src="https://github-readme-activity-graph.vercel.app/graph?username=venombolteop&theme=tokyo-night&hide_border=true&bg_color=0d1117&color=7dff00&line=a855f7&point=22d3ee&area=true&area_color=a855f7" width="100%" alt="Activity graph"/>
-
-### 🧑‍🚀 Contributor Radial
-
-<img src="https://github-contributor-stats.vercel.app/api?username=venombolteop&limit=6&theme=tokyonight&hide_border=true&bg_color=0d1117&title_color=7dff00&icon_color=22d3ee" alt="Contributor radial graph" width="60%"/>
+</div>
 
 ### 🕹️ The Contribution Snake
 
@@ -546,7 +533,7 @@ VenomMusic/
   <img alt="Contribution snake animation" src="https://raw.githubusercontent.com/venombolteop/VenomMusic/output/github-contribution-grid-snake-dark.svg" width="100%"/>
 </picture>
 
-<sub>Auto-generated daily by a GitHub Action — first render appears a few minutes after the workflow's initial run.</sub>
+<sub>Auto-generated daily by a GitHub Action.</sub>
 
 </div>
 
