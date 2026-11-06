@@ -2,6 +2,7 @@
 # All rights reserved.
 #
 import asyncio
+import time
 from typing import Union
 
 from ntgcalls import TelegramServerError
@@ -49,6 +50,7 @@ from pyrogram.errors import (
     ChannelsTooMuch,
     ChatAdminRequired,
     FloodWait,
+    InviteHashExpired,
     InviteRequestSent,
     UserAlreadyParticipant,
 )
@@ -74,6 +76,17 @@ _PROXY_FFMPEG = f"-http_proxy {_PROXY} " if _PROXY else ""
 # next track a stream swap instead, which is sub-second.
 VC_IDLE_GRACE = int(getattr(config, "VC_IDLE_GRACE", 600) or 600)
 _idle_leave_tasks = {}
+
+# stream_end for a video track can fire twice (audio and video source ends
+# reported separately), and the two change_stream() runs then race: each pops
+# its own queue head, the second play() call replaces the first, and the user
+# sees the second queued song instead of the first plus a doubled
+# "downloading your next song" card. A per-chat lock serialises runs and a
+# short dedup window throws away the echo.
+_END_DEDUP_WINDOW = 2.5
+_end_locks: dict = {}
+_end_last: dict = {}
+
 def _needs_proxy(link) -> bool:
     """Only external remote URLs need the ffmpeg proxy.
 
@@ -191,6 +204,9 @@ class Call:
         import time as _t
         _j0 = _t.monotonic()
         self._cancel_idle_leave(chat_id)
+        # Arm the advance dedup: the replaced stream's echo must not pop the
+        # just-started track within the dedup window afterwards.
+        _end_last[chat_id] = _t.monotonic()
         assistant = await group_assistant(self, chat_id)
         LOGGER(__name__).info("[Call] join_call: group_assistant %.1fs", _t.monotonic() - _j0)
         audio_stream_quality = await get_audio_bitrate(chat_id)
@@ -333,6 +349,14 @@ class Call:
                 raise AssistantErr(_["call_3"].format(type(e).__name__))
         except UserAlreadyParticipant:
             pass
+        except InviteHashExpired:
+            # Cached invite links die (old link revocation); a re-export on
+            # the next attempt heals the join instead of erroring the user.
+            links.pop(chat_id, None)
+            if attempts <= max_attempts:
+                attempts += 1
+                return await self.join_chat(chat_id, attempts)
+            raise AssistantErr(_["call_3"].format(type(InviteHashExpired).__name__))
         except ChannelsTooMuch:
             if attempts <= max_attempts:
                 attempts += 1
@@ -354,6 +378,11 @@ class Call:
 
                 raise AssistantErr(_["call_10"].format(time))
         except Exception as e:
+            # Surface the full traceback: the invite-path errors were only
+            # ever reported as their class name, hiding real causes.
+            LOGGER(__name__).exception(
+                "[Call] join_chat failed for chat %s (%s)", chat_id, type(e).__name__
+            )
             raise AssistantErr(_["call_3"].format(type(e).__name__))
 
     async def join_call(
@@ -498,6 +527,18 @@ class Call:
         )
 
     async def change_stream(self, client, chat_id):
+        lock = _end_locks.setdefault(chat_id, asyncio.Lock())
+        async with lock:
+            now = time.monotonic()
+            if now - _end_last.get(chat_id, 0.0) < _END_DEDUP_WINDOW:
+                LOGGER(__name__).info(
+                    "[Call] duplicate stream_end suppressed for chat %s", chat_id
+                )
+                return
+            _end_last[chat_id] = now
+            await self._advance_queue(client, chat_id)
+
+    async def _advance_queue(self, client, chat_id):
         check = db.get(chat_id)
         popped = None
         loop = await get_loop(chat_id)
