@@ -31,3 +31,8 @@ unknown_errors.txt
 fetch_refs.py
 test_emoji_edit.py
 test_rich.py
+
+*.bak
+*.bak2
+venv/
+venv-*/

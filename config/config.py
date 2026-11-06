@@ -145,6 +145,8 @@ PRIVATE_BOT_MODE = getenv("PRIVATE_BOT_MODE", "False")
 
 # Instant Play / Streaming Mode (default ON: try direct stream URLs before falling back to a full download)
 INSTANT_PLAY = getenv("INSTANT_PLAY", "True")
+# Vote-skip: how many group members are needed to vote-skip the current track
+VOTE_SKIP_LIMIT = int(getenv("VOTE_SKIP_LIMIT", "3"))
 # Media API used for instant (no-download) playback: serves a stable stream permalink
 VENOM_API_URL = getenv("VENOM_API_URL", "http://127.0.0.1:3200")
 # Post time-synced lyrics in the voice chat, sent by the assistant account

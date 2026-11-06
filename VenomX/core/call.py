@@ -337,7 +337,10 @@ class Call:
 
         try:
             await asyncio.sleep(1)
-            await userbot.join_chat(invitelink)
+            try:
+                await userbot.join_chat(invitelink)
+            except AttributeError:
+                pass  # pyroblack parse bug
         except InviteRequestSent:
             # The assistant can't join until approved — do it on the bot's
             # side instead of erroring out: after approval the upcoming
@@ -649,6 +652,21 @@ class Call:
                 # full download of the next track.
                 from VenomX.utils.stream.stream import _api_stream_url
                 stream_link = await _api_stream_url(videoid, video)
+                if stream_link:
+                    if str(stream_link).startswith("http"):
+                        import aiohttp
+                        try:
+                            async with aiohttp.ClientSession() as _sess:
+                                # Range request to trigger API cold-start & validate stream viability
+                                async with _sess.get(stream_link, headers={"Range": "bytes=0-1024"}, timeout=10) as _resp:
+                                    if _resp.status >= 400:
+                                        stream_link = None  # API Failed -> Fallback to yt-dlp
+                        except Exception:
+                            stream_link = None  # Timeout/Offline -> Fallback to yt-dlp
+                    else:
+                        import os
+                        if not os.path.exists(stream_link):
+                            stream_link = None
                 n = 1 if stream_link else 0
                 if n == 0:
                     try:

@@ -12,6 +12,7 @@ import asyncio
 import re
 import time
 
+from VenomX import LOGGER
 from VenomX.misc import db
 from VenomX.utils.inline.play import get_progress_bar
 from VenomX.utils.rich_msg import (
@@ -116,6 +117,14 @@ def _rows(chat_id: int, videoid, elapsed: float, total_sec: float, playing: bool
         _toggle_button(chat_id),
         rich_button(f"{pemoji('⏩')} sᴋɪᴘ", callback_data=f"ADMIN Skip|{chat_id}", style=_ctl_style()),
         rich_button(f"{pemoji('🛑')} sᴛᴏᴘ", callback_data=f"ADMIN Stop|{chat_id}", style="danger"),
+        align="center",
+    )
+    rows += rich_button_row(
+        rich_button(
+            f"{pemoji('🗳')} ᴠᴏᴛᴇ-ꜱᴋɪᴘ",
+            callback_data=f"VSkip|{chat_id}",
+            style="warning",
+        ),
         align="center",
     )
     return rows
@@ -276,10 +285,23 @@ async def spawn_now_playing(
         return None
     _panel_content[(chat_id, mid)] = (body, videoid, total_sec, time.time())
     _register(chat_id, mid, videoid, total_sec)
+    if chat_id < 0:
+        # Start-of-stream board bump for the per-chat /hot chart; fire-and-
+        # forget so a slow mongo never delays the card.
+        asyncio.create_task(_board_bump(chat_id, title))
     asyncio.create_task(
         _ticker(chat_id, mid, videoid, body, _panel_content[(chat_id, mid)])
     )
     return mid
+
+
+async def _board_bump(chat_id: int, title: str) -> None:
+    from VenomX.utils.database import count_track_play
+
+    try:
+        await count_track_play(chat_id, title)
+    except Exception as e:
+        LOGGER(__name__).warning(f"/hot board bump failed for {chat_id}: {e}")
 
 
 async def _ticker(chat_id: int, mid: int, videoid, body: str, snapshot: tuple) -> None:

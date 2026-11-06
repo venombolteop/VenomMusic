@@ -4,6 +4,8 @@
 
 from typing import Dict, List, Union
 
+import time
+
 from VenomX.core.mongo import mongodb
 
 queriesdb = mongodb.queries
@@ -18,6 +20,7 @@ usersdb = mongodb.tgusersdb
 playlistdb = mongodb.playlist
 blockeddb = mongodb.blockedusers
 privatedb = mongodb.privatechats
+playstatsdb = mongodb.playstats
 
 playlist = []
 
@@ -444,3 +447,27 @@ async def remove_banned_user(user_id: int):
     if not is_gbanned:
         return
     return await blockeddb.delete_one({"user_id": user_id})
+
+
+# Per-chat track leaderboards (/hot)
+
+
+async def count_track_play(chat_id: int, title: str):
+    """One atomic increment per stream start — fire-and-forget from cards."""
+    title = str(title).strip()[:100]
+    if not title:
+        return
+    await playstatsdb.update_one(
+        {"chat_id": chat_id, "title": title},
+        {"$inc": {"plays": 1}, "$set": {"last": int(time.time())}},
+        upsert=True,
+    )
+
+
+async def get_top_tracks(chat_id: int, limit: int = 10) -> list:
+    out = []
+    async for doc in playstatsdb.find({"chat_id": chat_id}).sort(
+        "plays", -1
+    ).limit(limit):
+        out.append({"title": doc.get("title"), "plays": doc.get("plays", 0)})
+    return out

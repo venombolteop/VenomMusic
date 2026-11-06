@@ -124,6 +124,13 @@ async def fetch(track_title: str, duration: int | None = None, lang: str | None 
     The lookup, the title cleanup, the length matching and the language choice
     all live in the media API, so the answer arrives ready to play against.
     """
+    # Clean up junk keywords from title to get accurate lyrics match
+    import re
+    if track_title:
+        clean_title = re.sub(r'(?i)\b(official|video|audio|lyrics|lyric|ft|feat|remix|hd|4k|live|cover)\b.*', '', track_title)
+        clean_title = re.sub(r'[\(\[].*?[\)\]]', '', clean_title).strip()
+        if clean_title:
+            track_title = clean_title
     if lang is None and chat_id is not None:
         try:
             from VenomX.utils.database import get_lyrics_lang
@@ -403,9 +410,14 @@ async def _run(chat_id, message, lines, started_at, client=None, title=True):  #
                 await send_call_message(client, chat_id, text)
             if message is not None:
                 try:
+                    from pyrogram.errors import MessageNotModified, FloodWait
                     await message.edit_text(f"🎵 <b>{text}</b>", parse_mode=None)
+                except MessageNotModified:
+                    pass
+                except FloodWait as fw:
+                    await asyncio.sleep(fw.value or 2)
                 except Exception:
-                    message = None
+                    pass
     except asyncio.CancelledError:
         raise
     except Exception as e:
@@ -453,6 +465,9 @@ async def _run_notes(client, chat_id, track_title, duration, playback_started):
     step = max(float(getattr(config, "VC_LYRICS_NOTES_SEC", 30) or 30), 10.0)
     try:
         while True:
+            _cur = _timers.get(chat_id)
+            if not _cur or _cur[0] is not asyncio.current_task():
+                break
             if _budget_left(chat_id):
                 _count_sent(chat_id)
                 mark = " ".join(NOTES[index % len(NOTES)] for _ in range(2))
@@ -496,6 +511,7 @@ async def start(client, chat_id, track_title, duration=None,
         )
         return None
     lines = await fetch(track_title, duration, chat_id=chat_id)
+    stop(chat_id)
     started_at = playback_started or time.monotonic()
     if not lines:
         LOGGER(__name__).info("lyrics: none found for %r", track_title[:50])
