@@ -44,7 +44,7 @@ async def ping_com(client, message, _):
         + f"{pemoji('⚡')} <b>ᴘɪɴɢ</b>: {resp} ms\n\n"
         + f"{pemoji('🖥')} <b>ᴜᴘᴛɪᴍᴇ</b>: {UP}\n"
         + f"{pemoji('💾')} <b>ʀᴀᴍ</b>: {RAM}\n"
-        + f"{pemoji('🧯')} <b>ᴄᴘᴜ</b>: {CPU}\n"
+        + f"{pemoji('🛑')} <b>ᴄᴘᴜ</b>: {CPU}\n"
         + f"{pemoji('🌩')} <b>ᴅɪsᴋ</b>: {DISK}\n"
         + f"{pemoji('📞')} <b>ᴄʙ ʟᴀᴛᴇɴᴄʏ</b>: {pytgping}"
         + "</p>"

@@ -492,11 +492,11 @@ def menu_pages_rows(_, videoid, chat_id: int, page: int) -> str:
     else:
         rows = (
             rich_button_row(
-                rich_button(f"{pemoji('⏪')} 10ꜱ ʙᴀᴄᴋ", callback_data=f"ADMIN 1|{chat_id}", style="primary"),
+                rich_button(f"{pemoji('◀')} 10ꜱ ʙᴀᴄᴋ", callback_data=f"ADMIN 1|{chat_id}", style="primary"),
                 rich_button(f"{pemoji('⏩')} 10ꜱ ғᴏʀᴡᴀʀᴅ", callback_data=f"ADMIN 2|{chat_id}", style="primary"),
             )
             + rich_button_row(
-                rich_button(f"{pemoji('⏪')} 30ꜱ ʙᴀᴄᴋ", callback_data=f"ADMIN 3|{chat_id}", style="primary"),
+                rich_button(f"{pemoji('◀')} 30ꜱ ʙᴀᴄᴋ", callback_data=f"ADMIN 3|{chat_id}", style="primary"),
                 rich_button(f"{pemoji('⏩')} 30ꜱ ғᴏʀᴡᴀʀᴅ", callback_data=f"ADMIN 4|{chat_id}", style="primary"),
             )
         )

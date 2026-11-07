@@ -563,7 +563,7 @@ async def authusers_mar(client, CallbackQuery, _):
                     continue
                 body += (
                     f"<p>{j}➤ {rich_esc(user)} <code>{user_id}</code></p>"
-                    f"<p>{pemoji('↳')} {rich_esc(_['auth_8'])} "
+                    f"<p>{pemoji('➡')} {rich_esc(_['auth_8'])} "
                     f"{rich_esc(admin_name)} <code>{admin_id}</code></p>"
                 )
             body += rich_button_row(
