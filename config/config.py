@@ -156,6 +156,9 @@ AI_ENABLED = getenv("AI_ENABLED", "true").lower() in ("true", "1", "yes")
 AI_PROVIDER = getenv("AI_PROVIDER", "auto").lower()
 OLLAMA_URL = getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 AI_MODEL_LOCAL = getenv("AI_MODEL_LOCAL", "gpt-oss:20b")
+# Fastest of the installed set (~50 tok/s vs 13/11). "think": false skips
+# the hidden reasoning phase -> first visible tokens ~1.4s sooner.
+AI_LOCAL_THINK = getenv("AI_LOCAL_THINK", "false").lower() in ("true", "1", "yes")
 AI_LOCAL_TIMEOUT = int(getenv("AI_LOCAL_TIMEOUT", "100"))
 AI_CLOUD_URL = getenv("AI_CLOUD_URL", "")
 AI_CLOUD_KEY = getenv("AI_CLOUD_KEY", "")

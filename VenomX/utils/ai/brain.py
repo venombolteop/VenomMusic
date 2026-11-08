@@ -86,6 +86,8 @@ async def _local_call(messages: list, json_mode: bool) -> str:
         "keep_alive": "15m",
         "options": {"temperature": 0.7, "num_ctx": 4096},
     }
+    if not getattr(config, "AI_LOCAL_THINK", False):
+        body["think"] = False
     if json_mode:
         body["format"] = "json"
     timeout = aiohttp.ClientTimeout(total=config.AI_LOCAL_TIMEOUT)
@@ -167,6 +169,8 @@ async def stream_chat(messages: list):
         "keep_alive": "15m",
         "options": {"temperature": 0.7, "num_ctx": 4096},
     }
+    if not getattr(config, "AI_LOCAL_THINK", False):
+        body["think"] = False
     timeout = aiohttp.ClientTimeout(total=config.AI_LOCAL_TIMEOUT)
     produced = 0
     async with aiohttp.ClientSession(timeout=timeout) as s:

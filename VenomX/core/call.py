@@ -567,7 +567,7 @@ class Call:
             raise AssistantErr(
                 "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
             )
-        await self._schedule_idle_leave(assistant, chat_id)
+        self._schedule_idle_leave(assistant, chat_id)
 
     async def warm_join(self, chat_id):
         """Resolve the peer and the active group call ahead of the real join.
