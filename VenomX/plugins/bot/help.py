@@ -106,6 +106,14 @@ async def format_helper_text(lng, helper_key: str, text: str) -> str:
             _cmd("UNGBAN_COMMAND"),
             _cmd("GBANNED_COMMAND"),
         )
+    elif helper_key == "AI":
+        return text.format(
+            _cmd("AI_COMMAND"),
+            _cmd("DJ_COMMAND"),
+            _cmd("DJAUTO_COMMAND"),
+            _cmd("IDENTIFY_COMMAND"),
+            _cmd("PERSONA_COMMAND"),
+        )
     elif helper_key == "Dev":
         return text.format(
             _cmd("ADDSUDO_COMMAND"),

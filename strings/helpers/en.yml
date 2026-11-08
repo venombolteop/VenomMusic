@@ -126,3 +126,19 @@ Dev: |
   <b>{11} [enable / disable]</b> - Toggle bot logging of searched queries to log group
   <b>{12} [Number of lines]</b> - Get logs from server
   <b>{13} [enable / disable]</b> - Automatically end the stream after 30s if no one is listening to songs
+AI: |
+  <b>Venom AI — Brain on your own server (local Ollama, private), with safety locks. Secrets are always redacted; the AI can only text back, never touch the bot.</b>
+
+  <b>✧ {0}</b> - Talk to the AI assistant. Hinglish fully supported. It knows what you have been listening to.
+
+  <b>✧ {1}</b> - AI DJ: describe the vibe (Example: /dj chill evening), the AI picks 6 mood-matched songs and queues the best, plays it.
+
+  <b>✧ {2}</b> [on/off] - AI Auto DJ. When ON, the AI silently keeps feeding the next perfect song while the voice chat is alive. Admins only.
+
+  <b>✧ {3}</b> - Reply to any voice note with this. Shazam-like: listens, names the exact song, posts a fun fact, and starts playing it.
+
+  <b>✧ {4}</b> [text | off] - Give the AI a permanent style for this chat. Example: /persona bhajan mandali ka pandit ji ban jao. Admins only.
+
+  <b>👑 Owner/Sudo only:</b> /aion, /aioff - master switch • /aistats - usage • /aidiag - AI doctor (notes server issues from logs) • /airead - feed AI a code file to explain.
+
+  <b>🎙 Voice:</b> just send a voice note in DM (or reply to the bot with one in group) - transcribe + instant AI reply, and it can reply back with its own voice.

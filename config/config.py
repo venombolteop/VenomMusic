@@ -149,6 +149,24 @@ INSTANT_PLAY = getenv("INSTANT_PLAY", "True")
 VOTE_SKIP_LIMIT = int(getenv("VOTE_SKIP_LIMIT", "3"))
 # Media API used for instant (no-download) playback: serves a stable stream permalink
 VENOM_API_URL = getenv("VENOM_API_URL", "http://127.0.0.1:3200")
+
+# ==== Venom AI (local Ollama + optional cloud fallback) ====
+AI_ENABLED = getenv("AI_ENABLED", "true").lower() in ("true", "1", "yes")
+# auto = local first then cloud fallback; local = only Ollama; cloud = only cloud; none = off
+AI_PROVIDER = getenv("AI_PROVIDER", "auto").lower()
+OLLAMA_URL = getenv("OLLAMA_URL", "http://127.0.0.1:11434")
+AI_MODEL_LOCAL = getenv("AI_MODEL_LOCAL", "gpt-oss:20b")
+AI_LOCAL_TIMEOUT = int(getenv("AI_LOCAL_TIMEOUT", "100"))
+AI_CLOUD_URL = getenv("AI_CLOUD_URL", "")
+AI_CLOUD_KEY = getenv("AI_CLOUD_KEY", "")
+AI_CLOUD_MODEL = getenv("AI_CLOUD_MODEL", "gpt-4o-mini")
+AI_CLOUD_TIMEOUT = int(getenv("AI_CLOUD_TIMEOUT", "60"))
+AI_LIMIT_HOURLY = int(getenv("AI_LIMIT_HOURLY", "25"))
+AI_COOLDOWN = int(getenv("AI_COOLDOWN", "5"))
+AI_HISTORY_MAX = int(getenv("AI_HISTORY_MAX", "12"))
+AI_MAX_INPUT = int(getenv("AI_MAX_INPUT", "2000"))
+AI_VOICE = getenv("AI_VOICE", "true").lower() in ("true", "1", "yes")
+AI_FACTS = getenv("AI_FACTS", "true").lower() in ("true", "1", "yes")
 # Post time-synced lyrics in the voice chat, sent by the assistant account
 VC_LYRICS = getenv("VC_LYRICS", "True")
 # Inside a group voice chat the only surface a bot can write to is the call's

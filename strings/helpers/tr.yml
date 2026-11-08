@@ -87,3 +87,20 @@ Dev: |
   <b>{11} [enable/disable]</b> - Aranan sorguların log grubuna kaydedilmesini geçiş yapın
   <b>{12} [Satır sayısı]</b> - Sunucudan günlükleri alın
   <b>{13} [enable/disable]</b> - Eğer kimse şarkıyı dinlemiyorsa yayını 30 saniye sonra otomatik olarak bitirin
+
+AI: |
+  <b>Venom AI — kendi sunucunuzda çalışan beyin (lokal Ollama, özel), güvenlik kilitleriyle. Sırlar her zaman maskelenir; yapay zeka yalnızca metin döndürür, bota dokunamaz.</b>
+
+  <b>✧ {0}</b> - Yapay zeka asistanıyla konuşun. Duyarlı, sohbet odanıza yakın şarkıları bilir.
+
+  <b>✧ {1}</b> - AI DJ: modu anlatın (örnek: /dj sakin akşam), AI 6 uyumlu şarkı seçip listeye ekler.
+
+  <b>✧ {2}</b> [on/off] - AI Auto DJ. Açıkken VC aktif olduğu sürece sıradaki mükemmel şarkıyı sessizce ekler. Yalnızca adminler.
+
+  <b>✧ {3}</b> - Herhangi bir sesli mesaja bunu uygulayın. Shazam gibi: dinler, şarkıyı tam tanır, eğlenceli bilgi verir ve oynatmaya başlar.
+
+  <b>✧ {4}</b> [metin | off] - Bu konuşma için AI'a kalıcı bir stil tanımlayın. Yalnızca adminler.
+
+  <b>👑 Owner/Sudo only:</b> /aion, /aioff, /aistats, /aidiag, /airead
+
+  <b>🎙 Ses:</b> DM'de doğrudan sesli not gönderin (veya grupta bota yanıt vererek) - anında AI yanıtı ve kendi sesiyle konuşma.

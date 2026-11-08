@@ -289,10 +289,34 @@ async def spawn_now_playing(
         # Start-of-stream board bump for the per-chat /hot chart; fire-and-
         # forget so a slow mongo never delays the card.
         asyncio.create_task(_board_bump(chat_id, title))
+        # Optional AI fun-fact (one cached AI call per unique song title
+        # ever) — fire-and-forget, never blocks or fails the card.
+        try:
+            from config import config as _cfg
+
+            if getattr(_cfg, "AI_FACTS", False):
+                asyncio.create_task(_maybe_fact(chat_id, title))
+        except Exception:  # noqa: BLE001
+            pass
     asyncio.create_task(
         _ticker(chat_id, mid, videoid, body, _panel_content[(chat_id, mid)])
     )
     return mid
+
+
+async def _maybe_fact(chat_id: int, title: str) -> None:
+    from VenomX.utils.ai import enabled as ai_enabled, tools as ai_tools
+    from VenomX.utils.rich_msg import send_note
+
+    try:
+        on, _why = await ai_enabled()
+        if not on:
+            return
+        fact = await ai_tools.fun_fact(title)
+        if fact:
+            await send_note(chat_id, str(fact)[:300], heading="AI Fact")
+    except Exception as e:
+        LOGGER(__name__).debug(f"AI fun-fact failed for {title[:30]!r}: {e}")
 
 
 async def _board_bump(chat_id: int, title: str) -> None:

@@ -87,6 +87,50 @@ _END_DEDUP_WINDOW = 2.5
 _end_locks: dict = {}
 _end_last: dict = {}
 
+# Two /play commands landing on the same chat within the ~13s group-call
+# handshake used to race each other into join_call: both saw "not active",
+# the second wiped the first track's queue and started its own join, and the
+# result was a card with no audio (only lyrics) or an assistant that never
+# appeared. join_call is serialised per chat, the chat is marked active
+# BEFORE the handshake so a second play queues itself instead of racing, and
+# the active flag is rolled back if the join actually fails.
+_join_locks: dict = {}
+
+# When the bot empties the queue it leaves the call itself; Telegram then
+# delivers a LEFT_CALL update that can land AFTER a fresh /play has already
+# re-joined — treating that echo as "assistant removed" ran stop_stream and
+# kicked the assistant back out mid-play (assistant gone, card alive, no
+# audio). Our own recent leaves are stamped and their echo ignored.
+_SELF_LEFT_GRACE = 20
+_self_left: dict = {}
+
+
+def _mark_self_left(chat_id: int) -> None:
+    _self_left[chat_id] = time.monotonic()
+
+
+def _was_self_left(chat_id: int) -> bool:
+    return time.monotonic() - _self_left.get(chat_id, 0.0) < _SELF_LEFT_GRACE
+
+
+async def _rollback_join(chat_id: int) -> None:
+    """Undo the pre-handshake active-marking when the join truly fails.
+
+    Without this a failed join leaves the chat 'active' and every following
+    /play silently queues behind a call that nobody is in.
+    """
+    from VenomX.utils.stream.autoclear import auto_clean as _ac
+
+    try:
+        popped = db.pop(chat_id, None)
+        if popped:
+            await _ac(popped)
+        db[chat_id] = []
+        await remove_active_video_chat(chat_id)
+        await remove_active_chat(chat_id)
+    except Exception:  # noqa: BLE001
+        LOGGER(__name__).warning("[Call] rollback_join cleanup failed for %s", chat_id)
+
 def _needs_proxy(link) -> bool:
     """Only external remote URLs need the ffmpeg proxy.
 
@@ -396,9 +440,32 @@ class Call:
         video: Union[bool, str] = None,
         image: Union[bool, str] = None,
     ):
+        # Serialise joins per chat: a second /play that lands while the
+        # ~13s handshake is running must queue, not race.
+        lock = _join_locks.setdefault(chat_id, asyncio.Lock())
+        async with lock:
+            return await self._join_call_locked(
+                chat_id, original_chat_id, link, video, image
+            )
+
+    async def _join_call_locked(
+        self,
+        chat_id: int,
+        original_chat_id: int,
+        link,
+        video: Union[bool, str] = None,
+        image: Union[bool, str] = None,
+    ):
         import time as _t
         _j0 = _t.monotonic()
         self._cancel_idle_leave(chat_id)
+        # Mark the chat active BEFORE the handshake so concurrent plays see an
+        # active chat and push into the queue instead of racing the join.
+        # Rolled back if the join actually fails below.
+        await add_active_chat(chat_id)
+        await music_on(chat_id)
+        if video:
+            await add_active_video_chat(chat_id)
         assistant = await group_assistant(self, chat_id)
         LOGGER(__name__).info("[Call] join_call: group_assistant %.1fs", _t.monotonic() - _j0)
         audio_stream_quality = await get_audio_bitrate(chat_id)
@@ -454,10 +521,12 @@ class Call:
                     )
                     break
                 except AlreadyJoinedError:
+                    await _rollback_join(chat_id)
                     raise AssistantErr(
                         "**ASSISTANT IS ALREADY IN VOICECHAT **\n\nMusic bot system detected that assistant is already in the voicechat, if the problem continues restart the videochat and try again."
                     )
                 except TelegramServerError:
+                    await _rollback_join(chat_id)
                     raise AssistantErr(
                         "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
                     )
@@ -469,23 +538,36 @@ class Call:
                 LOGGER(__name__).error(
                     "[Call] join_call: retries exhausted on chat %s", chat_id
                 )
+                await _rollback_join(chat_id)
                 raise AssistantErr(
                     "**No Active Voice Chat Found**\n\nPlease make sure group's voice chat is enabled. If already enabled, please end it and start fresh voice chat again and if the problem continues, try /restart"
                 )
 
         except AlreadyJoinedError:
-            raise AssistantErr(
-                "**ASSISTANT IS ALREADY IN VOICECHAT **\n\nMusic bot system detected that assistant is already in the voicechat, if the problem continues restart the videochat and try again."
+            # The assistant is already in the call: the behaviour users need
+            # is a clean source switch, not an error splash. A short settle
+            # then replay also heals the mid-handshake "mic off / silent"
+            # state left over from racing plays.
+            LOGGER(__name__).info(
+                "[Call] AlreadyJoinedError on first play for chat %s; settle+replay", chat_id
             )
+            await asyncio.sleep(0.75)
+            try:
+                await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
+            except Exception as e:
+                LOGGER(__name__).warning(
+                    "[Call] replay after AlreadyJoinedError failed for chat %s: %s: %s",
+                    chat_id, type(e).__name__, e,
+                )
+                raise AssistantErr(
+                    "**ASSISTANT IS ALREADY IN VOICECHAT **\n\nMusic bot system detected that assistant is already in the voicechat, if the problem continues restart the videochat and try again."
+                )
         except TelegramServerError:
+            await _rollback_join(chat_id)
             raise AssistantErr(
                 "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
             )
-        await add_active_chat(chat_id)
-        await music_on(chat_id)
-        if video:
-            await add_active_video_chat(chat_id)
-        self._schedule_idle_leave(assistant, chat_id)
+        await self._schedule_idle_leave(assistant, chat_id)
 
     async def warm_join(self, chat_id):
         """Resolve the peer and the active group call ahead of the real join.
@@ -509,6 +591,7 @@ class Call:
             return
         try:
             await client.leave_call(chat_id, close=False)
+            _mark_self_left(chat_id)
             LOGGER(__name__).info("[Call] idle leave done for chat %s", chat_id)
         except Exception as e:
             LOGGER(__name__).error(f"Failed idle leave for chat {chat_id}: {e}")
@@ -553,6 +636,7 @@ class Call:
             # /play take py-tgcalls' set_stream_sources path, which switches the
             # source without restarting ffmpeg, so the chat hears silence.
             self._cancel_idle_leave(chat_id)
+            _mark_self_left(chat_id)
             try:
                 await client.leave_call(chat_id, close=False)
             except Exception as e:
@@ -573,6 +657,7 @@ class Call:
                         pass
             if not check:
                 await _clear_(chat_id)
+                _mark_self_left(chat_id)
                 try:
                     await client.leave_call(chat_id, close=False)
                 except Exception as e:
@@ -582,6 +667,7 @@ class Call:
             LOGGER(__name__).error(f"Error in change_stream for chat {chat_id}: {e}")
             try:
                 await _clear_(chat_id)
+                _mark_self_left(chat_id)
                 await client.leave_call(chat_id, close=False)
             except Exception as e2:
                 LOGGER(__name__).error(f"Failed to leave call after error for chat {chat_id}: {e2}")
@@ -871,6 +957,17 @@ class Call:
 
             @call.on_update(filters.chat_update(ChatUpdate.Status.LEFT_CALL))
             async def stream_services_handler(client, update):
+                # Careless echo protection: a LEFT_CALL that is the shadow of
+                # our OWN recent leave (empty queue) must not run stop_stream
+                # if a fresh /play has already re-joined — that used to kick
+                # the assistant back out mid-song.
+                if _was_self_left(update.chat_id):
+                    _self_left.pop(update.chat_id, None)
+                    LOGGER(__name__).info(
+                        "[Call] LEFT_CALL echo of our own leave ignored for chat %s",
+                        update.chat_id,
+                    )
+                    return
                 await self.stop_stream(update.chat_id)
 
             @call.on_update(filters.stream_end())

@@ -87,3 +87,20 @@ Dev: |
   <b>{11} [enable / disable]</b> - बॉट के खोजे गए क्वेरी को लॉग ग्रुप में लॉग करने को टॉगल करें
   <b>{12} [पंक्तियों की संख्या]</b> - सर्वर से लॉग प्राप्त करें
   <b>{13} [enable / disable]</b> - अगर कोई गाना नहीं सुन रहा है तो 30 सेकंड के बाद स्ट्रीम को अपने आप बंद करें
+
+AI: |
+  <b>Venom AI — tumhare server pe chalne wala dimaag (local Ollama, private), safety locks ke saath. Secrets hamesha redacted hote hain; AI sirf text bhej sakta hai, bot ko haath nahi laga sakta.</b>
+
+  <b>✧ {0}</b> - AI assistant se baat karo. Hinglish full support. WOH jaanta hai tumne abhi kya suna.
+
+  <b>✧ {1}</b> - AI DJ: mood batao (Example: /dj mast party), AI 6 mood-matched gaane chunke queue karta hai.
+
+  <b>✧ {2}</b> [on/off] - AI Auto DJ. ON karo to AI chupke-chupke next perfect gaana lagata rehta hai jab tak VC chalu hai. Sirf admins.
+
+  <b>✧ {3}</b> - Kisi bhi voice note pe ye command lagao. Shazam jaise: sunta hai, exact gaana pakadta hai, mazedaar fact deta hai aur play kar deta hai.
+
+  <b>✧ {4}</b> [text | off] - Is chat ke liye AI ki permanent shaiyl set karo. Sirf admins.
+
+  <b>👑 Owner/Sudo only:</b> /aion, /aioff - master switch • /aistats - usage • /aidiag - AI doctor (logs se server ki problem note karta hai) • /airead - code file samjhane ke liye.
+
+  <b>🎙 Voice:</b> DM me seedha voice note bhejo (ya group me bot ko reply karke) - turant AI reply, aur woh apni awaaz me bol bhi sakta hai.

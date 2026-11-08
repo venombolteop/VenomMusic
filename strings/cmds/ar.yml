@@ -115,3 +115,10 @@ LYRICS_LANG_COMMAND : ['lyricslang', 'lyricslanguage']
 LYRICS_TEXT_COMMAND : ['lyricsget', 'lyricsfind']
 
 HOT_COMMAND : ["hot", "topplayed"]
+
+# Venom AI
+AI_COMMAND : ["ai"]
+DJ_COMMAND : ["dj", "aidj"]
+IDENTIFY_COMMAND : ["identify", "songname"]
+PERSONA_COMMAND : ["persona"]
+DJAUTO_COMMAND : ["djauto"]
