@@ -20,17 +20,56 @@ _LOG = logging.getLogger("[VenomAI-tools]")
 def _clean_names(payload) -> list:
     """Extract & validate a list of plain song names out of a model payload.
 
-    Accepts {"songs": [..]} / {"names":[..]} / a bare list. Every entry must
-    be a plain string (numbers and objects are dropped) and is bounded.
+    Accepts a raw JSON string, {"songs": [..]} / {"names":[..]} / any
+    dict key holding a list of titles, or a bare list. Every entry must be a
+    plain string (numbers and objects are dropped) and is bounded.
     """
+    if isinstance(payload, str):
+        import ast as _ast
+        import json as _json
+        import re as _re
+
+        m = _re.search(r"\{.*\}", payload, _re.DOTALL)
+        blob = (m.group(0) if m else payload).strip()
+        try:
+            payload = _json.loads(blob)
+        except Exception:  # noqa: BLE001
+            try:
+                # A python-repr dict (single quotes) from an upstream str()
+                payload = _ast.literal_eval(blob)
+            except Exception:  # noqa: BLE001
+                payload = None
     names = None
-    if isinstance(payload, dict):
-        for key in ("songs", "names", "titles", "tracks", "query", "result"):
-            if isinstance(payload.get(key), list):
-                names = payload[key]
+    if isinstance(payload, str) and payload.strip():
+        names = [payload]
+    elif isinstance(payload, dict):
+        for key in ("songs", "song", "names", "titles", "tracks", "queue",
+                    "playlist", "query", "result", "results"):
+            val = payload.get(key)
+            if isinstance(val, list) and val:
+                names = val
                 break
-        if names is None and isinstance(payload.get("song"), str):
-            names = [payload["song"]]
+            if isinstance(val, str) and val.strip():
+                names = [val]
+                break
+        if names is None:
+            # The model drifts key names ("queue", "party", ...). Any value
+            # that is a list of plain strings is good enough.
+            fallback = [
+                val for val in payload.values()
+                if isinstance(val, list) and any(
+                    isinstance(x, (str, dict)) for x in val
+                )
+            ]
+            if fallback:
+                names = fallback[0]
+            else:
+                strings = [
+                    val for val in payload.values()
+                    if isinstance(val, str) and val.strip()
+                ]
+                if strings and len(strings) <= len(payload):
+                    names = [strings[0]]
     elif isinstance(payload, list):
         names = payload
     if not names:

@@ -147,8 +147,14 @@ async def chat(messages: list, json_mode: bool = False) -> tuple:
     for provider in chain:
         try:
             if provider == "local":
-                return safety.redact(await _local_call(messages, json_mode)), "local"
-            return safety.redact(await _cloud_call(messages, json_mode)), "cloud"
+                out = await _local_call(messages, json_mode)
+                if isinstance(out, str):
+                    out = safety.redact(out)
+                return out, provider
+            out = await _cloud_call(messages, json_mode)
+            if isinstance(out, str):
+                out = safety.redact(out)
+            return out, provider
         except Exception as e:
             last_err = e
             _LOG.error(f"{_LOGIN} provider {provider} failed: {type(e).__name__}: {e}")

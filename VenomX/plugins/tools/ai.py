@@ -246,7 +246,8 @@ _DJ_SYSTEM = (
     "ACTION: propose songs for a voice-chat queue for a Telegram music bot. "
     "Read the mood of the request and the recent-play history: design a "
     "small arc (intro, peak, outro). Only proper searchable song titles, "
-    "no year tags, no reasoning. Max 6 songs."
+    "no year tags, no reasoning. Max 6 songs. "
+    'Reply as {"songs": ["title", ...]} exactly.'
 )
 
 
