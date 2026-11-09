@@ -107,7 +107,8 @@ def threat(text: str) -> bool:
 # url at all inside streamed data) is neutralised to '[link blocked]'.
 _URL_RE = re.compile(r"(?i)\bhttps?://\S+|\b(?:www\.)\S+")
 _LINK_OK_RE = re.compile(
-    r"(?i)^[\w-]*\.?(?:youtube\.com|youtu\.be|spotify\.com|venombolteop\.\S+)"
+    r"(?i)^(?:https?://)?(?:[\w-]*\.)*(?:youtube\.com|youtu\.be|spotify\.com"
+    r"|venombolteop\S*)"
 )
 _LINK_BLOCKED = "[link blocked]"
 
