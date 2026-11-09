@@ -80,7 +80,44 @@ def redact(text: str) -> str:
             text = text.replace(value, "<redacted>")
     for pattern, replacement in _PATTERN_BANK:
         text = pattern.sub(replacement, text)
-    return text
+    return link_guard(text)
+
+
+# ------------------------------------------------------------ threat guard
+
+# Requests for hacking/phishing/scam help never reach any model: the router
+# short-circuits them to a canned refusal before the AI layer is touched.
+_THREAT_RE = re.compile(
+    r"\b(?:hack\w*|phish\w*|scam\w*|cheat|fraud|keylog\w*|rat\b|trojan\w*|"
+    r"malware|virus|exploit\w*|ddos|botnet|crack\w*|steal\w*|bypass\w*|"
+    r"otp\b|sim.?swap|carding|dark.?web|trap.?link|fake.?link|"
+    r"account.{0,12}(?:hack|chor|paas|do)|password.{0,12}(?:hack|nikal|do))\b",
+    re.I | re.UNICODE,
+)
+
+
+def threat(text: str) -> bool:
+    """True when the text asks for hacking / phishing / scam assistance."""
+    return bool(_THREAT_RE.search(str(text or "")))
+
+
+# ------------------------------------------------------------ link allowlist
+
+# Only audio-relevant links may survive into a reply. Anything else (and any
+# url at all inside streamed data) is neutralised to '[link blocked]'.
+_URL_RE = re.compile(r"(?i)\bhttps?://\S+|\b(?:www\.)\S+")
+_LINK_OK_RE = re.compile(
+    r"(?i)^[\w-]*\.?(?:youtube\.com|youtu\.be|spotify\.com|venombolteop\.\S+)"
+)
+_LINK_BLOCKED = "[link blocked]"
+
+
+def link_guard(text: str) -> str:
+    """Replace every url that is not an allowlisted music link."""
+    def _sub(m):
+        url = m.group(0).rstrip(".,?!)];}\"'")
+        return _LINK_BLOCKED if not _LINK_OK_RE.match(url) else url
+    return _URL_RE.sub(_sub, str(text or ""))
 
 
 # ---------------------------------------------------------------- input caps

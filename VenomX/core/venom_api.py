@@ -154,11 +154,26 @@ class VenomApi:
         """Dependency state. `checks` values are statuses only, by design."""
         return await self._json("GET", "/health")
 
+    @staticmethod
+    def _guard_url(value: str) -> str:
+        """Fail fast on link-shaped injection payloads before any request.
+
+        The API runs yt-dlp with an argv list (never a shell), so these
+        payloads cannot execute there either — this keeps them out of the
+        bot, the API logs, and the cache keys entirely.
+        """
+        import re as _re
+
+        text = str(value or "")
+        if _re.search(r"\$\(|\$\{|`|;|\||\\|\r|\n|[\x00-\x1f\x7f<>]", text):
+            raise ValueError("refusing to forward a link with injection characters")
+        return text
+
     async def resolve(self, url: str) -> dict:
         """Full metadata for one video. POST, because a URL is not a nice
         query parameter and this is the call a program makes."""
         return await self._json("POST", "/v1/resolve",
-                                json={"url": url})
+                                json={"url": self._guard_url(url)})
 
     async def search(self, query: str, limit: int = 5) -> dict:
         """Search YouTube. `engine` is 'primary' or 'fallback'."""
@@ -167,7 +182,8 @@ class VenomApi:
 
     async def formats(self, url: str) -> dict:
         """Every selectable format, split into `audio` and `video`."""
-        return await self._json("POST", "/v1/formats", json={"url": url})
+        return await self._json("POST", "/v1/formats",
+                                json={"url": self._guard_url(url)})
 
     async def link(self, url: str, kind: str = "audio",
                    height: int | None = None) -> dict:
@@ -175,10 +191,10 @@ class VenomApi:
 
         Returns exactly three fields: `title`, `type`, `stream_url`.
 
-        GET rather than POST, because the answer is a link and a link is
+            GET rather than POST, because the answer is a link and a link is
         something you can paste into a message, a log, or an <audio> tag.
         """
-        params: dict[str, Any] = {"url": url, "type": kind}
+        params: dict[str, Any] = {"url": self._guard_url(url), "type": kind}
         if height:
             params["height"] = height
         if kind == "audio":
@@ -222,7 +238,7 @@ class VenomApi:
         read on the other side. Returns `took_seconds` and `already_cached`, so
         a caller can log whether warming was worth anything.
         """
-        params: dict[str, Any] = {"url": url, "type": kind}
+        params: dict[str, Any] = {"url": self._guard_url(url), "type": kind}
         if height:
             params["height"] = height
         return await self._json("GET", "/warm", params=params)
@@ -235,7 +251,7 @@ class VenomApi:
         holds the whole file in memory; there is `download_to` for when that
         does not fit.
         """
-        payload: dict[str, Any] = {"url": url, "type": kind}
+        payload: dict[str, Any] = {"url": self._guard_url(url), "type": kind}
         if kind == "audio":
             payload["convert"] = convert
         if height:
@@ -263,7 +279,7 @@ class VenomApi:
         of megabytes, and a music bot serving several at once will not fit that
         in memory comfortably.
         """
-        payload: dict[str, Any] = {"url": url, "type": kind}
+        payload: dict[str, Any] = {"url": self._guard_url(url), "type": kind}
         if kind == "audio":
             payload["convert"] = convert
         if height:
