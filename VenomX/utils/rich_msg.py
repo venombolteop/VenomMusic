@@ -483,6 +483,26 @@ def _client():
     return app_client
 
 
+def _mid_from_updates(exc):
+    """Message id out of the raw Updates that pyroblack failed to parse."""
+    tb = exc.__traceback__
+    r = None
+    while tb is not None:
+        if tb.tb_frame.f_code.co_name == "send_rich_message":
+            r = tb.tb_frame.f_locals.get("r")
+        tb = tb.tb_next
+    if r is None:
+        return None
+    mid = getattr(r, "id", None)
+    if isinstance(mid, int):
+        return mid
+    for u in getattr(r, "updates", None) or []:
+        mid = getattr(getattr(u, "message", None), "id", None)
+        if isinstance(mid, int):
+            return mid
+    return None
+
+
 async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
     """Send a rich message via the inbuilt pyroblack method."""
     from pyrogram.errors import RPCError
@@ -496,6 +516,11 @@ async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
             chat_id, InputRichMessage(html=_beautify(html)), **kwargs
         )
         return int(msg.id)
+    except AttributeError as e:
+        _mid = _mid_from_updates(e)
+        if _mid:
+            return _mid
+        log.debug("pyroblack send_rich_message parse failed, trying HTTP", exc_info=True)
     except Exception:
         log.debug("pyroblack send_rich_message unavailable, trying HTTP", exc_info=True)
     # HTTP fallback keeps old friend paths alive until the bot session is up.
