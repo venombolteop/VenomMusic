@@ -152,7 +152,36 @@ async def _ai_instant_play(mystic, message, _, chat_id, arg):
     from VenomX import Platform
 
     try:
-        details, track_id = await Platform.youtube.track(str(arg)[:80])
+        url_arg = str(arg).strip()
+        raw_url = url_arg.lower()
+        # A playlist link queues the whole list exactly like .play does — the
+        # single-track resolver reports "nahi mila" for these.
+        if "://" in raw_url and ("list=" in raw_url or "playlist?" in raw_url):
+            items = await Platform.youtube.playlist(
+                url_arg,
+                config.PLAYLIST_FETCH_LIMIT,
+            )
+            if not items:
+                return await _html(
+                    mystic,
+                    f"<p>{pemoji('🔍')} {_sc('Playlist khaali mili — skip.')}</p>",
+                )
+            await _html(
+                mystic,
+                f"<p>{pemoji('⚡')} {_sc('AI picked playlist:')} <b>{len(items)} gaane</b> - queueing…</p>",
+            )
+            await stream(
+                _,
+                mystic,
+                message.from_user.id,
+                items,
+                message.chat.id,
+                rich_user_link(message.from_user),
+                message.chat.id,
+                streamtype="playlist",
+            )
+            return await mystic.delete()
+        details, track_id = await Platform.youtube.track(url_arg[:80])
     except Exception:  # noqa: BLE001
         return await _html(
             mystic, f"<p>{pemoji('🔍')} {_sc('Kuch nahi mila, naam thoda clear do.')}</p>"
