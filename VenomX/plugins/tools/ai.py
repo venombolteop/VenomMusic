@@ -216,8 +216,14 @@ async def _ai_instant_play(mystic, message, _, chat_id, arg):
 
 
 async def _ai_brain_reply(mystic, message, _, uid, ask_text, action="chat"):
-    """Streamed local brain reply with per-chat music context."""
+    """Streamed local brain reply with per-chat music context.
+
+    The status card is dropped the moment a rich draft starts, so the reply
+    types itself into one slot instead of stacking two cards; the final
+    send persists in place of the preview.
+    """
     import time as _t
+    from VenomX import rich_msg
     from VenomX.utils.ai import brain, safety
     from VenomX.utils.ai import memory as mem
     from VenomX.utils.ai.safety import shield
@@ -239,15 +245,41 @@ async def _ai_brain_reply(mystic, message, _, uid, ask_text, action="chat"):
     msgs = brain._messages(brain._system(persona, guard), history, ask_text)
     buf = ""
     last = 0.0
+    draft_id = int(_t.time() * 1e5) & 0x3FFFFFFF
+    streaming = False
+    started = _t.monotonic()
+
+    async def _show(question_body: str) -> None:
+        nonlocal streaming
+        if streaming:
+            ok = await rich_msg.send_rich_draft(chat_id, draft_id, question_body)
+            if ok:
+                return
+        await _html(mystic, question_body)
+
     try:
         if config.AI_PROVIDER in ("auto", "local"):
             async for delta in brain.stream_chat(msgs):
                 buf += delta
                 now = _t.monotonic()
-                if now - last >= 2.2 and len(buf) > 60:
+                if now - last >= 1.5 and len(buf) > 24:
                     last = now
                     partial = safety.redact(buf)[:1600]
-                    await _html(mystic, f"<p>{_LOGO} {rich_esc(partial)}\u2026</p>")
+                    body = (
+                        f"<h3>{_LOGO} Venom AI</h3>"
+                        f"{rich_msg.md_to_rich(partial)}"
+                        f"<p>…</p>"
+                    )
+                    if not streaming:
+                        first = await rich_msg.send_rich_draft(chat_id, draft_id, body)
+                        if first:
+                            streaming = True
+                            try:
+                                await mystic.delete()
+                            except Exception:  # noqa: BLE001
+                                pass
+                            continue
+                    await _show(body)
         else:
             raise brain.AIError("cloud-first")
     except Exception:  # noqa: BLE001
@@ -259,14 +291,28 @@ async def _ai_brain_reply(mystic, message, _, uid, ask_text, action="chat"):
         except Exception:  # noqa: BLE001
             text_out = None
         if text_out:
-            await _html(mystic, f"<p>{_LOGO} {rich_esc(str(text_out)[:1600])}</p>")
+            await _html(
+                mystic,
+                f"<h3>{_LOGO} Venom AI</h3>" + rich_msg.md_to_rich(str(text_out)[:1600]),
+            )
         else:
             await _html(mystic, f"<p>{_ERR}</p>")
         return
     final = safety.redact(buf)
     await mem.push(chat_id, uid, "user", str(ask_text)[:800])
     await mem.push(chat_id, uid, "assistant", final[:2000])
-    await _html(mystic, f"<p>{_LOGO} {rich_esc(final[:1600])}</p>")
+    secs = max(1, int(_t.monotonic() - started))
+    body = (
+        f"<h3>{_LOGO} Venom AI</h3>"
+        + rich_msg.md_to_rich(final[:1600])
+        + f"<footer>⚡ streamed in {secs}s</footer>"
+    )
+    if streaming:
+        if await rich_msg.send_rich(chat_id, body):
+            return
+        # Draft was up but persistence failed: the preview dies in 30s, so
+        # fall back to the status card so the answer does not vanish.
+    await _html(mystic, body)
 
 
 # -------------------------------------------------------------- AI DJ

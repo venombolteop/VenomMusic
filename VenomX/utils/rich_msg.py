@@ -380,8 +380,125 @@ async def url_ok(url: str) -> bool:
         return True
 
 
+def _base_url() -> str:
+    return f"{API_URL}/"
+
+
+def md_to_rich(md: str) -> str:
+    """Model markdown into rich-HTML blocks (headings/lists/code/quotes).
+
+    The plugins that show free-form model output call this instead of wrapping
+    everything in <p>, so the reply renders with Telegram's native Structures
+    instead of one flat paragraph.
+    """
+    lines = md.splitlines()
+    out: list[str] = []
+    para: list[str] = []
+
+    def flush_para() -> None:
+        if para:
+            out.append("<p>" + "<br>".join(rich_esc(x) for x in para) + "</p>")
+            para.clear()
+
+    i = 0
+    in_code = False
+    code: list[str] = []
+    lang = ""
+    while i < len(lines):
+        s = lines[i].strip()
+        if s.startswith("```"):
+            if in_code:
+                body = rich_esc("\n".join(code))
+                out.append(f"<pre><code class=\"language-{rich_esc(lang)}\">{body}</code></pre>" if lang else f"<pre>{body}</pre>")
+                code, lang = [], ""
+                in_code = False
+            else:
+                in_code = True
+                lang = s[3:].strip()
+            i += 1
+            continue
+        if in_code:
+            code.append(lines[i])
+            i += 1
+            continue
+        if not s:
+            flush_para()
+            i += 1
+            continue
+        if s in ("---", "***", "___"):
+            flush_para()
+            out.append("<hr/>")
+            i += 1
+            continue
+        hash_n = len(s) - len(s.lstrip("#"))
+        if 1 <= hash_n <= 6 and s[hash_n:hash_n + 1] == " ":
+            flush_para()
+            out.append(f"<h4>{rich_esc(s[hash_n + 1:].strip())}</h4>")
+            i += 1
+            continue
+        if s.startswith(("- ", "* ", "• ")):
+            flush_para()
+            items: list[str] = []
+            while i < len(lines):
+                t = lines[i].strip()
+                if t.startswith(("- ", "* ", "• ")):
+                    items.append(t[2:])
+                    i += 1
+                else:
+                    break
+            out.append("<ul>" + "".join(f"<li>{rich_esc(x)}</li>" for x in items) + "</ul>")
+            continue
+        numbered = re.match(r"^(\d+)[.)]\s+(.*)$", s)
+        if numbered:
+            flush_para()
+            items2: list[str] = []
+            while i < len(lines):
+                m2 = re.match(r"^(\d+)[.)]\s+(.*)$", lines[i].strip())
+                if m2:
+                    items2.append(m2.group(2))
+                    i += 1
+                else:
+                    break
+            out.append("<ol>" + "".join(f"<li>{rich_esc(x)}</li>" for x in items2) + "</ol>")
+            continue
+        if s.startswith(">"):
+            flush_para()
+            buf = [s[1:].strip()]
+            while i + 1 < len(lines) and lines[i + 1].strip().startswith(">"):
+                i += 1
+                buf.append(lines[i].strip()[1:].strip())
+            out.append("<blockquote>" + rich_esc(" ".join(x for x in buf if x)) + "</blockquote>")
+            i += 1
+            continue
+        para.append(lines[i])
+        i += 1
+    flush_para()
+    return "\n".join(out)
+
+
+def _client():
+    """The bot's MTProto client, once pyroblack rich methods are the path."""
+    from VenomX import app as app_client
+
+    return app_client
+
+
 async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
-    """Send a rich message; returns the new message id (or None)."""
+    """Send a rich message via the inbuilt pyroblack method."""
+    from pyrogram.errors import RPCError
+    from pyrogram.types import InputRichMessage
+
+    try:
+        kwargs = {}
+        if reply_markup is not None:
+            kwargs["reply_markup"] = reply_markup
+        msg = await _client().send_rich_message(
+            chat_id, InputRichMessage(html=_beautify(html)), **kwargs
+        )
+        return int(msg.id)
+    except Exception:
+        log.debug("pyroblack send_rich_message unavailable, trying HTTP", exc_info=True)
+    # HTTP fallback keeps old friend paths alive until the bot session is up.
     params = {"chat_id": chat_id, "rich_message": {"html": _beautify(html)}}
     if reply_markup is not None:
         params["reply_markup"] = reply_markup
@@ -392,6 +509,8 @@ async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
 
 
 async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None) -> bool:
+    from pyrogram.errors import RPCError
+
     params = {"chat_id": chat_id, "message_id": message_id,
               "rich_message": {"html": _beautify(html)}}
     if reply_markup is not None:
@@ -400,6 +519,25 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
     if not j.get("ok") and "not modified" in str(j.get("description") or ""):
         return True
     return bool(j.get("ok"))
+
+
+async def send_rich_draft(chat_id: int, draft_id: int, html: str) -> bool:
+    """Stream a partial rich message (30-second preview) while generating."""
+    from pyrogram.types import InputRichMessage
+
+    try:
+        await _client().send_rich_message_draft(
+            chat_id, int(draft_id), InputRichMessage(html=_beautify(html))
+        )
+        return True
+    except Exception:
+        log.debug("draft stream skipped", exc_info=True)
+        return False
+
+
+async def ai_stream(chat_id: int, chat_id_int: int, chunk_html: str) -> None:
+    """Convenience wrapper the AI lane calls with progressive HTML."""
+    await send_rich_draft(chat_id, chat_id_int, chunk_html)
 
 
 async def edit_reply_markup(chat_id: int, message_id: int, reply_markup) -> bool:
