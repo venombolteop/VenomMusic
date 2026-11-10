@@ -677,3 +677,7 @@ async def reply_rich(message, text: str, reply_markup=None) -> int | None:
                                reply_markup=reply_markup)
     except Exception:  # noqa: BLE001
         return None
+
+
+import logging
+log = logging.getLogger(__name__)
