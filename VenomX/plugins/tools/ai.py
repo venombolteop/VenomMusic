@@ -620,7 +620,7 @@ async def _auto_dj_loop(chat_id: int):
 
     first = True
     while True:
-        await asyncio.sleep(20 if first else 60)
+        await asyncio.sleep(5 if first else 15)
         first = False
         try:
             if not await ai_mem.get_setting(chat_id, "autodj", False):
