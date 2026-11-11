@@ -130,7 +130,7 @@ async def chatbot_chatter(client, message):
         # escapes the text itself — no raw HTML to break parse mode. The
         # card is only posted once there is real text, no lame placeholder.
         nonlocal mystic
-        body = f"{_LOGO} {partial[:700]} …"
+        body = f"{partial[:700]} …"
         try:
             if mystic is None:
                 mystic = await status_card(chat_id, body)
@@ -159,20 +159,14 @@ async def chatbot_chatter(client, message):
         except Exception:
             pass
         return
-    secs = max(1, int(time.monotonic() - started))
     mid = getattr(mystic, "id", None)
     if mid:
-        html = (
-            "<h3>🤖 AI Chat</h3>"
-            + md_to_rich(final[:1200])
-            + f"<footer>🤖 {secs}s me reply</footer>"
-        )
         try:
-            await edit_rich(chat_id, mid, html)
+            await edit_rich(chat_id, mid, md_to_rich(final[:1200]))
             return
         except Exception:
             pass
     try:
-        await mystic.edit_text(f"{_LOGO} {final[:1200]}")
+        await mystic.edit_text(final[:1200])
     except Exception:
         pass
