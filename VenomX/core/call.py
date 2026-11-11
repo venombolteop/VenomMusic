@@ -508,10 +508,17 @@ class Call:
             )
             LOGGER(__name__).info("[Call] join_call: assistant.play done at %.1fs", _t.monotonic() - _j0)
         except Exception:
+            # The first play() failure type is the single most useful signal
+            # for the "No Active Voice Chat Found" report — surface it.
+            LOGGER(__name__).warning(
+                "[Call] join_call: first assistant.play failed on chat %s",
+                chat_id,
+                exc_info=True,
+            )
             await self.join_chat(chat_id)
             # A freshly invited assistant may not have seen the group call in
             # its update stream yet — settle before believing the VC is off.
-            for _settle in (0.6, 2.5):
+            for _settle in (0.6, 2.5, 6.0):
                 await asyncio.sleep(_settle)
                 try:
                     await assistant.play(

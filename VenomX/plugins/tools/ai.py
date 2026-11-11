@@ -11,6 +11,7 @@
 # not by prompt. Every response is secret-redacted; every input is
 # rate-limited and injection-shielded.
 
+import asyncio
 import os
 import re
 import subprocess

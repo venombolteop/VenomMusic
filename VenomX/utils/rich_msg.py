@@ -496,8 +496,16 @@ def _mid_from_updates(exc):
     mid = getattr(r, "id", None)
     if isinstance(mid, int):
         return mid
-    for u in getattr(r, "updates", None) or []:
+    ups = getattr(r, "updates", None)
+    if ups is not None and not isinstance(ups, (list, tuple)):
+        ups = getattr(ups, "updates", None) or []
+    for u in ups or []:
         mid = getattr(getattr(u, "message", None), "id", None)
+        if isinstance(mid, int):
+            return mid
+        # Bot sendMessage replies carry Updates(updateMessageID): the id
+        # sits directly on the UpdateMessageID entry, no message payload.
+        mid = getattr(u, "id", None)
         if isinstance(mid, int):
             return mid
     return None
@@ -517,10 +525,18 @@ async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
         )
         return int(msg.id)
     except AttributeError as e:
+        # pyroblack bot bug: raw Updates parses fine over MTProto but its
+        # utils.parse_messages expects .messages — the message IS sent, so
+        # recover the id from the raw payload instead of re-sending (dupe).
         _mid = _mid_from_updates(e)
         if _mid:
             return _mid
-        log.debug("pyroblack send_rich_message parse failed, trying HTTP", exc_info=True)
+        log.warning(
+            "send_rich_message sent but raw id not recoverable (%s) — "
+            "skipping HTTP resend to avoid duplicates",
+            type(e).__name__,
+        )
+        return None
     except Exception:
         log.debug("pyroblack send_rich_message unavailable, trying HTTP", exc_info=True)
     # HTTP fallback keeps old friend paths alive until the bot session is up.

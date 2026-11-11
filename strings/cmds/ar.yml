@@ -122,3 +122,6 @@ DJ_COMMAND : ["dj", "aidj"]
 IDENTIFY_COMMAND : ["identify", "songname"]
 PERSONA_COMMAND : ["persona"]
 DJAUTO_COMMAND : ["djauto"]
+
+# Venom AI - chatbot
+CHATBOT_COMMAND : ["chatbot", "aichat"]
