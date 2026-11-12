@@ -18,6 +18,7 @@ from VenomX.utils.inline.play import get_progress_bar
 from VenomX.utils.rich_msg import (
     RichMystic,
     edit_rich,
+    get_anchor,
     pemoji,
     rich_note,
     rich_url_button,
@@ -237,7 +238,7 @@ def _body(
 
 
 async def _send_card(chat_id: int, html: str) -> int | None:
-    return await send_rich(chat_id, html)
+    return await send_rich(chat_id, html, reply_to=get_anchor(chat_id))
 
 
 def _register(chat_id: int, mid: int, videoid, total_sec: float):

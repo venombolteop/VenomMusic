@@ -97,6 +97,13 @@ class AyuBot(Client):
         self.mention = self.me.mention
 
         try:
+            from VenomX.utils.rich_msg import register_anchor_hook
+
+            register_anchor_hook(self)
+        except Exception:
+            LOGGER(__name__).warning("anchor hook registration failed", exc_info=True)
+
+        try:
             # Reported, not asserted. The point of a startup banner is to be the
             # one place you look when something later behaves as the wrong
             # version, so both are read from the host rather than written into the

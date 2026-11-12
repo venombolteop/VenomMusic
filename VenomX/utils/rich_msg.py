@@ -462,6 +462,52 @@ def _client():
     return app_client
 
 
+import time
+
+# Per-chat reply anchor: Telegram strips custom emoji when a standalone
+# rich message is edited (tdlib/telegram-bot-api#904) — edits keep them as
+# long as the message was originally sent as a reply. Cards and status
+# messages always carry one, so every later edit stays premium.
+_ANCHORS: dict[int, tuple[int, float]] = {}
+
+
+def set_anchor(chat_id: int, message_id: int | None) -> None:
+    if message_id:
+        _ANCHORS[chat_id] = (int(message_id), time.time())
+
+
+def get_anchor(chat_id: int) -> int | None:
+    entry = _ANCHORS.get(chat_id)
+    if not entry:
+        return None
+    mid, ts = entry
+    if time.time() - ts > 21600:
+        _ANCHORS.pop(chat_id, None)
+        return None
+    return mid
+
+
+async def _anchor_updater(client, message):
+    try:
+        if message.chat is not None and message.id:
+            set_anchor(message.chat.id, message.id)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def register_anchor_hook(app) -> None:
+    """Keep a per-chat reply anchor from every incoming message.
+
+    Telegram strips custom emoji when a standalone rich message is edited
+    (tdlib/telegram-bot-api#904); edits keep them if the message was first
+    sent as a reply. Every card/status send then replies to the last
+    message we saw in that chat, so its later edits stay premium.
+    """
+    from pyrogram.handlers import MessageHandler
+
+    app.add_handler(MessageHandler(_anchor_updater), group=-200)
+
+
 def _mid_from_updates(exc):
     """Message id out of the raw Updates that pyroblack failed to parse."""
     tb = exc.__traceback__
@@ -490,25 +536,37 @@ def _mid_from_updates(exc):
     return None
 
 
-async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
-    """Send a rich message via the inbuilt pyroblack method."""
+async def send_rich(
+    chat_id: int, html: str, reply_markup=None, reply_to: int | None = None
+) -> int | None:
+    """Send a rich message via the inbuilt pyroblack method.
+
+    reply_to keeps the card a reply — Telegram strips custom emoji when a
+    standalone rich message is edited in groups (tdlib#904), so cards
+    should always carry an anchor.
+    """
     from pyrogram.errors import RPCError
-    from pyrogram.types import InputRichMessage
+    from pyrogram.types import InputRichMessage, ReplyParameters
 
     try:
         kwargs = {}
         if reply_markup is not None:
             kwargs["reply_markup"] = reply_markup
+        if reply_to:
+            kwargs["reply_parameters"] = ReplyParameters(message_id=int(reply_to))
         msg = await _client().send_rich_message(
             chat_id, InputRichMessage(html=_beautify(html)), **kwargs
         )
-        return int(msg.id)
+        mid = int(msg.id)
+        set_anchor(chat_id, mid)
+        return mid
     except AttributeError as e:
         # pyroblack bot bug: raw Updates parses fine over MTProto but its
         # utils.parse_messages expects .messages — the message IS sent, so
         # recover the id from the raw payload instead of re-sending (dupe).
         _mid = _mid_from_updates(e)
         if _mid:
+            set_anchor(chat_id, _mid)
             return _mid
         log.warning(
             "send_rich_message sent but raw id not recoverable (%s)",
@@ -632,7 +690,11 @@ async def status_card(chat_id: int, text: str, fallback_message=None):
     fallback_message: a pyrogram Message used verbatim (reply) when the rich
     send fails, so the status stays visible instead of silently no-oping.
     """
-    mid = await send_rich(chat_id, f"<p>{rich_esc(text)}</p>")
+    if fallback_message is not None:
+        set_anchor(chat_id, fallback_message.id)
+    mid = await send_rich(
+        chat_id, f"<p>{rich_esc(text)}</p>", reply_to=get_anchor(chat_id)
+    )
     if not mid and fallback_message is not None:
         try:
             return await fallback_message.reply_text(
