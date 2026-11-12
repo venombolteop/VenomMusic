@@ -340,7 +340,7 @@ async def song_download_cb(client, CallbackQuery, _):
     import asyncio as _aio
 
     async def _api_meta():
-        """Title+duration from the local media API (warm, ~0.5s), None on miss."""
+        """(title, duration, uploader) from the local media API, None on miss."""
         url = (getattr(config, "VENOM_API_URL", "") or "").strip()
         if not url:
             return None
@@ -367,11 +367,15 @@ async def song_download_cb(client, CallbackQuery, _):
             return None
         if not payload.get("title"):
             return None
-        return payload["title"], payload.get("duration")
+        return (
+            payload["title"],
+            payload.get("duration"),
+            payload.get("uploader") or "Venom Music",
+        )
 
     meta = await _api_meta()
     if meta:
-        title, duration = meta[0].title(), meta[1]
+        title, duration, uploader = meta
     else:
         # Fallback: blocking extract in an executor thread so the bot's loop
         # is not held up while the API is down.
@@ -395,9 +399,15 @@ async def song_download_cb(client, CallbackQuery, _):
                 _ytdl_opts["cookiefile"] = cp
             with yt_dlp.YoutubeDL(_ytdl_opts) as ytdl:
                 x = ytdl.extract_info(yturl, download=False)
-            return (x["title"]).title(), x["duration"]
+            return (
+                (x["title"]).title(),
+                x["duration"],
+                x.get("uploader") or "Venom Music",
+            )
 
-        title, duration = await _aio.get_running_loop().run_in_executor(None, _ytdl_meta)
+        title, duration, uploader = await _aio.get_running_loop().run_in_executor(
+            None, _ytdl_meta
+        )
     title = re.sub(r"\W+", " ", title)
 
     try:
@@ -451,7 +461,7 @@ async def song_download_cb(client, CallbackQuery, _):
             file_path,
             caption=title,
             title=title,
-            performer=x["uploader"],
+            performer=uploader,
         )
         if j.get("ok"):
             await delete_msg(chat_id, mid)

@@ -550,7 +550,28 @@ async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
 
 
 async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None) -> bool:
-    from pyrogram.errors import RPCError
+    """Edit a rich message.
+
+    Preferred path is the pyroblack MTProto client (messages.EditMessage
+    with rich_message): native edits keep the premium-emoji document
+    entities intact — the Bot API HTTP edit strips them back to plain
+    emoji in groups. HTTP stays as a fallback for the rare client hiccup.
+    """
+    try:
+        from pyrogram.raw import functions as raw_functions
+        from pyrogram.types import InputRichMessage
+
+        c = _client()
+        rpc = raw_functions.messages.EditMessage(
+            peer=await c.resolve_peer(chat_id),
+            id=int(message_id),
+            rich_message=InputRichMessage(html=_beautify(html)).write(),
+            reply_markup=await reply_markup.write(c) if reply_markup else None,
+        )
+        await c.invoke(rpc)
+        return True
+    except Exception:
+        log.debug("MTProto rich edit failed, falling back to HTTP", exc_info=True)
 
     params = {"chat_id": chat_id, "message_id": message_id,
               "rich_message": {"html": _beautify(html)}}
@@ -582,7 +603,25 @@ async def ai_stream(chat_id: int, chat_id_int: int, chunk_html: str) -> None:
 
 
 async def edit_reply_markup(chat_id: int, message_id: int, reply_markup) -> bool:
-    """Edit only the inline keyboard of a message (preserves custom-emoji icons)."""
+    """Edit only the inline keyboard (preserves custom-emoji icons).
+
+    MTProto first for the same reason as edit_rich — the HTTP endpoint can
+    drop premium-emoji document entities from the card.
+    """
+    try:
+        from pyrogram.raw import functions as raw_functions
+
+        c = _client()
+        await c.invoke(
+            raw_functions.messages.EditMessage(
+                peer=await c.resolve_peer(chat_id),
+                id=int(message_id),
+                reply_markup=await reply_markup.write(c),
+            )
+        )
+        return True
+    except Exception:
+        log.debug("MTProto reply-markup edit failed, trying HTTP", exc_info=True)
     j = await _api("editMessageReplyMarkup", chat_id=chat_id, message_id=message_id,
                    reply_markup=reply_markup)
     return bool(j.get("ok"))
