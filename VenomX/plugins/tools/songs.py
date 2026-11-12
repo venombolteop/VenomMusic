@@ -443,28 +443,28 @@ async def song_download_cb(client, CallbackQuery, _):
         return await edit_rich(chat_id, mid, f"<p>{rich_esc(_['song_9'].format(e))}</p>")
 
     if stype == "video":
-        j = await send_video(
-            chat_id,
-            file_path,
-            caption=title,
-            duration=duration,
-            streaming=True,
-        )
-        if j.get("ok"):
+        try:
+            await send_video(
+                chat_id,
+                file_path,
+                caption=title,
+                duration=duration,
+                streaming=True,
+            )
             await delete_msg(chat_id, mid)
-        else:
+        except Exception:
             await edit_rich(chat_id, mid, f"<p>{rich_esc(_['song_10'])}</p>")
         os.remove(file_path)
     elif stype == "audio":
-        j = await send_audio(
-            chat_id,
-            file_path,
-            caption=title,
-            title=title,
-            performer=uploader,
-        )
-        if j.get("ok"):
+        try:
+            await send_audio(
+                chat_id,
+                file_path,
+                caption=title,
+                title=title,
+                performer=uploader,
+            )
             await delete_msg(chat_id, mid)
-        else:
+        except Exception:
             await edit_rich(chat_id, mid, f"<p>{rich_esc(_['song_10'])}</p>")
         os.remove(file_path)

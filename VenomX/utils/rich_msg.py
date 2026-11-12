@@ -1,10 +1,10 @@
-# VenomX rich message helper — Bot API 10.3 rich messages over pure HTTP.
+# VenomX rich message helper — Bot API 10.3 rich messages, all MTProto.
 #
-# Sends rich messages (music panels with per-track covers, inline buttons,
-# switch-inline queue views, progress bars) and edits/deletes them, while the
-# pyrogram client keeps receiving callback_query updates for these buttons
-# through its normal handlers.  No MTProto client is created here, so this
-# never touches auth.ImportBotAuthorization and never trips FLOOD_WAIT.
+# Everything goes through the bot's pyroblack client: send_rich_message,
+# messages.EditMessage with rich_message, delete_messages. Native MTProto
+# edits keep premium-emoji document entities alive (the HTTP Bot API strips
+# them back to plain emoji on edit); callback updates still arrive through
+# the client's normal handlers.
 
 from __future__ import annotations
 
@@ -18,9 +18,9 @@ import httpx
 
 from VenomX.utils.premium import _DB_EMOJI_FALLBACK
 
-from config import BOT_TOKEN
+import logging
 
-API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+log = logging.getLogger(__name__)
 
 _EMOJI_DB_PATH = Path(
     os.environ.get(
@@ -201,59 +201,42 @@ def btn_off(label: str, callback: str) -> str:
     return _ctl("❌", label, callback, "danger")
 
 
-_HTTP = httpx.AsyncClient(
-    timeout=httpx.Timeout(45.0),
+# One httpx client, but only for non-Telegram HEAD checks (cover URLs).
+_IMG_HTTP = httpx.AsyncClient(
+    timeout=httpx.Timeout(30.0),
     limits=httpx.Limits(max_keepalive_connections=8),
 )
 
 
-async def _post(path: str, **kw) -> dict:
-    """POST with retries — flaky DNS/keepalive must never crash a command."""
-    tries = 3
-    for attempt in range(tries):
-        try:
-            resp = await _HTTP.post(path, **kw)
-            try:
-                return resp.json()
-            except Exception:  # noqa: BLE001
-                return {"ok": False, "description": resp.text[:200]}
-        except Exception as e:  # noqa: BLE001
-            if attempt == tries - 1:
-                return {"ok": False, "description": repr(e)[:200]}
-            await asyncio.sleep(0.8 * (attempt + 1))
-
-
-async def _api(method: str, **params) -> dict:
-    return await _post(f"{API_URL}/{method}", json=params)
-
-
-async def _api_multipart(method: str, data: dict, files: dict) -> dict:
-    return await _post(f"{API_URL}/{method}", data=data, files=files)
-
-
 async def send_audio(chat_id: int, filepath: str, caption: str = "",
                      thumb: str | None = None, title: str = "",
-                     performer: str = "") -> dict:
-    data = {"chat_id": chat_id, "caption": caption, "title": title,
-            "performer": performer}
-    files = {"audio": open(filepath, "rb")}
-    if thumb:
-        data["thumbnail"] = "attach://thumb"
-        files["thumb"] = open(thumb, "rb")
-    return await _api_multipart("sendAudio", data, files)
+                     performer: str = "", duration: int = 0):
+    """Upload a song file via the pyroblack client; returns the Message."""
+    return await _client().send_audio(
+        chat_id=chat_id,
+        audio=filepath,
+        caption=caption,
+        title=title or None,
+        performer=performer or None,
+        duration=duration or 0,
+        thumb=thumb,
+    )
 
 
 async def send_video(chat_id: int, filepath: str, caption: str = "",
                      duration: int = 0, width: int = 0, height: int = 0,
-                     thumb: str | None = None, streaming: bool = True) -> dict:
-    data = {"chat_id": chat_id, "caption": caption, "duration": duration,
-            "width": width, "height": height,
-            "supports_streaming": str(streaming)}
-    files = {"video": open(filepath, "rb")}
-    if thumb:
-        data["thumbnail"] = "attach://thumb"
-        files["thumb"] = open(thumb, "rb")
-    return await _api_multipart("sendVideo", data, files)
+                     thumb: str | None = None, streaming: bool = True):
+    """Upload a video file via the pyroblack client; returns the Message."""
+    return await _client().send_video(
+        chat_id=chat_id,
+        video=filepath,
+        caption=caption,
+        duration=duration or 0,
+        width=width or 0,
+        height=height or 0,
+        supports_streaming=streaming,
+        thumb=thumb,
+    )
 
 
 
@@ -374,14 +357,10 @@ def _beautify(html: str) -> str:
 async def url_ok(url: str) -> bool:
     """HEAD-check an image URL (best effort — assumes yes on any failure)."""
     try:
-        resp = await _HTTP.head(url)
+        resp = await _IMG_HTTP.head(url)
         return resp.status_code == 200
     except Exception:
         return True
-
-
-def _base_url() -> str:
-    return f"{API_URL}/"
 
 
 def md_to_rich(md: str) -> str:
@@ -532,35 +511,26 @@ async def send_rich(chat_id: int, html: str, reply_markup=None) -> int | None:
         if _mid:
             return _mid
         log.warning(
-            "send_rich_message sent but raw id not recoverable (%s) — "
-            "skipping HTTP resend to avoid duplicates",
+            "send_rich_message sent but raw id not recoverable (%s)",
             type(e).__name__,
         )
         return None
     except Exception:
-        log.debug("pyroblack send_rich_message unavailable, trying HTTP", exc_info=True)
-    # HTTP fallback keeps old friend paths alive until the bot session is up.
-    params = {"chat_id": chat_id, "rich_message": {"html": _beautify(html)}}
-    if reply_markup is not None:
-        params["reply_markup"] = reply_markup
-    j = await _api("sendRichMessage", **params)
-    if not j.get("ok"):
+        log.warning("send_rich_message failed", exc_info=True)
         return None
-    return j["result"]["message_id"]
 
 
 async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None) -> bool:
-    """Edit a rich message.
+    """Edit a rich message through the pyroblack client.
 
-    Preferred path is the pyroblack MTProto client (messages.EditMessage
-    with rich_message): native edits keep the premium-emoji document
-    entities intact — the Bot API HTTP edit strips them back to plain
-    emoji in groups. HTTP stays as a fallback for the rare client hiccup.
+    Native MTProto edits keep the premium-emoji document entities intact —
+    the HTTP Bot API strips them back to plain emoji in groups.
     """
-    try:
-        from pyrogram.raw import functions as raw_functions
-        from pyrogram.types import InputRichMessage
+    from pyrogram.errors import MessageNotModified
+    from pyrogram.raw import functions as raw_functions
+    from pyrogram.types import InputRichMessage
 
+    try:
         c = _client()
         rpc = raw_functions.messages.EditMessage(
             peer=await c.resolve_peer(chat_id),
@@ -570,17 +540,11 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
         )
         await c.invoke(rpc)
         return True
-    except Exception:
-        log.debug("MTProto rich edit failed, falling back to HTTP", exc_info=True)
-
-    params = {"chat_id": chat_id, "message_id": message_id,
-              "rich_message": {"html": _beautify(html)}}
-    if reply_markup is not None:
-        params["reply_markup"] = reply_markup
-    j = await _api("editMessageText", **params)
-    if not j.get("ok") and "not modified" in str(j.get("description") or ""):
+    except MessageNotModified:
         return True
-    return bool(j.get("ok"))
+    except Exception:
+        log.warning("rich edit failed in %s", chat_id, exc_info=True)
+        return False
 
 
 async def send_rich_draft(chat_id: int, draft_id: int, html: str) -> bool:
@@ -603,14 +567,10 @@ async def ai_stream(chat_id: int, chat_id_int: int, chunk_html: str) -> None:
 
 
 async def edit_reply_markup(chat_id: int, message_id: int, reply_markup) -> bool:
-    """Edit only the inline keyboard (preserves custom-emoji icons).
+    """Edit only the inline keyboard via the client (keeps emoji icons)."""
+    from pyrogram.raw import functions as raw_functions
 
-    MTProto first for the same reason as edit_rich — the HTTP endpoint can
-    drop premium-emoji document entities from the card.
-    """
     try:
-        from pyrogram.raw import functions as raw_functions
-
         c = _client()
         await c.invoke(
             raw_functions.messages.EditMessage(
@@ -621,28 +581,24 @@ async def edit_reply_markup(chat_id: int, message_id: int, reply_markup) -> bool
         )
         return True
     except Exception:
-        log.debug("MTProto reply-markup edit failed, trying HTTP", exc_info=True)
-    j = await _api("editMessageReplyMarkup", chat_id=chat_id, message_id=message_id,
-                   reply_markup=reply_markup)
-    return bool(j.get("ok"))
+        log.warning("reply-markup edit failed in %s", chat_id, exc_info=True)
+        return False
 
 
 async def delete_msg(chat_id: int, message_id: int) -> bool:
-    j = await _api("deleteMessage", chat_id=chat_id, message_id=message_id)
-    return bool(j.get("ok"))
-
-
-async def answer_callback(cq_id: str, text: str = "", alert: bool = False) -> bool:
-    j = await _api("answerCallbackQuery", callback_query_id=cq_id, text=text,
-                   show_alert=alert)
-    return bool(j.get("ok"))
+    try:
+        await _client().delete_messages(chat_id, [int(message_id)])
+        return True
+    except Exception:
+        log.warning("delete failed in %s for %s", chat_id, message_id, exc_info=True)
+        return False
 
 
 class RichMystic:
     """Drop-in status-message adapter for code that expects a pyrogram Message.
 
-    edit_text/delete/reply_text map onto the HTTP rich-message helper, so
-    stream()/helpers can drive a rich card instead of a plain text bubble.
+    edit_text/delete/reply_text map onto the MTProto rich-message helpers,
+    so stream()/helpers can drive a rich card instead of a plain bubble.
     """
 
     def __init__(self, chat_id: int, message_id: int):
@@ -718,7 +674,7 @@ async def edit_any(mystic, text: str, reply_markup=None) -> bool:
     """Rich-edit a message; pyrogram edit_text is the failure fallback.
 
     Accepts a RichMystic or a pyrogram Message so every edit site can stay
-    row-blind: first try the Bot API rich edit, then the classic edit.
+    row-blind: first try the rich edit, then the classic edit.
     """
     chat_id, mid = ids_of(mystic)
     if chat_id and mid:
@@ -759,5 +715,3 @@ async def reply_rich(message, text: str, reply_markup=None) -> int | None:
         return None
 
 
-import logging
-log = logging.getLogger(__name__)
