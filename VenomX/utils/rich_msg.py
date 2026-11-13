@@ -548,6 +548,20 @@ async def send_rich(
     from pyrogram.errors import RPCError
     from pyrogram.types import InputRichMessage, ReplyParameters
 
+    # Telegram strips custom emoji when a standalone rich message is edited
+    # in groups (tdlib#904). Replies keep them — even to a message that was
+    # deleted right after. So every send defaults to answering the chat's
+    # last anchor, and when no anchor was ever seen it mints a temporary
+    # one and deletes it again as soon as the card is out.
+    if reply_to is None:
+        reply_to = get_anchor(chat_id)
+    temp_anchor = None
+    if not reply_to:
+        try:
+            temp_anchor = await _client().send_message(chat_id, "🎵")
+            reply_to = temp_anchor.id
+        except Exception:  # noqa: BLE001
+            reply_to = None
     try:
         kwargs = {}
         if reply_markup is not None:
@@ -576,6 +590,12 @@ async def send_rich(
     except Exception:
         log.warning("send_rich_message failed", exc_info=True)
         return None
+    finally:
+        if temp_anchor is not None:
+            try:
+                await delete_msg(chat_id, temp_anchor.id)
+            except Exception:  # noqa: BLE001
+                pass
 
 
 async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None) -> bool:
