@@ -36,3 +36,4 @@ test_rich.py
 venv/
 venv-*/
 *.bak3
+*.bak7

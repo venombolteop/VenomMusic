@@ -157,9 +157,9 @@ _REMOTE_FFMPEG_PARAMS = (
 # For local files: buffer tuning to prevent pipe starvation
 _LOCAL_FFMPEG_PARAMS = (
     "-thread_queue_size 4096 "
-    "-analyzeduration 5000000 -probesize 131072 "
+    "-analyzeduration 5000000 -probesize 1000000 "
     "-fflags +genpts+discardcorrupt "
-    "-flags low_delay"
+    ""
 )
 
 # Video-specific: faster decode + lower buffer for real-time pipe streaming

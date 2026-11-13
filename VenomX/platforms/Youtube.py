@@ -1300,6 +1300,9 @@ class YouTube:
                 format=_AUDIO_FMT,
                 outtmpl="downloads/%(id)s.%(ext)s",
             )
+            # web_embedded is the only client that still serves audio-only
+            # formats here; tv/mweb/web only return progressive itag 18.
+            ydl_optssx["extractor_args"]["youtube"]["player_client"] = ["web_embedded"] + list(_YT_CLIENTS)
 
             info = extract_info_with_fallback(link, ydl_optssx)
             xyz = os.path.join("downloads", f"{info['id']}.{info['ext']}")
