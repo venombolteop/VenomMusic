@@ -119,7 +119,16 @@ def rich_heading(text: str, level: int = 4) -> str:
 
 
 def rich_img(url: str) -> str:
-    return f'<img src="{url}"/>'
+    """An <img> tag — or "" when the URL is missing/not a remote http(s) one.
+
+    A dead or malformed URL here used to fail the WHOLE rich card
+    (send_rich_message raises and the card was silently dropped), so junk
+    values are dropped before they ever reach Telegram.
+    """
+    u = str(url or "").strip()
+    if not u.startswith(("http://", "https://")):
+        return ""
+    return f'<img src="{u}"/>'
 
 
 def rich_button(text: str, callback_data: str = "", style: str = "primary") -> str:
@@ -464,6 +473,46 @@ def _client():
 
 import time
 
+# Dead image protection: one un-fetchable remote <img> makes Telegram reject
+# the whole rich card, so known-bad URLs are dropped up front and, if a send/
+# edit still fails while the HTML carries images, it is retried once without
+# them (tg://emoji imgs are custom-emoji entities and are never touched).
+_IMG_TAG_RE = re.compile(r'<img\s+src="((?!tg://)[^"]*)"[^>]*>')
+_BAD_IMG: dict[str, float] = {}
+_IMG_TTL = 1800  # 30 min — a URL may come back, keep re-checking after that.
+
+
+def _img_urls(html: str) -> list[str]:
+    """Remote (non-tg://) image URLs inside the html."""
+    return _IMG_TAG_RE.findall(html)
+
+
+def _strip_imgs(html: str) -> str:
+    """Remove every remote <img> tag; tg://emoji tags survive untouched."""
+    return _IMG_TAG_RE.sub("", html)
+
+
+def _mark_bad_imgs(html: str) -> None:
+    """Blacklist the remote image urls found in html for _IMG_TTL."""
+    exp = time.time() + _IMG_TTL
+    for url in _IMG_TAG_RE.findall(html):
+        _BAD_IMG[url] = exp
+
+
+def _drop_bad_imgs(html: str) -> str:
+    """Drop <img> tags whose URL is blacklisted; expired entries are pruned."""
+    if not _BAD_IMG:
+        return html
+    now = time.time()
+    for url in [u for u, exp in _BAD_IMG.items() if exp <= now]:
+        _BAD_IMG.pop(url, None)
+    if not _BAD_IMG:
+        return html
+    return _IMG_TAG_RE.sub(
+        lambda m: "" if m.group(1) in _BAD_IMG else m.group(0), html
+    )
+
+
 # Per-chat reply anchor: Telegram strips custom emoji when a standalone
 # rich message is edited (tdlib/telegram-bot-api#904) — edits keep them as
 # long as the message was originally sent as a reply. Cards and status
@@ -568,10 +617,41 @@ async def send_rich(
             kwargs["reply_markup"] = reply_markup
         if reply_to:
             kwargs["reply_parameters"] = ReplyParameters(message_id=int(reply_to))
-        msg = await _client().send_rich_message(
-            chat_id, InputRichMessage(html=_beautify(html)), **kwargs
+        bhtml = _beautify(_drop_bad_imgs(html))
+        log.info(
+            "[rich send] chat=%s anchor=%s%s emoji_tags=%s",
+            chat_id, reply_to, " (temp)" if temp_anchor else "", bhtml.count("<tg-emoji"),
         )
+        if os.environ.get("RICH_DEBUG_DUMP", "").lower() in ("1", "true", "yes"):
+            try:
+                import time as _t
+
+                with open(f"/tmp/rich_send_{int(chat_id)}_{int(_t.time())}.html", "w") as _f:
+                    _f.write(bhtml)
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            msg = await _client().send_rich_message(
+                chat_id, InputRichMessage(html=bhtml), **kwargs
+            )
+        except AttributeError:
+            raise  # pyroblack recovery below — never re-send (dupe)
+        except Exception:
+            if not _IMG_TAG_RE.search(bhtml):
+                raise
+            # One un-fetchable <img> kills the whole card: retry once without
+            # the images; if that lands, blacklist the dead urls.
+            log.warning(
+                "[rich send] failed with <img> tags — retrying stripped (chat=%s)",
+                chat_id,
+            )
+            stripped = _beautify(_strip_imgs(_drop_bad_imgs(html)))
+            msg = await _client().send_rich_message(
+                chat_id, InputRichMessage(html=stripped), **kwargs
+            )
+            _mark_bad_imgs(html)
         mid = int(msg.id)
+        log.info("[rich sent] mid=%s chat=%s", mid, chat_id)
         set_anchor(chat_id, mid)
         return mid
     except AttributeError as e:
@@ -580,6 +660,7 @@ async def send_rich(
         # recover the id from the raw payload instead of re-sending (dupe).
         _mid = _mid_from_updates(e)
         if _mid:
+            log.info("[rich sent/updates] mid=%s chat=%s", _mid, chat_id)
             set_anchor(chat_id, _mid)
             return _mid
         log.warning(
@@ -608,16 +689,54 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
     from pyrogram.raw import functions as raw_functions
     from pyrogram.types import InputRichMessage
 
+    if not message_id:
+        # Nothing to edit (a failed send returned None) — say so instead of
+        # letting EditMessage blow up on id=None.
+        return False
     try:
         c = _client()
-        rpc = raw_functions.messages.EditMessage(
-            peer=await c.resolve_peer(chat_id),
-            id=int(message_id),
-            rich_message=InputRichMessage(html=_beautify(html)).write(),
-            reply_markup=await reply_markup.write(c) if reply_markup else None,
+        bhtml = _beautify(_drop_bad_imgs(html))
+        log.info(
+            "[rich edit] chat=%s mid=%s emoji_tags=%s reply_markup=%s",
+            chat_id, message_id, bhtml.count("<tg-emoji"), bool(reply_markup),
         )
-        await c.invoke(rpc)
-        return True
+        if os.environ.get("RICH_DEBUG_DUMP", "").lower() in ("1", "true", "yes"):
+            try:
+                import time as _t
+
+                with open(f"/tmp/rich_edit_{int(message_id)}_{int(_t.time())}.html", "w") as _f:
+                    _f.write(bhtml)
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            rpc = raw_functions.messages.EditMessage(
+                peer=await c.resolve_peer(chat_id),
+                id=int(message_id),
+                rich_message=InputRichMessage(html=bhtml).write(),
+                reply_markup=await reply_markup.write(c) if reply_markup else None,
+            )
+            await c.invoke(rpc)
+            return True
+        except MessageNotModified:
+            return True
+        except Exception:
+            if not _IMG_TAG_RE.search(bhtml):
+                raise
+            # A dead <img> rejects the whole edit: retry once without images.
+            log.warning(
+                "[rich edit] failed with <img> tags — retrying stripped (chat=%s mid=%s)",
+                chat_id, message_id,
+            )
+            stripped = _beautify(_strip_imgs(_drop_bad_imgs(html)))
+            rpc = raw_functions.messages.EditMessage(
+                peer=await c.resolve_peer(chat_id),
+                id=int(message_id),
+                rich_message=InputRichMessage(html=stripped).write(),
+                reply_markup=await reply_markup.write(c) if reply_markup else None,
+            )
+            await c.invoke(rpc)
+            _mark_bad_imgs(html)
+            return True
     except MessageNotModified:
         return True
     except Exception:
