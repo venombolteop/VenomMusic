@@ -718,10 +718,13 @@ async def send_rich(
         return None
     finally:
         if temp_anchor is not None:
-            try:
-                await delete_msg(chat_id, temp_anchor.id)
-            except Exception:  # noqa: BLE001
-                pass
+            # Fire-and-forget: the card is already out, the anchor has done
+            # its job. A stuck delete must never block the caller's reply
+            # edit (this froze /ping in groups — delete_msg caps the RPC
+            # and runs in the background here).
+            asyncio.get_running_loop().create_task(
+                delete_msg(chat_id, temp_anchor.id)
+            )
 
 
 async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None) -> bool:
@@ -760,10 +763,12 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
                 rich_message=InputRichMessage(html=bhtml).write(),
                 reply_markup=await reply_markup.write(c) if reply_markup else None,
             )
-            await c.invoke(rpc)
+            await asyncio.wait_for(c.invoke(rpc), 15)
             return True
         except MessageNotModified:
             return True
+        except asyncio.TimeoutError:
+            raise
         except Exception:
             if not _IMG_TAG_RE.search(bhtml):
                 raise
@@ -779,7 +784,7 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
                 rich_message=InputRichMessage(html=stripped).write(),
                 reply_markup=await reply_markup.write(c) if reply_markup else None,
             )
-            await c.invoke(rpc)
+            await asyncio.wait_for(c.invoke(rpc), 15)
             _mark_bad_imgs(html)
             return True
     except MessageNotModified:
@@ -830,7 +835,11 @@ async def edit_reply_markup(chat_id: int, message_id: int, reply_markup) -> bool
 async def delete_msg(chat_id: int, message_id: int) -> bool:
     forget_anchor(chat_id, message_id)
     try:
-        await _client().delete_messages(chat_id, [int(message_id)])
+        # A stuck delete RPC (observed: channels.DeleteMessages losing its
+        # response in supergroups) must never wedge its caller — cap it.
+        await asyncio.wait_for(
+            _client().delete_messages(chat_id, [int(message_id)]), 10
+        )
         return True
     except Exception:
         log.warning("delete failed in %s for %s", chat_id, message_id, exc_info=True)
