@@ -62,7 +62,8 @@ def audio_quality_markup(
 ):
     def aq(btn_text, cb, on):
         return rich_button(
-            f"{pemoji('✅') if on else pemoji('🎧')} {rich_esc(btn_text)}",
+            f"{pemoji('✅') if on else pemoji('🎧')} "
+            f"{rich_esc(btn_text.replace('{0}', '').strip())}",
             callback_data=cb,
             style="success" if on else "primary",
         )
@@ -91,7 +92,8 @@ def video_quality_markup(
 ):
     def vq(btn_text, cb, on):
         return rich_button(
-            f"{pemoji('✅') if on else pemoji('🎥')} {rich_esc(btn_text)}",
+            f"{pemoji('✅') if on else pemoji('🎥')} "
+            f"{rich_esc(btn_text.replace('{0}', '').strip())}",
             callback_data=cb,
             style="success" if on else "primary",
         )
