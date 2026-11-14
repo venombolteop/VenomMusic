@@ -536,6 +536,39 @@ def get_anchor(chat_id: int) -> int | None:
     return mid
 
 
+def forget_anchor(chat_id: int, message_id: int | None) -> None:
+    """Drop the chat's anchor, but only if it is exactly this message id.
+
+    Every caller that deletes a card/anchor outside delete_msg must use this
+    so the next send does not reply to a dead message (Telegram then strips
+    the premium emoji from the whole card).
+    """
+    if message_id is None:
+        return
+    entry = _ANCHORS.get(chat_id)
+    if entry and int(entry[0]) == int(message_id):
+        _ANCHORS.pop(chat_id, None)
+
+
+async def _msg_alive(chat_id: int, mid: int) -> bool:
+    """Is this message still there? False only on a definitive miss.
+
+    Any client/API hiccup answers True — a stale-but-alive reply beats a
+    pointless temp anchor round-trip.
+    """
+    try:
+        res = await _client().get_messages(chat_id, int(mid))
+        if isinstance(res, (list, tuple)):
+            res = res[0] if res else None
+        if res is None:
+            return False
+        if getattr(res, "empty", False):
+            return False
+        return True
+    except Exception:  # noqa: BLE001
+        return True
+
+
 async def _anchor_updater(client, message):
     try:
         if message.chat is not None and message.id:
@@ -604,6 +637,15 @@ async def send_rich(
     # one and deletes it again as soon as the card is out.
     if reply_to is None:
         reply_to = get_anchor(chat_id)
+    anchor_alive: bool | None = None
+    if reply_to is not None:
+        anchor_alive = await _msg_alive(chat_id, reply_to)
+        if not anchor_alive:
+            # The anchor was deleted under us (commanddelete, moderation bot,
+            # close button…): replying to a dead message strips premium emoji,
+            # so forget it and let the temp-anchor path mint a fresh one.
+            forget_anchor(chat_id, reply_to)
+            reply_to = None
     temp_anchor = None
     if not reply_to:
         try:
@@ -619,8 +661,11 @@ async def send_rich(
             kwargs["reply_parameters"] = ReplyParameters(message_id=int(reply_to))
         bhtml = _beautify(_drop_bad_imgs(html))
         log.info(
-            "[rich send] chat=%s anchor=%s%s emoji_tags=%s",
-            chat_id, reply_to, " (temp)" if temp_anchor else "", bhtml.count("<tg-emoji"),
+            "[rich send] chat=%s anchor=%s%s%s emoji_tags=%s",
+            chat_id, reply_to,
+            " (temp)" if temp_anchor else "",
+            " (alive)" if anchor_alive else " (fresh)",
+            bhtml.count("<tg-emoji"),
         )
         if os.environ.get("RICH_DEBUG_DUMP", "").lower() in ("1", "true", "yes"):
             try:
@@ -783,6 +828,7 @@ async def edit_reply_markup(chat_id: int, message_id: int, reply_markup) -> bool
 
 
 async def delete_msg(chat_id: int, message_id: int) -> bool:
+    forget_anchor(chat_id, message_id)
     try:
         await _client().delete_messages(chat_id, [int(message_id)])
         return True

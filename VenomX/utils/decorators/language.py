@@ -6,7 +6,7 @@ from pyrogram.enums import ChatType
 from strings import get_string
 from VenomX.misc import SUDOERS
 from VenomX.utils.database import get_lang, is_commanddelete_on, is_maintenance
-from VenomX.utils.rich_msg import reply_note, status_card
+from VenomX.utils.rich_msg import forget_anchor, reply_note, status_card
 
 
 def language(mystic):
@@ -22,6 +22,13 @@ def language(mystic):
                     return await reply_note(message, language["maint_4"])
                 return
         if await is_commanddelete_on(message.chat.id):
+            # The command message is what the anchor hook registered; if it is
+            # deleted here without forgetting, the next rich card replies to a
+            # dead message and Telegram strips its premium emoji.
+            try:
+                forget_anchor(message.chat.id, message.id)
+            except Exception:
+                pass
             try:
                 await message.delete()
             except Exception:

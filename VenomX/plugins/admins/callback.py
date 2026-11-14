@@ -48,7 +48,7 @@ from VenomX.utils.inline.play import (
     stream_markup,
     telegram_markup,
 )
-from VenomX.utils.rich_msg import edit_any, edit_rich, send_note, status_card
+from VenomX.utils.rich_msg import edit_any, edit_rich, forget_anchor, send_note, status_card
 from VenomX.utils.rich_panels import show_main, show_menu
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.stream.stream import stream
@@ -468,6 +468,10 @@ async def play_music(client, CallbackQuery, _):
         return
     user_name = CallbackQuery.from_user.first_name
     try:
+        forget_anchor(CallbackQuery.message.chat.id, CallbackQuery.message.id)
+    except Exception:
+        pass
+    try:
         await CallbackQuery.message.delete()
         await CallbackQuery.answer()
     except Exception:
@@ -551,6 +555,10 @@ async def play_playlists_cb(client, CallbackQuery, _):
     except Exception:
         return
     user_name = CallbackQuery.from_user.first_name
+    try:
+        forget_anchor(CallbackQuery.message.chat.id, CallbackQuery.message.id)
+    except Exception:
+        pass
     await CallbackQuery.message.delete()
     try:
         await CallbackQuery.answer()
@@ -711,6 +719,12 @@ async def slider_queries(client, CallbackQuery, _):
 
 @app.on_callback_query(filters.regex("close") & ~BANNED_USERS)
 async def close_menu(_, CallbackQuery):
+    # The closed message may be the chat's current reply anchor; forgetting
+    # it here keeps the next card from replying to a dead message.
+    try:
+        forget_anchor(CallbackQuery.message.chat.id, CallbackQuery.message.id)
+    except Exception:
+        pass
     try:
         await CallbackQuery.message.delete()
         await CallbackQuery.answer()
