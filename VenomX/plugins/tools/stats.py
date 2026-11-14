@@ -60,7 +60,18 @@ async def stats_global(client, message, _):
     body += rich_heading(f'{pemoji("📊")} ᴠᴇɴᴏᴍ sᴛᴀᴛs', level=4)
     body += f"<p>{rich_esc(_['gstats_11'].format(app.mention))}</p>"
     body += upl
-    await send_rich(message.chat.id, body)
+    mid = await send_rich(message.chat.id, body)
+    if not mid:
+        # Rich card failed (dead header image, API hiccup) — answer plainly
+        # instead of silence.
+        try:
+            await message.reply_text(
+                f"📊 ᴠᴇɴᴏᴍ sᴛᴀᴛs — @{app.username}\n"
+                + _["gstats_11"].format(f"@{app.username}"),
+                disable_web_page_preview=True,
+            )
+        except Exception:
+            pass
 
 
 @app.on_message(command("GSTATS_COMMAND") & ~BANNED_USERS)
@@ -69,10 +80,33 @@ async def gstats_global(client, message, _):
     mystic = await send_rich(
         message.chat.id, f"<p>{rich_esc(_['gstats_1'])}</p>"
     )
+    if not mystic:
+        # Status card failed — answer now so the command is never silent.
+        try:
+            await message.reply_text(
+                _["gstats_1"], disable_web_page_preview=True
+            )
+        except Exception:
+            pass
+
+    async def _finish(body: str, fallback_text: str):
+        """Edit the status card when it exists; else send/fallback an answer."""
+        if mystic:
+            ok = await edit_rich(message.chat.id, mystic, body)
+            if ok:
+                return
+        if not await send_rich(message.chat.id, body):
+            try:
+                await message.reply_text(
+                    fallback_text, disable_web_page_preview=True
+                )
+            except Exception:
+                pass
+
     stats = await get_global_tops()
     if not stats:
         await asyncio.sleep(1)
-        return await edit_rich(message.chat.id, mystic, f"<p>{rich_esc(_['gstats_2'])}</p>")
+        return await _finish(f"<p>{rich_esc(_['gstats_2'])}</p>", _["gstats_2"])
 
     def get_stats():
         results = {}
@@ -105,16 +139,24 @@ async def gstats_global(client, message, _):
         print(e)
         return
     if videoid is None:
-        return await edit_rich(message.chat.id, mystic, f"<p>{rich_esc(_['gstats_2'])}</p>")
-    (
-        title,
-        duration_min,
-        duration_sec,
-        thumbnail,
-        vidid,
-    ) = await Platform.youtube.details(videoid, True)
+        return await _finish(f"<p>{rich_esc(_['gstats_2'])}</p>", _["gstats_2"])
+    try:
+        (
+            title,
+            duration_min,
+            duration_sec,
+            thumbnail,
+            vidid,
+        ) = await Platform.youtube.details(videoid, True)
+    except Exception:
+        # A dead lookup must not leave the command unanswered.
+        title, thumbnail = None, None
+    if title is None:
+        return await _finish(f"<p>{rich_esc(_['gstats_2'])}</p>", _["gstats_2"])
     title = title.title()
     upl = get_stats_markup(_, True if message.from_user.id in SUDOERS else False)
+    # rich_img drops missing/non-http thumbs to "" — the card then renders
+    # without the image instead of failing as a whole.
     body = rich_img(thumbnail)
     body += rich_heading(f'{pemoji("🏆")} ᴛᴏᴘ ᴘʟᴀʏᴇᴅ ᴛʀᴀᴄᴋ', level=4)
     body += (
@@ -122,7 +164,10 @@ async def gstats_global(client, message, _):
         f"<p>{pemoji('🔥')} {rich_esc(app.mention)} — {rich_esc(co)}x</p>"
     )
     body += upl
-    await edit_rich(message.chat.id, mystic, body)
+    await _finish(
+        body,
+        f"🏆 ᴛᴏᴘ ᴘʟᴀʏᴇᴅ ᴛʀᴀᴄᴋ\n{title} — {co}x",
+    )
 
 
 @app.on_callback_query(filters.regex("GetStatsNow") & ~BANNED_USERS)
