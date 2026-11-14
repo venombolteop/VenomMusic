@@ -170,7 +170,9 @@ def _api_audio_url():
     return (getattr(config, "VENOM_API_URL", "") or "").strip()
 
 
-async def _api_audio_download(chat_id: int, mid: int, vidid: str, title: str):
+async def _api_audio_download(
+    chat_id: int, mid: int, vidid: str, title: str, format_id=None
+):
     """MP3 fast path through the media server's /v1/download.
 
     The server plays from its warm cache when it can, so a popular track
@@ -191,6 +193,10 @@ async def _api_audio_download(chat_id: int, mid: int, vidid: str, title: str):
         "type": "audio",
         "convert": "mp3",
     }
+    if str(format_id) == "320":
+        # The picker's highest-audio choice: the API holds the mp3 transcode
+        # at CBR 320 kbps (its default is the encoder ceiling VBR, ~245 kbps).
+        payload["abr"] = 320
     os.makedirs("downloads", exist_ok=True)
     safe = re.sub(r"\W+", " ", title).strip().replace(" ", "_")[:60] or vidid
     dest = os.path.join("downloads", f"{vidid}_{safe}.mp3")
@@ -269,6 +275,15 @@ async def song_helper_cb(client, CallbackQuery, _):
     rows = []
 
     if stype == "audio":
+        rows.append(
+            rich_button_row(
+                rich_button(
+                    f"{pemoji('🎧')} 320 KBPS MP3 (Best)",
+                    callback_data=f"song_download {stype}|320|{vidid}",
+                    style="primary",
+                )
+            )
+        )
         done = []
         for x in formats_available:
             check = x["format"]
@@ -292,19 +307,32 @@ async def song_helper_cb(client, CallbackQuery, _):
                     )
                 )
     else:
-        done = [160, 133, 134, 135, 136, 137, 298, 299, 264, 304, 266]
+        # Highest resolution first, deduped per height. The format-note (e.g.
+        # "1080p60") is the only reliable resolution hint, and YouTube's
+        # ladder often exposes several formats at one height — keep the
+        # largest file. The old hardcoded itag whitelist hid whatever the
+        # extractor's current clients didn't emit, which is why 2K/4K/8K
+        # never showed up.
+        by_height: dict[int, dict] = {}
         for x in formats_available:
-            check = x["format"]
             if x["filesize"] is None:
                 continue
-            if int(x["format_id"]) not in done:
+            note = (x["format_note"] or "").lower()
+            fmt = str(x["format"]).lower()
+            m = re.search(r"(\d{3,4})p", note) or re.search(r"(\d{3,4})p", fmt)
+            if not m:
                 continue
+            height = int(m.group(1))
+            cur = by_height.get(height)
+            if cur is None or (x["filesize"] or 0) > (cur["filesize"] or 0):
+                by_height[height] = x
+        for height in sorted(by_height, reverse=True)[:10]:
+            x = by_height[height]
             sz = convert_bytes(x["filesize"])
-            ap = check.split("-", 1)[-1] if "-" in check else check
             rows.append(
                 rich_button_row(
                     rich_button(
-                        f"{pemoji('🎥')} {ap} = {sz}",
+                        f"{pemoji('🎥')} {height}p = {sz}",
                         callback_data=f"song_download {stype}|{x['format_id']}|{vidid}",
                         style="primary",
                     )
@@ -421,7 +449,9 @@ async def song_download_cb(client, CallbackQuery, _):
             # The media API usually has popular tracks on a warm disk cache,
             # so its /v1/download is faster than a local yt-dlp run. Any
             # failure falls through to the local path below.
-            file_path = await _api_audio_download(chat_id, mid, vidid, title)
+            file_path = await _api_audio_download(
+                chat_id, mid, vidid, title, format_id
+            )
         if file_path is None:
             if stype == "video":
                 file_path = await Platform.youtube.download(

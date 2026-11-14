@@ -1372,14 +1372,24 @@ class YouTube:
         @asyncify
         def song_audio_dl():
             dl_t0 = time.monotonic()
-            _log("info", "song_audio_dl() starting format=%s for: %s", format_id, link[:80])
+            # "320" is the picker's highest-audio choice, not a yt-dlp format
+            # id: pull the best native audio and hold the mp3 transcode at
+            # CBR 320 kbps (YouTube's own streams top out near 130 kbps).
+            native_format = format_id == "320"
+            dl_format = _AUDIO_FMT if (native_format or not format_id) else format_id
+            _log("info", "song_audio_dl() starting format=%s for: %s", dl_format, link[:80])
             ydl_optssx = _base_ydl_opts(
-                format=format_id or _AUDIO_FMT,
+                format=dl_format,
                 outtmpl=os.path.join("downloads", f"%(id)s_{format_id}.%(ext)s"),
                 postprocessors=[
                     {
                         "key": "FFmpegExtractAudio",
-                        "preferredcodec": "opus",
+                        # mp3, not opus: the returned filename below is .mp3,
+                        # so an opus target would convert to .opus and the
+                        # caller would hand Telegram a path that never
+                        # existed. 320 kbps matches the media API's abr=320
+                        # lane.
+                        "preferredcodec": "mp3",
                         "preferredquality": "320",
                     }
                 ],
