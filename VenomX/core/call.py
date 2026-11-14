@@ -189,6 +189,27 @@ async def _clear_(chat_id):
     await set_loop(chat_id, 0)
 
 
+async def _drop_old_card(mystic) -> None:
+    """Retire the previous now-playing/status card (delete is best effort)."""
+    if mystic is None:
+        return
+    try:
+        await mystic.delete()
+    except Exception:
+        pass
+
+
+async def _spawn_then_clean(_, chat_id, old_mystic, *spawn_args, **spawn_kw):
+    """Spawn the next now-playing card while the OLD reply anchor is still
+    alive, and only then delete the previous card — the same order stream()
+    uses. Deleting first (the old behaviour in _advance_queue) left the
+    anchor dead at send time, so queued tracks shipped plain emoji.
+    """
+    mid_np = await spawn_now_playing(_, chat_id, *spawn_args, **spawn_kw)
+    await _drop_old_card(old_mystic)
+    return mid_np
+
+
 class Call:
     def __init__(self):
         self.calls = []
@@ -650,6 +671,7 @@ class Call:
                 LOGGER(__name__).error(f"Failed to leave call for empty queue chat {chat_id}: {e}")
             return
         try:
+            old_mystic = None
             if loop == 0:
                 popped = check.pop(0)
             else:
@@ -657,12 +679,12 @@ class Call:
                 await set_loop(chat_id, loop)
             if popped:
                 await auto_clean(popped)
-                if popped.get("mystic"):
-                    try:
-                        await popped.get("mystic").delete()
-                    except Exception:
-                        pass
+                # Deletion of the old card is deferred to _spawn_then_clean:
+                # it must happen AFTER the next card is sent, so the reply
+                # anchor is still a live message at that moment.
+                old_mystic = popped.get("mystic")
             if not check:
+                await _drop_old_card(old_mystic)
                 await _clear_(chat_id)
                 _mark_self_left(chat_id)
                 try:
@@ -697,6 +719,7 @@ class Call:
             if "live_" in queued:
                 n, link = await Platform.youtube.video(videoid, True)
                 if n == 0:
+                    await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 is_remote = _needs_proxy(link)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
@@ -730,9 +753,10 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
+                    await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
-                mid_np = await spawn_now_playing(
-                    _, chat_id, None, title, check[0]["dur"], user,
+                mid_np = await _spawn_then_clean(
+                    _, chat_id, old_mystic, None, title, check[0]["dur"], user,
                     thumb=await gen_thumb(videoid),
                 )
             elif "vid_" in queued:
@@ -770,6 +794,7 @@ class Call:
                             video=video,
                         )
                     except Exception:
+                        await _drop_old_card(old_mystic)
                         return await mystic.edit_text(
                             _["call_7"], disable_web_page_preview=True
                         )
@@ -805,6 +830,7 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
+                    await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 try:
                     # Precise "via" tag for the card — the db entry only gets a
@@ -813,12 +839,15 @@ class Call:
                     db[chat_id][0]["source"] = _play_source_tag(stream_link)
                 except Exception:
                     pass
-                if 'mystic' in locals():
-                    await mystic.delete()
-                mid_np = await spawn_now_playing(
-                    _, chat_id, videoid, title, check[0]["dur"], user,
+                # Spawn first (the status card is still a live reply anchor),
+                # THEN retire the old cards — deletion order is what keeps
+                # premium emoji on queued tracks.
+                mid_np = await _spawn_then_clean(
+                    _, chat_id, old_mystic, videoid, title, check[0]["dur"], user,
                     thumb=await gen_thumb(videoid),
                 )
+                if 'mystic' in locals():
+                    await mystic.delete()
             elif "index_" in queued:
                 # A queued playlist item arrives as a downloaded file path.
                 # Streaming the permalink instead means the next track starts
@@ -859,14 +888,15 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
+                    await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 try:
                     from VenomX.utils.stream.stream import _play_source_tag
                     db[chat_id][0]["source"] = _play_source_tag(play_source)
                 except Exception:
                     pass
-                mid_np = await spawn_now_playing(
-                    _, chat_id, None, title, check[0]["dur"], user,
+                mid_np = await _spawn_then_clean(
+                    _, chat_id, old_mystic, None, title, check[0]["dur"], user,
                     thumb=config.STREAM_IMG_URL,
                 )
             else:
@@ -913,10 +943,11 @@ class Call:
                 try:
                     await client.play(chat_id, stream, config=call_config)
                 except Exception:
+                    await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
                 if videoid == "telegram":
-                    mid_np = await spawn_now_playing(
-                        _, chat_id, None, title, check[0]["dur"], user,
+                    mid_np = await _spawn_then_clean(
+                        _, chat_id, old_mystic, None, title, check[0]["dur"], user,
                         thumb=(
                             config.TELEGRAM_AUDIO_URL
                             if str(streamtype) == "audio"
@@ -924,20 +955,20 @@ class Call:
                         ),
                     )
                 elif videoid == "soundcloud":
-                    mid_np = await spawn_now_playing(
-                        _, chat_id, None, title, check[0]["dur"], user,
+                    mid_np = await _spawn_then_clean(
+                        _, chat_id, old_mystic, None, title, check[0]["dur"], user,
                         thumb=config.SOUNCLOUD_IMG_URL,
                     )
                 elif "saavn" in videoid:
-                    mid_np = await spawn_now_playing(
-                        _, chat_id, None, title, check[0]["dur"], user,
+                    mid_np = await _spawn_then_clean(
+                        _, chat_id, old_mystic, None, title, check[0]["dur"], user,
                         thumb=image,
                     )
 
                 else:
                     img = await gen_thumb(videoid)
-                    mid_np = await spawn_now_playing(
-                        _, chat_id, videoid, title, check[0]["dur"], user,
+                    mid_np = await _spawn_then_clean(
+                        _, chat_id, old_mystic, videoid, title, check[0]["dur"], user,
                         thumb=img,
                     )
 
