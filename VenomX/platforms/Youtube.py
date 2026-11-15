@@ -135,14 +135,26 @@ RUNTIME_PRIORITY = ["node", "bun", "deno"]
 
 # YouTube SABR experiment blocks adaptive bestaudio without PO tokens.
 # Progressive itag 18 (360p mp4) still works with cookies + tv/mweb/web clients.
-_YT_CLIENTS = ["tv", "mweb", "web"]
-_YT_CLIENTS_STR = "tv,mweb,web"
+# tv_samsung rides at the tail as a rescue ladder: on this datacentre IP the
+# logged-in tv/mweb/web combo was observed collapsing to itag 18 only, while
+# tv_samsung alone returned the full ladder up to 2160p (25 video + 12 audio).
+_YT_CLIENTS = ["tv", "mweb", "web", "tv_samsung"]
+_YT_CLIENTS_STR = "tv,mweb,web,tv_samsung"
 _INNERTUBE_NEXT_URL = "https://www.youtube.com/youtubei/v1/next?prettyPrint=false"
 _AUDIO_FMT = "bestaudio/best/18/worst"
 _VIDEO_FMT = (
     "bestvideo[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/"
     "bestvideo[height<=?2160]+bestaudio/"
     "best[height<=?2160]/18/best"
+)
+# File downloads have no encoder ceiling: reach up to 8K (itag 272) when the
+# source offers it. VC streaming stays on _VIDEO_FMT — Telegram's call video
+# caps at 4K, and an 8K source only re-encodes hotter for nothing.
+_VIDEO_FMT_8K = (
+    "bestvideo[height<=?4320][ext=mp4]+bestaudio[ext=m4a]/"
+    "bestvideo[height<=?4320]+bestaudio/"
+    "best[height<=?4320]/best[height<=?2160][ext=mp4]+bestaudio[ext=m4a]/"
+    "best[height<=?2160]+bestaudio/18/best"
 )
 
 # --- WPC PO Token Provider settings ---
@@ -1355,7 +1367,9 @@ class YouTube:
         @asyncify
         def song_video_dl():
             dl_t0 = time.monotonic()
-            formats = f"{format_id}+bestaudio/best/18/best" if format_id else _VIDEO_FMT
+            # No explicit pick: go for the largest file the source has, up to
+            # 8K (the VC ladder is capped at 2160 — see _VIDEO_FMT_8K).
+            formats = f"{format_id}+bestaudio/best/18/best" if format_id else _VIDEO_FMT_8K
             _log("info", "song_video_dl() starting format=%s for: %s", formats, link[:80])
             ydl_optssx = _base_ydl_opts(
                 format=formats,
