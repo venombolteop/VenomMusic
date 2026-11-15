@@ -87,6 +87,16 @@ _END_DEDUP_WINDOW = 2.5
 _end_locks: dict = {}
 _end_last: dict = {}
 
+# When each track actually began streaming, stamped at every play point. A
+# 2.5s dedup window is not enough for video MediaStreams: their audio and
+# video decoders EOF separately, and the second stream_end can land well past
+# the window. That late echo used to run _advance_queue again, which popped
+# the NEXT (already playing) track, saw an empty queue and left the call —
+# the queued song died seconds after starting. Knowing when the current
+# track started lets an end event be rejected as an echo whenever far less
+# than the track's own duration has elapsed.
+_track_started: dict = {}
+
 # Two /play commands landing on the same chat within the ~13s group-call
 # handshake used to race each other into join_call: both saw "not active",
 # the second wiped the first track's queue and started its own join, and the
@@ -306,6 +316,9 @@ class Call:
             )
 
         await assistant.play(chat_id, stream, config=call_config)
+        # A skipped-in track just began: its end event must not be mistaken
+        # for the replaced track's echo (or the reverse).
+        _track_started[chat_id] = time.monotonic()
         self._schedule_idle_leave(assistant, chat_id)
 
     async def seek_stream(self, chat_id, file_path, to_seek, duration, mode):
@@ -331,6 +344,13 @@ class Call:
             )
         )
         await assistant.play(chat_id, stream, config=call_config)
+        # Seek restarts the source at to_seek: keep the start stamp aligned
+        # with media position so the end-echo check in change_stream still
+        # measures remaining time correctly.
+        try:
+            _track_started[chat_id] = time.monotonic() - float(to_seek)
+        except (TypeError, ValueError):
+            _track_started[chat_id] = time.monotonic()
 
     async def stream_call(self, link):
         assistant = await group_assistant(self, config.LOGGER_ID)
@@ -595,6 +615,9 @@ class Call:
             raise AssistantErr(
                 "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
             )
+        # Fresh join: the stream begins now. Covers every replay path above
+        # since this is the common tail of join_call.
+        _track_started[chat_id] = time.monotonic()
         self._schedule_idle_leave(assistant, chat_id)
 
     async def warm_join(self, chat_id):
@@ -649,6 +672,22 @@ class Call:
                     "[Call] duplicate stream_end suppressed for chat %s", chat_id
                 )
                 return
+            # An end event that arrives while the current track has barely
+            # played cannot be its own natural end — it is the echo of a
+            # replaced or previously finished stream. Without this check the
+            # echo popped the playing track and left the call mid-song.
+            check = db.get(chat_id) or []
+            cur = check[0] if check else None
+            if cur and cur.get("seconds"):
+                started = _track_started.get(chat_id, 0.0)
+                elapsed = now - started if started else 0.0
+                if elapsed + 10.0 < cur["seconds"]:
+                    LOGGER(__name__).info(
+                        "[Call] stream_end echo of replaced track suppressed "
+                        "for chat %s (elapsed %.1fs < dur %.1fs)",
+                        chat_id, elapsed, cur["seconds"],
+                    )
+                    return
             _end_last[chat_id] = now
             await self._advance_queue(client, chat_id)
 
@@ -752,6 +791,7 @@ class Call:
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
+                    _track_started[chat_id] = time.monotonic()
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
@@ -829,6 +869,7 @@ class Call:
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
+                    _track_started[chat_id] = time.monotonic()
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
@@ -887,6 +928,7 @@ class Call:
                 )
                 try:
                     await client.play(chat_id, stream, config=call_config)
+                    _track_started[chat_id] = time.monotonic()
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
@@ -942,6 +984,7 @@ class Call:
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
+                    _track_started[chat_id] = time.monotonic()
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
