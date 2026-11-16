@@ -12,6 +12,7 @@ import asyncio
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
 import httpx
@@ -790,6 +791,15 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
     except MessageNotModified:
         return True
     except Exception:
+        # MESSAGE_ID_INVALID means the message is gone (deleted by a user or
+        # the chat's history was cleared) — no edit can ever succeed, so it
+        # is not an error worth a traceback every queue update.
+        from pyrogram.errors.exceptions.bad_request_400 import MessageIdInvalid
+        if isinstance(sys.exc_info()[1], MessageIdInvalid) or "MESSAGE_ID_INVALID" in \
+                str(sys.exc_info()[1]):
+            log.debug("rich edit skipped — message gone in %s (mid=%s)",
+                      chat_id, message_id)
+            return False
         log.warning("rich edit failed in %s", chat_id, exc_info=True)
         return False
 

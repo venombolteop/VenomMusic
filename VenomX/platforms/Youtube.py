@@ -198,10 +198,19 @@ _POT_PROVIDERS = ["wpc"]
 
 
 def _wpc_extractor_args():
-    """WPC extractor args dict, or None when no browser is available."""
+    """WPC extractor args dict, or None when no browser is available.
+
+    yt-dlp's Python API wants every extractor-arg value as a list of strings
+    (the CLI joins them with commas); a bare string reaches the provider as
+    an empty config — nodriver then logged `executable :/` and every PO Token
+    mint failed with "Permission denied".
+    """
     if not _WPC_BROWSER_PATH:
         return None
-    return {"browser_path": _WPC_BROWSER_PATH, **_WPC_BROWSER_ARGS}
+    return {
+        "browser_path": [_WPC_BROWSER_PATH],
+        "no_sandbox": ["True"],
+    }
 
 
 def _pot_args():
