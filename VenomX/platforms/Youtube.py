@@ -138,7 +138,7 @@ RUNTIME_PRIORITY = ["node", "bun", "deno"]
 # tv_samsung rides at the tail as a rescue ladder: on this datacentre IP the
 # logged-in tv/mweb/web combo was observed collapsing to itag 18 only, while
 # tv_samsung alone returned the full ladder up to 2160p (25 video + 12 audio).
-_YT_CLIENTS = ["tv", "mweb", "web", "tv_samsung"]
+_YT_CLIENTS = ["tv_samsung", "tv", "mweb", "web"]
 _YT_CLIENTS_STR = "tv,mweb,web,tv_samsung"
 _INNERTUBE_NEXT_URL = "https://www.youtube.com/youtubei/v1/next?prettyPrint=false"
 _AUDIO_FMT = "bestaudio/best/18/worst"
