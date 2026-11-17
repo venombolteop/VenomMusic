@@ -338,6 +338,7 @@ async def _ticker(chat_id: int, mid: int, videoid, body: str, snapshot: tuple) -
         dur_float = float(total_sec or 0)
     except Exception:
         dur_float = 0
+    fail_streak = 0
     while (chat_id, mid) not in _closed_panels:
         await asyncio.sleep(_TICK)
         if (chat_id, mid) in _closed_panels:
@@ -349,7 +350,15 @@ async def _ticker(chat_id: int, mid: int, videoid, body: str, snapshot: tuple) -
             continue
         played = float(playing[0].get("played", 0) or 0)
         html = body + _rows(chat_id, videoid, played, dur_float, playing=True)
-        await edit_rich(chat_id, mid, html)
+        ok = await edit_rich(chat_id, mid, html)
+        # A permanently dead message (deleted card, cleared history) used to
+        # keep the ticker editing every tick forever — spamming the log with
+        # a retry warning each time. Three consecutive failed edits mean the
+        # panel is not coming back.
+        fail_streak = 0 if ok else fail_streak + 1
+        if fail_streak >= 3:
+            _closed_panels.add((chat_id, mid))
+            break
         if dur_float and played >= dur_float:
             break
 

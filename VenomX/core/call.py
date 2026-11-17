@@ -8,12 +8,17 @@ from typing import Union
 from ntgcalls import TelegramServerError
 from pyrogram.types import InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, filters
+# py-tgcalls 3.x dropped AlreadyJoinedError. Aliasing it to NoActiveGroupCall
+# used to make every retry play that hit a plain "No active group call" get
+# caught as "already joined" and abort the settle loop after the first
+# attempt — misreporting a missing-call problem as an AlreadyInVoiceChat
+# splash. Keep a distinct sentinel so NoActiveGroupCall keeps falling through
+# to the real retries.
 try:
-    from pytgcalls.exceptions import AlreadyJoinedError, NoActiveGroupCall
+    from pytgcalls.exceptions import AlreadyJoinedError
 except ImportError:
-    from pytgcalls.exceptions import NoActiveGroupCall
-
-    AlreadyJoinedError = NoActiveGroupCall
+    class AlreadyJoinedError(Exception):
+        pass
 from pytgcalls.types import (
     ChatUpdate,
     GroupCallConfig,
@@ -225,10 +230,7 @@ class Call:
         self.calls = []
 
         for client in userbot.clients:
-            pycall = PyTgCalls(
-                client,
-                cache_duration=100,
-            )
+            pycall = PyTgCalls(client)
             self.calls.append(pycall)
 
     async def pause_stream(self, chat_id: int):
