@@ -924,22 +924,46 @@ class RichMystic:
     async def edit_text(self, text: str, reply_markup=None, **kw) -> bool:
         if not self.id:
             return False
-        html = f"<p>{rich_esc(text)}</p>"
-        return await edit_rich(self.chat_id, self.id, html)
+        return await edit_rich(self.chat_id, self.id, _style_status(text))
 
     async def edit(self, text: str, reply_markup=None, **kw) -> bool:
         return await self.edit_text(text)
 
     async def reply_text(self, text: str, reply_markup=None, **kw) -> "RichMystic":
-        mid = await send_rich(
-            self.chat_id, f"<p>{rich_esc(text)}</p>"
-        )
+        mid = await send_rich(self.chat_id, _style_status(text))
         return RichMystic(self.chat_id, mid) if mid else self
 
     async def delete(self, **kw) -> bool:
         if not self.id:
             return False
         return await delete_msg(self.chat_id, self.id)
+
+
+def _style_status(text: str) -> str:
+    """Turn a plain status/error string into a styled rich body.
+
+    Every bot status flows through here (play errors, download progress,
+    join failures …), so they all ship the same card look instead of a
+    bare <p> bubble: leading emoji becomes a premium-emoji heading, the
+    first line is the title, the rest sits in a callout block.
+    """
+    if "<tg-emoji" in text or "<h4" in text:
+        # already richly built by the caller — leave it alone
+        return text
+    esc = rich_esc(text)
+    first, _, rest = esc.partition("\n")
+    lead = ""
+    if first and first[0].isprintable() and not first[0].isalnum() \
+            and not first[0].isspace() and first[0] not in "&<*-–—([{~`\"'’“_#!?.,:;/|":
+        lead = first[0]
+        first = first[1:].lstrip()
+    if len(first) > 64:  # long first lines are bodies, not titles
+        first, rest = lead + " " + first, first + ("\n" + rest if rest else "")
+        lead = ""
+    heading = f"<h4>{pemoji(lead or '💠')} {first.strip()}</h4>"
+    if rest.strip():
+        return heading + f"<blockquote>{rest.strip()}</blockquote>"
+    return heading
 
 
 async def status_card(chat_id: int, text: str, fallback_message=None):
@@ -951,7 +975,7 @@ async def status_card(chat_id: int, text: str, fallback_message=None):
     if fallback_message is not None:
         set_anchor(chat_id, fallback_message.id)
     mid = await send_rich(
-        chat_id, f"<p>{rich_esc(text)}</p>", reply_to=get_anchor(chat_id)
+        chat_id, _style_status(text), reply_to=get_anchor(chat_id)
     )
     if not mid and fallback_message is not None:
         try:
