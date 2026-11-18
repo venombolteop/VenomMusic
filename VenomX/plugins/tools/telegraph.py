@@ -45,7 +45,7 @@ async def get_link_group(client, message):
         return await reply_note(message, "⚠️ Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴇᴅɪᴀ ꜰɪʟᴇ ᴜɴᴅᴇʀ 200MB.")
 
     try:
-        text = await message.reply("Pʀᴏᴄᴇꜱꜱɪɴɢ...")
+        text = await status_card(message.chat.id, "Pʀᴏᴄᴇꜱꜱɪɴɢ...")
 
         async def progress(current, total):
             try:

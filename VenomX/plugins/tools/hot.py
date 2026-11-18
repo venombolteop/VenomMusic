@@ -11,7 +11,7 @@ from strings import command
 from VenomX import app
 from VenomX.utils.database import get_top_tracks
 from VenomX.utils.decorators.language import language
-from VenomX.utils.rich_msg import pemoji, reply_note, rich_esc
+from VenomX.utils.rich_msg import pemoji, reply_note, rich_esc, rich_heading, send_rich
 
 
 @app.on_message(command("HOT_COMMAND") & filters.group & ~BANNED_USERS)
@@ -27,9 +27,14 @@ async def hot_chart(client, message, _):
     for rank, t in enumerate(tracks, 1):
         badge = medals[rank - 1] if rank <= 3 else f"{rank}."
         title = rich_esc(str(t["title"])[:42])
-        lines.append(f"{badge} <b>{title}</b> — {t['plays']} ᴘʟᴀʏꜱ")
+        lines.append(f"{badge} <b>{title}</b> — <mark>{t['plays']} ᴘʟᴀʏꜱ</mark>")
     body = (
-        f"{pemoji('🔥')} <b>ᴠᴇɴᴏᴍ ʜᴏᴛ ᴄʜᴀʀᴛ</b>\n"
-        f"{pemoji('📊')} ᴛᴏᴘ ᴏꜰ ᴛʜɪꜱ ᴄʜᴀᴛ:\n\n" + "\n".join(lines)
+        rich_heading(f"{pemoji('🔥')} ᴠᴇɴᴏᴍ ʜᴏᴛ ᴄʜᴀʀᴛ", level=4)
+        + "<hr/>"
+        + "<aside>"
+        + f"{pemoji('📊')} ᴛᴏᴘ ᴏꜰ ᴛʜɪꜱ ᴄʜᴀᴛ"
+        + "</aside>"
+        + "<blockquote>" + "<br>".join(lines) + "</blockquote>"
+        + f"<footer>{pemoji('🎯')} ꜱᴛʀᴇᴀᴍ ꜱᴏɴɢꜱ ᴛᴏ ᴄʟɪᴍʙ ᴛʜᴇ ʙᴏᴀʀᴅ</footer>"
     )
-    await message.reply_text(body, disable_web_page_preview=True)
+    await send_rich(message.chat.id, body)
