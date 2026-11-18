@@ -91,6 +91,7 @@ _idle_leave_tasks = {}
 _END_DEDUP_WINDOW = 2.5
 _end_locks: dict = {}
 _end_last: dict = {}
+_stop_log_last: dict = {}
 
 # When each track actually began streaming, stamped at every play point. A
 # 2.5s dedup window is not enough for video MediaStreams: their audio and
@@ -255,7 +256,20 @@ class Call:
             await _clear_(chat_id)
             await assistant.leave_call(chat_id)
         except Exception as e:
-            LOGGER(__name__).error(f"Failed to stop stream for chat {chat_id}: {e}")
+            # A user spamming the skip/close button fires stop_stream every
+            # ~2s while the assistant is already out — one line per burst is
+            # enough, a traceback wall is not.
+            key = ("stop", chat_id)
+            now = time.time()
+            if now - _stop_log_last.get(key, 0) < 60:
+                LOGGER(__name__).debug(
+                    "stop stream for chat %s: %s", chat_id, e
+                )
+            else:
+                _stop_log_last[key] = now
+                LOGGER(__name__).error(
+                    f"Failed to stop stream for chat {chat_id}: {e}"
+                )
 
     async def force_stop_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
@@ -473,6 +487,22 @@ class Call:
             LOGGER(__name__).exception(
                 "[Call] join_chat failed for chat %s (%s)", chat_id, type(e).__name__
             )
+            # Common join denials deserve plain words, not a class name.
+            friendly = {
+                "ChannelPrivate": (
+                    "chat is dead/removed or the bot and assistant can no "
+                    "longer see it — check the group"
+                ),
+                "ChatWriteForbidden": (
+                    "assistant can't write in this chat — make it admin"
+                ),
+                "UserBannedInChannel": "assistant is banned in this chat",
+                "ChatIdInvalid": (
+                    "chat id invalid — add the bot to the group again"
+                ),
+            }.get(type(e).__name__)
+            if friendly:
+                raise AssistantErr(_["call_3"].format(friendly))
             raise AssistantErr(_["call_3"].format(type(e).__name__))
 
     async def join_call(

@@ -482,6 +482,33 @@ _IMG_TAG_RE = re.compile(r'<img\s+src="((?!tg://)[^"]*)"[^>]*>')
 _BAD_IMG: dict[str, float] = {}
 _IMG_TTL = 1800  # 30 min — a URL may come back, keep re-checking after that.
 
+# Some messages (old panels, chats where Telegram upgraded the rich message)
+# reject EVERY edit that carries a remote <img> — each ticker tick then
+# burned one failed invoke + one stripped retry and spammed the log ~200
+# times/hour. After the first stripped-retry lands for a mid, remember it
+# and pre-strip images for that message's later edits.
+_IMG_BROKEN_MIDS: dict[tuple[int, int], float] = {}
+_IMG_MID_TTL = 3600  # 1h — a message may get a fresh body with a new image.
+
+
+def _mid_imgs_broken(chat_id: int, message_id: int) -> bool:
+    exp = _IMG_BROKEN_MIDS.get((int(chat_id), int(message_id)))
+    if exp is None:
+        return False
+    if exp <= time.time():
+        _IMG_BROKEN_MIDS.pop((int(chat_id), int(message_id)), None)
+        return False
+    return True
+
+
+def _mark_mid_imgs_broken(chat_id: int, message_id: int) -> None:
+    key = (int(chat_id), int(message_id))
+    # keep the dict small: drop everything expired on the way in
+    now = time.time()
+    for k in [k for k, exp in _IMG_BROKEN_MIDS.items() if exp <= now]:
+        _IMG_BROKEN_MIDS.pop(k, None)
+    _IMG_BROKEN_MIDS[key] = now + _IMG_MID_TTL
+
 
 def _img_urls(html: str) -> list[str]:
     """Remote (non-tg://) image URLs inside the html."""
@@ -715,6 +742,16 @@ async def send_rich(
         )
         return None
     except Exception:
+        # Permission denials are steady chat state, not a bug: a full
+        # traceback per card attempt just spams the log.
+        from pyrogram.errors import ChatWriteForbidden, ChannelPrivate
+
+        if isinstance(sys.exc_info()[1], (ChatWriteForbidden, ChannelPrivate)):
+            log.info(
+                "rich send skipped — no write access in %s (%s)",
+                chat_id, type(sys.exc_info()[1]).__name__,
+            )
+            return None
         log.warning("send_rich_message failed", exc_info=True)
         return None
     finally:
@@ -744,6 +781,10 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
         return False
     try:
         c = _client()
+        if _mid_imgs_broken(chat_id, message_id):
+            # This message already proved it rejects img edits — go straight
+            # to the stripped body, no failed first attempt.
+            html = _strip_imgs(html)
         bhtml = _beautify(_drop_bad_imgs(html))
         log.info(
             "[rich edit] chat=%s mid=%s emoji_tags=%s reply_markup=%s",
@@ -770,14 +811,19 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
             return True
         except asyncio.TimeoutError:
             raise
-        except Exception:
+        except Exception as e:
             if not _IMG_TAG_RE.search(bhtml):
                 raise
             # A dead <img> rejects the whole edit: retry once without images.
+            # Log the real rejection once — if Telegram rejects the img for a
+            # non-image reason, this line is the only place that shows it.
             log.warning(
-                "[rich edit] failed with <img> tags — retrying stripped (chat=%s mid=%s)",
-                chat_id, message_id,
+                "[rich edit] failed with <img> tags — retrying stripped "
+                "(chat=%s mid=%s err=%s: %s urls=%s)",
+                chat_id, message_id, type(e).__name__, str(e)[:200],
+                _img_urls(bhtml),
             )
+            _mark_mid_imgs_broken(chat_id, message_id)
             stripped = _beautify(_strip_imgs(_drop_bad_imgs(html)))
             rpc = raw_functions.messages.EditMessage(
                 peer=await c.resolve_peer(chat_id),
@@ -794,11 +840,19 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
         # MESSAGE_ID_INVALID means the message is gone (deleted by a user or
         # the chat's history was cleared) — no edit can ever succeed, so it
         # is not an error worth a traceback every queue update.
+        from pyrogram.errors import ChatWriteForbidden, ChannelPrivate
         from pyrogram.errors.exceptions.bad_request_400 import MessageIdInvalid
         if isinstance(sys.exc_info()[1], MessageIdInvalid) or "MESSAGE_ID_INVALID" in \
                 str(sys.exc_info()[1]):
             log.debug("rich edit skipped — message gone in %s (mid=%s)",
                       chat_id, message_id)
+            return False
+        # Lost write access mid-session is steady chat state — quiet skip.
+        if isinstance(sys.exc_info()[1], (ChatWriteForbidden, ChannelPrivate)):
+            log.info(
+                "rich edit skipped — no write access in %s (%s)",
+                chat_id, type(sys.exc_info()[1]).__name__,
+            )
             return False
         log.warning("rich edit failed in %s", chat_id, exc_info=True)
         return False
