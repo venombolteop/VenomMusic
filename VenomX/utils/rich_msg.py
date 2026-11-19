@@ -947,6 +947,8 @@ def _style_status(text: str) -> str:
     bare <p> bubble: leading emoji becomes a premium-emoji heading, the
     first line is the title, the rest sits in a callout block.
     """
+    if not isinstance(text, str):
+        text = str(text)
     if "<tg-emoji" in text or "<h4" in text:
         # already richly built by the caller — leave it alone
         return text
