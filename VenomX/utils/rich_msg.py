@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 import httpx
+from pyrogram import ContinuePropagation
 
 from VenomX.utils.premium import _DB_EMOJI_FALLBACK
 
@@ -603,6 +604,7 @@ async def _anchor_updater(client, message):
             set_anchor(message.chat.id, message.id)
     except Exception:  # noqa: BLE001
         pass
+    raise ContinuePropagation
 
 
 def register_anchor_hook(app) -> None:

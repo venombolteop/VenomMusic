@@ -7,7 +7,7 @@ Runs at group=-2 so it executes before everything else.
 import re
 from urllib.parse import unquote
 
-from pyrogram import filters
+from pyrogram import ContinuePropagation, filters
 
 import config
 from VenomX import app, LOGGER
@@ -103,7 +103,7 @@ async def security_filter(client, message):
 
         full_text = " ".join(texts)
         if not _is_malicious(full_text):
-            return
+            raise ContinuePropagation
 
         # --- Malicious payload detected ---
         user = message.from_user

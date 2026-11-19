@@ -96,7 +96,13 @@ async def chatbot_toggle(client, message):
 _PREFIX_CHARS = "!/?*.,@#_-"
 
 
-@app.on_message(filters.group & ~BANNED_USERS & filters.text)
+@app.on_message(
+    filters.group
+    & ~BANNED_USERS
+    & filters.text
+    & ~filters.regex(r"^[!/?*.,@#_-]"),
+    group=1,
+)
 async def chatbot_chatter(client, message):
     if message.sender_chat:
         return
