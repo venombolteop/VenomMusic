@@ -155,5 +155,7 @@ async def security_filter(client, message):
         except Exception:
             pass
 
+    except ContinuePropagation:
+        raise
     except Exception as e:
         _LOG.error("Security filter error: %s", e)
