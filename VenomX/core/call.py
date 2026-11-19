@@ -2,6 +2,8 @@
 # All rights reserved.
 #
 import asyncio
+import re
+import subprocess
 import time
 from typing import Union
 
@@ -26,6 +28,61 @@ from pytgcalls.types import (
     Update,
 )
 from pytgcalls.types import StreamEnded
+
+import pytgcalls.ffmpeg as _pytgcalls_ffmpeg
+import pytgcalls.types.stream.media_stream as _pytgcalls_media_stream
+
+_PYTGCALLS_SUPPORTED_FLAGS = {}
+
+
+def _pytgcalls_supported_flags(process: str) -> set:
+    cached = _PYTGCALLS_SUPPORTED_FLAGS.get(process)
+    if cached is not None:
+        return cached
+    try:
+        result = subprocess.run(
+            [process, "-h", "full"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5,
+            check=False,
+        )
+        output = result.stdout.decode("utf-8", "replace")
+    except Exception:
+        output = ""
+    flags = set()
+    for names in re.findall(
+        r"(?m)^ *(--?\w[\w-]*(?:, *--?\w[\w-]*)*)",
+        output,
+    ):
+        flags.update(name.strip() for name in names.split(","))
+    flags.add("-i")
+    _PYTGCALLS_SUPPORTED_FLAGS[process] = flags
+    return flags
+
+
+async def _pytgcalls_cleanup_commands(commands, process_name=None, blacklist=None):
+    process = process_name or commands[0]
+    supported = _pytgcalls_supported_flags(process)
+    new_commands = []
+    ignore_next = False
+    for value in commands:
+        if not value:
+            continue
+        is_flag = value[0] == "-" and not value[1:].replace(".", "", 1).isdigit()
+        if is_flag:
+            ignore_next = value not in supported or (
+                blacklist is not None and value in blacklist
+            )
+        if not ignore_next:
+            new_commands.append(value)
+        elif not is_flag:
+            ignore_next = False
+    return new_commands
+
+
+_pytgcalls_ffmpeg.cleanup_commands = _pytgcalls_cleanup_commands
+_pytgcalls_media_stream.cleanup_commands = _pytgcalls_cleanup_commands
 
 import config
 from strings import get_string
