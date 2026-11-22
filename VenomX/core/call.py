@@ -91,12 +91,14 @@ from VenomX.misc import db
 from VenomX.utils.database import (
     add_active_chat,
     add_active_video_chat,
+    get_active_chats,
     get_audio_bitrate,
     get_instant_play,
     get_lang,
     get_loop,
     get_video_bitrate,
     group_assistant,
+    is_active_chat,
     music_on,
     remove_active_chat,
     remove_active_video_chat,
@@ -176,6 +178,11 @@ _join_locks: dict = {}
 # audio). Our own recent leaves are stamped and their echo ignored.
 _SELF_LEFT_GRACE = 20
 _self_left: dict = {}
+
+# How often to compare the in-memory active list against the real calls. This
+# is the safety net for VC ends whose LEFT_CALL is never delivered (or gets
+# swallowed by the self-leave echo guard above).
+_RECONCILE_INTERVAL = int(getattr(config, "VC_STATE_RECONCILE_INTERVAL", 30) or 30)
 
 
 def _mark_self_left(chat_id: int) -> None:
@@ -262,6 +269,42 @@ async def _clear_(chat_id):
     await set_loop(chat_id, 0)
 
 
+async def _chat_has_live_call(chat_id: int, calls) -> bool:
+    """Whether any of our PyTgCalls clients still holds this chat's call.
+
+    The in-memory `active` list is only a hint: a VC can be ended without us
+    seeing a LEFT_CALL (missed update, swallowed echo, assistant switched), and
+    a stale hint makes /play append to a queue nobody is playing.
+    """
+    for client in calls:
+        try:
+            if chat_id in await client._binding.calls():
+                return True
+        except Exception:
+            continue
+    return False
+
+
+async def _assistant_still_in_call(chat_id: int):
+    """Telegram-side answer to 'is the assistant really in this call?'.
+
+    True/False are definitive, None means the check itself failed. Used by the
+    LEFT_CALL handler so an old leave echo cannot kill a fresh session while a
+    genuine VC end is still cleaned up immediately.
+    """
+    try:
+        assistant = await get_assistant(chat_id)
+        members = []
+        async for member in assistant.get_call_members(chat_id):
+            if member is not None:
+                members.append(member)
+        return any(m.chat.id == assistant.id for m in members)
+    except ValueError:
+        return False
+    except Exception:
+        return None
+
+
 async def _drop_old_card(mystic) -> None:
     """Retire the previous now-playing/status card (delete is best effort)."""
     if mystic is None:
@@ -291,6 +334,59 @@ class Call:
             pycall = PyTgCalls(client)
             self.calls.append(pycall)
 
+    def is_join_pending(self, chat_id: int) -> bool:
+        lock = _join_locks.get(chat_id)
+        return lock is not None and lock.locked()
+
+    async def is_live_chat(self, chat_id: int) -> bool:
+        """Active flag AND a real call. Clears stale state when they disagree.
+
+        stream() uses this to decide between appending to the queue and
+        starting a fresh session. Without the call check, a chat whose VC ended
+        silently keeps looking active and every /play just piles onto a dead
+        queue (the song shows "Added to queue at #45" while no assistant is in
+        the call).
+        """
+        if not await is_active_chat(chat_id):
+            return False
+        lock = _join_locks.get(chat_id)
+        if lock is not None and lock.locked():
+            return True
+        try:
+            if await _chat_has_live_call(chat_id, self.calls):
+                return True
+        except Exception as e:
+            LOGGER(__name__).debug(
+                "[Call] live-call check failed for %s: %s", chat_id, e
+            )
+            return True
+        LOGGER(__name__).info(
+            "[Call] stale active chat %s (no live call); clearing queue", chat_id
+        )
+        await _clear_(chat_id)
+        return False
+
+    async def _reconcile_active_chats(self):
+        """Clear active state whose VC is gone, even if no LEFT_CALL arrived."""
+        while True:
+            await asyncio.sleep(_RECONCILE_INTERVAL)
+            for chat_id in list(await get_active_chats()):
+                lock = _join_locks.get(chat_id)
+                if lock is not None and lock.locked():
+                    continue
+                try:
+                    if not await is_active_chat(chat_id):
+                        continue
+                    if not await _chat_has_live_call(chat_id, self.calls):
+                        LOGGER(__name__).info(
+                            "[Call] reconciler clearing stale chat %s", chat_id
+                        )
+                        await _clear_(chat_id)
+                except Exception as e:
+                    LOGGER(__name__).debug(
+                        "[Call] reconcile failed for %s: %s", chat_id, e
+                    )
+
     async def pause_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         await assistant.pause(chat_id)
@@ -308,9 +404,11 @@ class Call:
         await assistant.unmute(chat_id)
 
     async def stop_stream(self, chat_id: int):
-        assistant = await group_assistant(self, chat_id)
+        # Cleanup must not depend on resolving the assistant: if that lookup
+        # fails, the stale active flag would keep growing the queue forever.
+        await _clear_(chat_id)
         try:
-            await _clear_(chat_id)
+            assistant = await group_assistant(self, chat_id)
             await assistant.leave_call(chat_id)
         except Exception as e:
             # A user spamming the skip/close button fires stop_stream every
@@ -645,7 +743,15 @@ class Call:
                 chat_id,
                 exc_info=True,
             )
-            await self.join_chat(chat_id)
+            try:
+                await self.join_chat(chat_id)
+            except Exception:
+                # e.g. ChatAdminRequired when the bot cannot invite the
+                # assistant. This raise escapes the sibling except clauses, so
+                # without a rollback the chat stays "active" and every later
+                # /play queues behind a call that was never joined.
+                await _rollback_join(chat_id)
+                raise
             # A freshly invited assistant may not have seen the group call in
             # its update stream yet — settle before believing the VC is off.
             for _settle in (0.6, 2.5, 6.0):
@@ -735,7 +841,11 @@ class Call:
             LOGGER(__name__).info("[Call] idle leave done for chat %s", chat_id)
         except Exception as e:
             LOGGER(__name__).error(f"Failed idle leave for chat {chat_id}: {e}")
-        _idle_leave_tasks.pop(chat_id, None)
+        finally:
+            # We are out of the call: drop the active flag too, otherwise the
+            # next /play queues behind a call that no longer exists.
+            await _clear_(chat_id)
+            _idle_leave_tasks.pop(chat_id, None)
 
     def _cancel_idle_leave(self, chat_id):
         task = _idle_leave_tasks.pop(chat_id, None)
@@ -1118,7 +1228,8 @@ class Call:
         """Starts all PyTgCalls instances for the existing userbot clients."""
         LOGGER(__name__).info(f"Starting PyTgCall Clients")
         await asyncio.gather(*[c.start() for c in self.calls])
-        await self.decorators() 
+        await self.decorators()
+        asyncio.create_task(self._reconcile_active_chats())
 
 
     
@@ -1127,17 +1238,22 @@ class Call:
 
             @call.on_update(filters.chat_update(ChatUpdate.Status.LEFT_CALL))
             async def stream_services_handler(client, update):
-                # Careless echo protection: a LEFT_CALL that is the shadow of
-                # our OWN recent leave (empty queue) must not run stop_stream
-                # if a fresh /play has already re-joined — that used to kick
-                # the assistant back out mid-song.
+                # Ignore only a PROVABLE echo of our own leave: the assistant
+                # must really be in a fresh call. A plain time window swallowed
+                # genuine VC ends, leaving the chat "active" with no assistant
+                # so every /play just appended to a dead queue.
                 if _was_self_left(update.chat_id):
+                    still_in = await _assistant_still_in_call(update.chat_id)
                     _self_left.pop(update.chat_id, None)
-                    LOGGER(__name__).info(
-                        "[Call] LEFT_CALL echo of our own leave ignored for chat %s",
-                        update.chat_id,
-                    )
-                    return
+                    if still_in is not False:
+                        LOGGER(__name__).info(
+                            "[Call] LEFT_CALL echo of our own leave ignored for chat %s",
+                            update.chat_id,
+                        )
+                        return
+                LOGGER(__name__).info(
+                    "[Call] VC end detected for chat %s; clearing queue", update.chat_id
+                )
                 await self.stop_stream(update.chat_id)
 
             @call.on_update(filters.stream_end())

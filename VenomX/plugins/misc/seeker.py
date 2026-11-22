@@ -89,6 +89,34 @@ async def markup_timer():
         await asyncio.sleep(2)
         active_chats = await get_active_chats()
         for chat_id in active_chats:
+            if Ayush.is_join_pending(chat_id):
+                continue
+
+            # Check the VC on every active chat, paused or not. An assistant
+            # that disappeared from the call used to be ignored (`m is None`
+            # just continued), so the queue kept growing with nobody in VC.
+            try:
+                userbot = await get_assistant(chat_id)
+                members = []
+                try:
+                    async for member in userbot.get_call_members(chat_id):
+                        if member is not None:
+                            members.append(member)
+                except ValueError:
+                    await Ayush.stop_stream(chat_id)
+                    continue
+
+                m = next((mm for mm in members if mm.chat.id == userbot.id), None)
+                if not members or m is None:
+                    await Ayush.stop_stream(chat_id)
+                    await set_loop(chat_id, 0)
+                    continue
+
+                if len(members) <= 1 and chat_id not in autoend:
+                    autoend[chat_id] = datetime.now() + timedelta(seconds=30)
+            except Exception:
+                pass
+
             if not await is_music_playing(chat_id):
                 continue
 
@@ -106,41 +134,12 @@ async def markup_timer():
 
             is_muted = False
             try:
-                userbot = await get_assistant(chat_id)
-                members = []
-                try:
-                    async for member in userbot.get_call_members(chat_id):
-                        if member is None:
-                            continue
-                        members.append(member)
-                except ValueError:
-                    try:
-                        await Ayush.stop_stream(chat_id)
-                    except Exception:
-                        pass
-                    continue
-
-                if not members:
-                    await Ayush.stop_stream(chat_id)
-                    await set_loop(chat_id, 0)
-                    continue
-
-                if len(members) <= 1 and chat_id not in autoend:
-                    autoend[chat_id] = datetime.now() + timedelta(seconds=30)
-
-                m = next((m for m in members if m.chat.id == userbot.id), None)
-                if m is None:
-                    continue
-
                 is_muted = bool(m.is_muted and not m.can_self_unmute)
-                if is_muted:
-
-                    if chat_id not in muted:
-                        muted[chat_id] = {
-                            "timestamp": time.time(),
-                            "_": _,
-                        }
-
+                if is_muted and chat_id not in muted:
+                    muted[chat_id] = {
+                        "timestamp": time.time(),
+                        "_": _,
+                    }
             except Exception:
                 pass
 

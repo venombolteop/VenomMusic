@@ -18,7 +18,6 @@ from VenomX.misc import db
 from VenomX.utils.database import (
     add_active_video_chat,
     get_vc_lyrics,
-    is_active_chat,
     is_video_allowed,
     get_instant_play,
 )
@@ -276,7 +275,7 @@ async def stream(
                 continue
             if count == 0:
                 pass
-            if await is_active_chat(chat_id):
+            if await Ayush.is_live_chat(chat_id):
                 await put_queue(
                     chat_id,
                     original_chat_id,
@@ -482,7 +481,7 @@ async def stream(
                 except Exception:
                     pass
                 raise AssistantErr(_["play_16"])
-        if await is_active_chat(chat_id):
+        if await Ayush.is_live_chat(chat_id):
             await put_queue(
                 chat_id,
                 original_chat_id,
@@ -551,7 +550,7 @@ async def stream(
             duration_min = result["duration_min"]
             link = result["url"]
             thumb = result["thumb"]
-            if await is_active_chat(chat_id):
+            if await Ayush.is_live_chat(chat_id):
                 await put_queue(
                     chat_id,
                     original_chat_id,
@@ -607,7 +606,7 @@ async def stream(
                 link = search["url"]
                 thumb = search["thumb"]
                 file_path, details = await Platform.saavn.download(link)
-                if await is_active_chat(chat_id):
+                if await Ayush.is_live_chat(chat_id):
                     await put_queue(
                         chat_id,
                         original_chat_id,
@@ -671,7 +670,7 @@ async def stream(
         file_path = result["filepath"]
         title = result["title"]
         duration_min = result["duration_min"]
-        if await is_active_chat(chat_id):
+        if await Ayush.is_live_chat(chat_id):
             await put_queue(
                 chat_id,
                 original_chat_id,
@@ -717,7 +716,7 @@ async def stream(
         title = (result["title"]).title()
         duration_min = result["dur"]
         status = True if video else None
-        if await is_active_chat(chat_id):
+        if await Ayush.is_live_chat(chat_id):
             await put_queue(
                 chat_id,
                 original_chat_id,
@@ -766,7 +765,7 @@ async def stream(
         thumbnail = result["thumb"]
         duration_min = "00:00"
         status = True if video else None
-        if await is_active_chat(chat_id):
+        if await Ayush.is_live_chat(chat_id):
             await put_queue(
                 chat_id,
                 original_chat_id,
@@ -822,7 +821,7 @@ async def stream(
         link = result
         title = "Index or M3u8 Link"
         duration_min = "URL stream"
-        if await is_active_chat(chat_id):
+        if await Ayush.is_live_chat(chat_id):
             await put_queue_index(
                 chat_id,
                 original_chat_id,
