@@ -45,7 +45,7 @@ async def sg(client: Client, message: Message):
     
     try:
         user_info = await ubot.resolve_peer(sg)
-        await ubot.send(DeleteHistory(peer=user_info, max_id=0, revoke=True))
+        await ubot.invoke(DeleteHistory(peer=user_info, max_id=0, revoke=True))
     except Exception:
         pass
     
