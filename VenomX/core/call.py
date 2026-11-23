@@ -355,8 +355,10 @@ class Call:
         lock = _join_locks.get(chat_id)
         if lock is not None and lock.locked():
             return True
+        if await _chat_has_live_call(chat_id, self.calls):
+            return True
         in_call = await _assistant_still_in_call(chat_id)
-        if in_call:
+        if in_call is not False:
             return True
         LOGGER(__name__).info(
             "[Call] stale active chat %s (assistant not in call); clearing queue",

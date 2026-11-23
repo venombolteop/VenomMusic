@@ -7,8 +7,9 @@ from datetime import datetime, timedelta
 
 from pyrogram.types import InlineKeyboardMarkup
 
+from VenomX import LOGGER
 from strings import get_string
-from VenomX.core.call import Ayush
+from VenomX.core.call import Ayush, _chat_has_live_call
 from VenomX.misc import db
 from VenomX.utils.database import (
     get_active_chats,
@@ -25,6 +26,7 @@ from .autoleave import autoend
 
 checker = {}
 muted = {}
+_call_presence_failures = {}
 
 
 async def timer():
@@ -95,27 +97,38 @@ async def markup_timer():
             # Check the VC on every active chat, paused or not. An assistant
             # that disappeared from the call used to be ignored (`m is None`
             # just continued), so the queue kept growing with nobody in VC.
+            userbot = None
+            members = []
+            m = None
             try:
                 userbot = await get_assistant(chat_id)
-                members = []
                 try:
                     async for member in userbot.get_call_members(chat_id):
                         if member is not None:
                             members.append(member)
                 except ValueError:
-                    await Ayush.stop_stream(chat_id)
-                    continue
-
-                m = next((mm for mm in members if mm.chat.id == userbot.id), None)
-                if not members or m is None:
-                    await Ayush.stop_stream(chat_id)
-                    await set_loop(chat_id, 0)
-                    continue
-
-                if len(members) <= 1 and chat_id not in autoend:
-                    autoend[chat_id] = datetime.now() + timedelta(seconds=30)
+                    members = []
+                if userbot is not None:
+                    m = next((mm for mm in members if mm.chat.id == userbot.id), None)
             except Exception:
                 pass
+
+            if m is None and not await _chat_has_live_call(chat_id, Ayush.calls):
+                misses = _call_presence_failures.get(chat_id, 0) + 1
+                _call_presence_failures[chat_id] = misses
+                if misses >= 5:
+                    LOGGER(__name__).info(
+                        "[Seek] assistant absent from chat %s; stopping stream", chat_id
+                    )
+                    await Ayush.stop_stream(chat_id)
+                    await set_loop(chat_id, 0)
+                    _call_presence_failures.pop(chat_id, None)
+                    continue
+            else:
+                _call_presence_failures.pop(chat_id, None)
+
+            if m is not None and len(members) <= 1 and chat_id not in autoend:
+                autoend[chat_id] = datetime.now() + timedelta(seconds=30)
 
             if not await is_music_playing(chat_id):
                 continue
