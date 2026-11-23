@@ -110,13 +110,16 @@ from VenomX.utils.rich_msg import RichMystic, send_rich
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
 
+from pyrogram.enums import ChatMemberStatus
 from pyrogram.errors import (
     ChannelsTooMuch,
     ChatAdminRequired,
+    ChannelPrivate,
     FloodWait,
     InviteHashExpired,
     InviteRequestSent,
     UserAlreadyParticipant,
+    UserNotParticipant,
 )
 
 from VenomX.core.userbot import assistants
@@ -352,16 +355,12 @@ class Call:
         lock = _join_locks.get(chat_id)
         if lock is not None and lock.locked():
             return True
-        try:
-            if await _chat_has_live_call(chat_id, self.calls):
-                return True
-        except Exception as e:
-            LOGGER(__name__).debug(
-                "[Call] live-call check failed for %s: %s", chat_id, e
-            )
+        in_call = await _assistant_still_in_call(chat_id)
+        if in_call:
             return True
         LOGGER(__name__).info(
-            "[Call] stale active chat %s (no live call); clearing queue", chat_id
+            "[Call] stale active chat %s (assistant not in call); clearing queue",
+            chat_id,
         )
         await _clear_(chat_id)
         return False
@@ -561,11 +560,27 @@ class Call:
         except Exception:
             _ = get_string("en")
         try:
+            member = await app.get_chat_member(chat_id, userbot.id)
+        except UserNotParticipant:
+            pass
+        except ChatAdminRequired:
+            raise AssistantErr(_["call_1"])
+        except Exception as e:
+            LOGGER(__name__).exception(
+                "[Call] membership check failed for chat %s (%s)",
+                chat_id, type(e).__name__,
+            )
+            raise AssistantErr(_["call_3"].format(f"{type(e).__name__}: {e}"))
+        else:
+            if member.status == ChatMemberStatus.BANNED:
+                raise AssistantErr(_["call_2"].format(userbot.username, userbot.id))
+            return
+        try:
             chat = await app.get_chat(chat_id)
         except ChatAdminRequired:
             raise AssistantErr(_["call_1"])
         except Exception as e:
-            raise AssistantErr(_["call_3"].format(app.mention, type(e).__name__))
+            raise AssistantErr(_["call_3"].format(f"{type(e).__name__}: {e}"))
         if chat_id in links:
             invitelink = links[chat_id]
         else:
@@ -582,7 +597,7 @@ class Call:
                     raise AssistantErr(_["call_1"])
                 except Exception as e:
                     raise AssistantErr(
-                        _["call_3"].format(app.mention, type(e).__name__)
+                        _["call_3"].format(f"{type(e).__name__}: {e}")
                     )
 
             if invitelink.startswith("https://t.me/+"):
@@ -636,6 +651,17 @@ class Call:
                     return await self.join_chat(chat_id, attempts)
 
                 raise AssistantErr(_["call_10"].format(time))
+        except ChannelPrivate as e:
+            links.pop(chat_id, None)
+            if attempts <= max_attempts:
+                attempts += 1
+                return await self.join_chat(chat_id, attempts)
+            raise AssistantErr(
+                _["call_3"].format(
+                    "assistant cannot resolve/join this chat (stale invite "
+                    f"link or access): {e}"
+                )
+            )
         except Exception as e:
             # Surface the full traceback: the invite-path errors were only
             # ever reported as their class name, hiding real causes.
@@ -644,10 +670,6 @@ class Call:
             )
             # Common join denials deserve plain words, not a class name.
             friendly = {
-                "ChannelPrivate": (
-                    "chat is dead/removed or the bot and assistant can no "
-                    "longer see it — check the group"
-                ),
                 "ChatWriteForbidden": (
                     "assistant can't write in this chat — make it admin"
                 ),
@@ -658,7 +680,7 @@ class Call:
             }.get(type(e).__name__)
             if friendly:
                 raise AssistantErr(_["call_3"].format(friendly))
-            raise AssistantErr(_["call_3"].format(type(e).__name__))
+            raise AssistantErr(_["call_3"].format(f"{type(e).__name__}: {e}"))
 
     async def join_call(
         self,
