@@ -6,7 +6,6 @@ import glob
 import importlib
 import logging
 import os
-import shutil
 import subprocess
 import sys
 from os.path import abspath, dirname, isfile, join
@@ -16,12 +15,6 @@ from VenomX import LOGGER
 
 logger = LOGGER(__name__)
 
-
-if EXTRA_PLUGINS_FOLDER in os.listdir():
-    shutil.rmtree(EXTRA_PLUGINS_FOLDER)
-
-if "utils" in os.listdir():
-    shutil.rmtree("utils")
 
 ROOT_DIR = abspath(join(dirname(__file__), "..", ".."))
 
@@ -42,24 +35,14 @@ if extra_plugins_enabled:
                     f"Error cloning external plugins repository: {clone_result.stderr.decode()}"
                 )
 
-    utils_source_path = join(EXTERNAL_REPO_PATH, "utils")
-    utils_target_path = join(ROOT_DIR, "utils")
-    if os.path.isdir(utils_source_path):
-        if not os.path.exists(utils_target_path):
-            os.rename(utils_source_path, utils_target_path)
-        else:
-            for root, dirs, files in os.walk(utils_source_path):
-                relative_path = os.path.relpath(root, utils_source_path)
-                target_dir = os.path.join(utils_target_path, relative_path)
-                os.makedirs(target_dir, exist_ok=True)
-                for file in files:
-                    source_file = os.path.join(root, file)
-                    target_file = os.path.join(target_dir, file)
-                    if not os.path.exists(target_file):
-                        os.rename(source_file, target_file)
-
-    if os.path.isdir(utils_target_path):
-        sys.path.append(utils_target_path)
+    # Import utilities from the checkout without moving or deleting local files.
+    sys.path.append(EXTERNAL_REPO_PATH)
+    utils_path = join(EXTERNAL_REPO_PATH, "utils")
+    if os.path.isdir(utils_path):
+        sys.path.append(utils_path)
+    legacy_utils = join(ROOT_DIR, "utils")
+    if os.path.isdir(legacy_utils):
+        sys.path.append(legacy_utils)
 
     requirements_path = join(EXTERNAL_REPO_PATH, "requirements.txt")
     if os.path.isfile(requirements_path):

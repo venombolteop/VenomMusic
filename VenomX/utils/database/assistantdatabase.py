@@ -40,44 +40,27 @@ async def set_assistant(chat_id):
 
     available_assistants = [assi for assi in assistants if assi != current_assistant]
 
-    if len(available_assistants) <= 1:
-        ran_assistant = random.choice(assistants)
-    else:
-        ran_assistant = random.choice(available_assistants)
-
-    assistantdict[chat_id] = ran_assistant
+    ran_assistant = random.choice(available_assistants or assistants)
     await db.update_one(
         {"chat_id": chat_id},
         {"$set": {"assistant": ran_assistant}},
         upsert=True,
     )
 
-    userbot = await get_client(ran_assistant)
-    return userbot
+    assistantdict[chat_id] = ran_assistant
+    return await get_client(ran_assistant)
 
 
-async def get_assistant(chat_id: int) -> str:
+async def get_assistant(chat_id: int):
     from VenomX.core.userbot import assistants
 
     assistant = assistantdict.get(chat_id)
-    if not assistant:
-        dbassistant = await db.find_one({"chat_id": chat_id})
-        if not dbassistant:
-            assistant = await set_assistant(chat_id)
-        else:
-            got_assis = dbassistant["assistant"]
-            if got_assis in assistants:
-                assistantdict[chat_id] = got_assis
-                assistant = got_assis
-            else:
-                assistant = await set_assistant(chat_id)
-    else:
-        if assistant not in assistants:
-            assistant = await set_assistant(chat_id)
-    # set_assistant returns the assistant number; every caller here wants the
-    # client behind it. Returning the number made join_chat call a method on an
-    # int, and the AttributeError it raised was reported as "could not invite
-    # the assistant", which is a different problem entirely.
+    if assistant is None:
+        saved = await db.find_one({"chat_id": chat_id})
+        assistant = saved.get("assistant") if saved else None
+    if assistant not in assistants:
+        return await set_assistant(chat_id)
+    assistantdict[chat_id] = assistant
     return await get_client(assistant)
 
 

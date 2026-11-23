@@ -8,6 +8,7 @@ import logging
 import time
 import traceback
 from functools import wraps
+from pyrogram.enums import ParseMode
 
 _TAG = "ErrorNotifier"
 
@@ -65,7 +66,7 @@ async def notify_owner(tag: str, error: Exception, context: str = ""):
             try:
                 mid = await send_note(owner_id, msg, heading=f"ᴇʀʀᴏʀ · {tag}")
                 if not mid:
-                    await app.send_message(owner_id, msg, parse_mode="html")
+                    await app.send_message(owner_id, msg, parse_mode=ParseMode.HTML)
             except Exception:
                 pass
     except Exception:

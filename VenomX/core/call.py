@@ -5,9 +5,13 @@ import asyncio
 import re
 import subprocess
 import time
+from functools import partial
 from typing import Union
 
-from ntgcalls import TelegramServerError
+from json import JSONDecodeError
+from ntgcalls import FFmpegError, TelegramServerError
+from pytgcalls.exceptions import (InvalidVideoProportion, NoActiveGroupCall,
+                                  NoAudioSourceFound, NoVideoSourceFound)
 from pyrogram.types import InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, filters
 # py-tgcalls 3.x dropped AlreadyJoinedError. Aliasing it to NoActiveGroupCall
@@ -173,6 +177,8 @@ _track_started: dict = {}
 # BEFORE the handshake so a second play queues itself instead of racing, and
 # the active flag is rolled back if the join actually fails.
 _join_locks: dict = {}
+MEDIA_ERRORS = (TimeoutError, FileNotFoundError, JSONDecodeError, FFmpegError,
+                NoAudioSourceFound, NoVideoSourceFound, InvalidVideoProportion)
 
 # When the bot empties the queue it leaves the call itself; Telegram then
 # delivers a LEFT_CALL update that can land AFTER a fresh /play has already
@@ -272,20 +278,21 @@ async def _clear_(chat_id):
     await set_loop(chat_id, 0)
 
 
-async def _chat_has_live_call(chat_id: int, calls) -> bool:
+async def _chat_has_live_call(chat_id: int, calls) -> bool | None:
     """Whether any of our PyTgCalls clients still holds this chat's call.
 
     The in-memory `active` list is only a hint: a VC can be ended without us
     seeing a LEFT_CALL (missed update, swallowed echo, assistant switched), and
     a stale hint makes /play append to a queue nobody is playing.
     """
+    missing = False
     for client in calls:
         try:
             if chat_id in await client._binding.calls():
                 return True
         except Exception:
-            continue
-    return False
+            missing = True
+    return None if missing else False
 
 
 async def _assistant_still_in_call(chat_id: int):
@@ -355,7 +362,7 @@ class Call:
         lock = _join_locks.get(chat_id)
         if lock is not None and lock.locked():
             return True
-        if await _chat_has_live_call(chat_id, self.calls):
+        if await _chat_has_live_call(chat_id, self.calls) is not False:
             return True
         in_call = await _assistant_still_in_call(chat_id)
         if in_call is not False:
@@ -376,13 +383,7 @@ class Call:
                 if lock is not None and lock.locked():
                     continue
                 try:
-                    if not await is_active_chat(chat_id):
-                        continue
-                    if not await _chat_has_live_call(chat_id, self.calls):
-                        LOGGER(__name__).info(
-                            "[Call] reconciler clearing stale chat %s", chat_id
-                        )
-                        await _clear_(chat_id)
+                    await self.is_live_chat(chat_id)
                 except Exception as e:
                     LOGGER(__name__).debug(
                         "[Call] reconcile failed for %s: %s", chat_id, e
@@ -538,20 +539,9 @@ class Call:
                     f"{type(exc).__name__}: {exc}"
                 )
         call_config = GroupCallConfig(auto_start=False, join_as=join_as)
-        try:
-            await assistant.play(
-                config.LOGGER_ID,
-                MediaStream(link),
-                config=call_config,
-            )
-            await asyncio.sleep(0.5)
-            await assistant.leave_call(config.LOGGER_ID)
-        except NoActiveGroupCall:
-            raise
-        except Exception as exc:
-            LOGGER(__name__).warning(
-                f"Stream sanity check failed: {type(exc).__name__}: {exc}"
-            )
+        await assistant.play(config.LOGGER_ID, MediaStream(link), config=call_config)
+        await asyncio.sleep(0.5)
+        await assistant.leave_call(config.LOGGER_ID)
 
     async def join_chat(self, chat_id, attempts=1):
         max_attempts = len(assistants) - 1
@@ -576,7 +566,8 @@ class Call:
         else:
             if member.status == ChatMemberStatus.BANNED:
                 raise AssistantErr(_["call_2"].format(userbot.username, userbot.id))
-            return
+            if member.status != ChatMemberStatus.LEFT:
+                return
         try:
             chat = await app.get_chat(chat_id)
         except ChatAdminRequired:
@@ -696,9 +687,13 @@ class Call:
         # ~13s handshake is running must queue, not race.
         lock = _join_locks.setdefault(chat_id, asyncio.Lock())
         async with lock:
-            return await self._join_call_locked(
-                chat_id, original_chat_id, link, video, image
-            )
+            try:
+                return await self._join_call_locked(
+                    chat_id, original_chat_id, link, video, image
+                )
+            except (Exception, asyncio.CancelledError):
+                await _rollback_join(chat_id)
+                raise
 
     async def _join_call_locked(
         self,
@@ -711,9 +706,6 @@ class Call:
         import time as _t
         _j0 = _t.monotonic()
         self._cancel_idle_leave(chat_id)
-        # Mark the chat active BEFORE the handshake so concurrent plays see an
-        # active chat and push into the queue instead of racing the join.
-        # Rolled back if the join actually fails below.
         await add_active_chat(chat_id)
         await music_on(chat_id)
         if video:
@@ -759,57 +751,18 @@ class Call:
                 config=call_config,
             )
             LOGGER(__name__).info("[Call] join_call: assistant.play done at %.1fs", _t.monotonic() - _j0)
-        except Exception:
-            # The first play() failure type is the single most useful signal
-            # for the "No Active Voice Chat Found" report — surface it.
-            LOGGER(__name__).warning(
-                "[Call] join_call: first assistant.play failed on chat %s",
-                chat_id,
-                exc_info=True,
-            )
-            try:
-                await self.join_chat(chat_id)
-            except Exception:
-                # e.g. ChatAdminRequired when the bot cannot invite the
-                # assistant. This raise escapes the sibling except clauses, so
-                # without a rollback the chat stays "active" and every later
-                # /play queues behind a call that was never joined.
-                await _rollback_join(chat_id)
-                raise
-            # A freshly invited assistant may not have seen the group call in
-            # its update stream yet — settle before believing the VC is off.
-            for _settle in (0.6, 2.5, 6.0):
-                await asyncio.sleep(_settle)
+        except (NoActiveGroupCall, UserNotParticipant, ChannelPrivate):
+            await self.join_chat(chat_id)
+            assistant = await group_assistant(self, chat_id)
+            for settle in (0.6, 2.5, 6.0):
+                await asyncio.sleep(settle)
                 try:
-                    await assistant.play(
-                        chat_id=chat_id,
-                        stream=stream,
-                        config=call_config,
-                    )
+                    await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
                     break
-                except AlreadyJoinedError:
-                    await _rollback_join(chat_id)
-                    raise AssistantErr(
-                        "**ASSISTANT IS ALREADY IN VOICECHAT **\n\nMusic bot system detected that assistant is already in the voicechat, if the problem continues restart the videochat and try again."
-                    )
-                except TelegramServerError:
-                    await _rollback_join(chat_id)
-                    raise AssistantErr(
-                        "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
-                    )
-                except Exception as e:
-                    LOGGER(__name__).warning(
-                        f"[Call] retry play after join failed at settle={_settle}: {type(e).__name__}: {e}"
-                    )
+                except NoActiveGroupCall:
+                    continue
             else:
-                LOGGER(__name__).error(
-                    "[Call] join_call: retries exhausted on chat %s", chat_id
-                )
-                await _rollback_join(chat_id)
-                raise AssistantErr(
-                    "**No Active Voice Chat Found**\n\nPlease make sure group's voice chat is enabled. If already enabled, please end it and start fresh voice chat again and if the problem continues, try /restart"
-                )
-
+                raise AssistantErr("**No Active Voice Chat Found**")
         except AlreadyJoinedError:
             # The assistant is already in the call: the behaviour users need
             # is a clean source switch, not an error splash. A short settle
@@ -830,7 +783,6 @@ class Call:
                     "**ASSISTANT IS ALREADY IN VOICECHAT **\n\nMusic bot system detected that assistant is already in the voicechat, if the problem continues restart the videochat and try again."
                 )
         except TelegramServerError:
-            await _rollback_join(chat_id)
             raise AssistantErr(
                 "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
             )
@@ -1026,76 +978,22 @@ class Call:
                 video = True if str(streamtype) == "video" else False
                 rich_mid = await send_rich(original_chat_id, f"<p>{_['call_8']}</p>")
                 mystic = RichMystic(original_chat_id, rich_mid)
-                # Same fast path stream() uses: the media API permalink streams
-                # without a download. The yt-dlp direct URL below is IP-bound to
-                # the proxy and answers 403, so it only ever fell through to a
-                # full download of the next track.
-                from VenomX.utils.stream.stream import _api_stream_url
-                stream_link = await _api_stream_url(videoid, video)
-                if stream_link:
-                    if str(stream_link).startswith("http"):
-                        import aiohttp
-                        try:
-                            async with aiohttp.ClientSession() as _sess:
-                                # Range request to trigger API cold-start & validate stream viability
-                                async with _sess.get(stream_link, headers={"Range": "bytes=0-1024"}, timeout=10) as _resp:
-                                    if _resp.status >= 400:
-                                        stream_link = None  # API Failed -> Fallback to yt-dlp
-                        except Exception:
-                            stream_link = None  # Timeout/Offline -> Fallback to yt-dlp
-                    else:
-                        import os
-                        if not os.path.exists(stream_link):
-                            stream_link = None
-                n = 1 if stream_link else 0
-                if n == 0:
-                    try:
-                        stream_link, direct = await Platform.youtube.download(
-                            videoid,
-                            mystic,
-                            videoid=True,
-                            video=video,
-                        )
-                    except Exception:
-                        await _drop_old_card(old_mystic)
-                        return await mystic.edit_text(
-                            _["call_7"], disable_web_page_preview=True
-                        )
-                is_remote = _needs_proxy(stream_link)
-                ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)
-                if video:
-                    stream = MediaStream(
-                        stream_link,
-                        audio_parameters=audio_stream_quality,
-                        video_parameters=video_stream_quality,
-                        ffmpeg_parameters=ffmpeg_params,
-                    )
-                else:
+                from VenomX.utils.stream.stream import play_youtube_source
+                image = None
+                if not video and config.PRIVATE_BOT_MODE == str(True):
                     try:
                         image = await Platform.youtube.thumbnail(videoid, True)
                     except Exception:
-                        image = None
-                    if image and config.PRIVATE_BOT_MODE == str(True):
-                        stream = MediaStream(
-                            image,
-                            audio_path=stream_link,
-                            audio_parameters=audio_stream_quality,
-                            video_parameters=video_stream_quality,
-                            ffmpeg_parameters=ffmpeg_params,
-                        )
-                    else:
-                        stream = MediaStream(
-                            stream_link,
-                            audio_parameters=audio_stream_quality,
-                            video_flags=MediaStream.Flags.IGNORE,
-                            ffmpeg_parameters=ffmpeg_params,
-                        )
+                        pass
                 try:
-                    await client.play(chat_id, stream, config=call_config)
-                    _track_started[chat_id] = time.monotonic()
+                    stream_link = await play_youtube_source(
+                        videoid, video, mystic,
+                        partial(self.skip_stream, chat_id, video=video, image=image),
+                        instant=await get_instant_play(chat_id),
+                    )
                 except Exception:
                     await _drop_old_card(old_mystic)
-                    return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
+                    return await mystic.edit_text(_["call_7"])
                 try:
                     # Precise "via" tag for the card — the db entry only gets a
                     # guess at queue time, this overwrites it with the truth.

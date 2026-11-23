@@ -773,7 +773,7 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
     Native MTProto edits keep the premium-emoji document entities intact —
     the HTTP Bot API strips them back to plain emoji in groups.
     """
-    from pyrogram.errors import MessageNotModified
+    from pyrogram.errors import ChannelPrivate, ChatWriteForbidden, MessageIdInvalid, MessageNotModified
     from pyrogram.raw import functions as raw_functions
     from pyrogram.types import InputRichMessage
 
@@ -811,6 +811,8 @@ async def edit_rich(chat_id: int, message_id: int, html: str, reply_markup=None)
             return True
         except MessageNotModified:
             return True
+        except (MessageIdInvalid, ChatWriteForbidden, ChannelPrivate):
+            return False
         except asyncio.TimeoutError:
             raise
         except Exception as e:

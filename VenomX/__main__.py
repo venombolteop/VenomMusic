@@ -61,6 +61,8 @@ async def init():
             "Please ensure the voice call in your log group is active."
         )
         exit()
+    except Exception as exc:
+        LOGGER("VenomX").warning("Startup media check failed (%s)", type(exc).__name__)
 
     LOGGER("VenomX").info("VenomX Started Successfully")
     await idle()

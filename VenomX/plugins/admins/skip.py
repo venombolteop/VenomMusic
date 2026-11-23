@@ -7,6 +7,7 @@ from pyrogram import filters
 from pyrogram.types import InlineKeyboardMarkup, Message
 
 import asyncio
+from functools import partial
 
 import config
 from config import BANNED_USERS
@@ -138,45 +139,21 @@ async def skip(cli, message: Message, _, chat_id):
             thumb=await gen_thumb(videoid),
         )
     elif "vid_" in queued:
-        import time as _t
-        _sk0 = _t.monotonic()
-        from VenomX.utils.stream.stream import _api_stream_url
-        stream_link = await _api_stream_url(videoid, bool(status))
-        LOGGER("Skip").info(
-            "[SKIP] link ready in %.2fs for %s", _t.monotonic() - _sk0, videoid
-        )
-        n = 1 if stream_link else 0
-        if n == 0:
-            mystic = await status_card(message.chat.id, _["call_8"], disable_web_page_preview=True)
-            try:
-                stream_link, direct = await Platform.youtube.download(
-                    videoid,
-                    mystic,
-                    videoid=True,
-                    video=status,
-                )
-            except Exception:
-                return await mystic.edit_text(_["call_7"])
-        else:
-            mystic = None
+        from VenomX.utils.stream.stream import play_youtube_source
+
+        mystic = await status_card(message.chat.id, _["call_8"], disable_web_page_preview=True)
         try:
-            await Ayush.skip_stream(chat_id, stream_link, video=status)
-            asyncio.create_task(
-                _start_lyrics_for_skip(chat_id, title, check[0]["dur"])
-            )
-            LOGGER("Skip").info(
-                "[SKIP] stream switched in %.2fs total", _t.monotonic() - _sk0
+            await play_youtube_source(
+                videoid, status, mystic, partial(Ayush.skip_stream, chat_id, video=status),
+                instant=await get_instant_play(chat_id),
             )
         except Exception:
-            if mystic:
-                return await mystic.edit_text(_["call_7"])
-            return await reply_note(message, _["call_7"])
+            return await mystic.edit_text(_["call_7"])
+        asyncio.create_task(_start_lyrics_for_skip(chat_id, title, check[0]["dur"]))
         mid_np = await spawn_now_playing(
-            _, chat_id, videoid, title, duration_min, user,
-            thumb=await gen_thumb(videoid),
+            _, chat_id, videoid, title, duration_min, user, thumb=await gen_thumb(videoid),
         )
-        if mystic:
-            await mystic.delete()
+        await mystic.delete()
     elif "index_" in queued:
         try:
             await Ayush.skip_stream(chat_id, videoid, video=status)

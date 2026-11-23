@@ -7,6 +7,7 @@
 import time
 
 from pyrogram import filters
+from pyrogram.enums import ParseMode
 
 from config import BANNED_USERS
 from strings import command
@@ -73,7 +74,7 @@ async def chatbot_toggle(client, message):
     on, _why = await ai_enabled()
     if not on:
         return await message.reply_text(
-            f"{_LOGO} AI off hai is deployment pe.", parse_mode="html"
+            f"{_LOGO} AI off hai is deployment pe.", parse_mode=ParseMode.HTML
         )
     want = message.text.lower().split()
     enable = None
@@ -88,7 +89,7 @@ async def chatbot_toggle(client, message):
     if enable:
         await send_rich(chat_id, note)
     else:
-        await message.reply_text(note, parse_mode="html")
+        await message.reply_text(note, parse_mode=ParseMode.HTML)
 
 
 # ------------------------------------------------------------------ chatter
@@ -122,7 +123,7 @@ async def chatbot_chatter(client, message):
     if threat(text):
         return await message.reply_text(
             f"{_LOGO} Ye baat me nahi karunga 🛡 — kaam ki baat pucho!",
-            parse_mode="html",
+            parse_mode=ParseMode.HTML,
         )
 
     msgs = brain._messages(brain._system(None, SYSTEM), [], text)

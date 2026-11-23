@@ -3,9 +3,13 @@
 #
 
 import asyncio
+import aiohttp
 import logging
 import os
 import time as _time
+from functools import partial
+from urllib.parse import urlencode
+from weakref import WeakValueDictionary
 from random import randint
 from typing import Union
 
@@ -13,7 +17,7 @@ from pyrogram.types import InlineKeyboardMarkup
 
 import config
 from VenomX import Platform, app, userbot
-from VenomX.core.call import Ayush
+from VenomX.core.call import Ayush, MEDIA_ERRORS
 from VenomX.misc import db
 from VenomX.utils.database import (
     add_active_video_chat,
@@ -35,7 +39,6 @@ from VenomX.utils.rich_panels import (
 from VenomX.utils.stream import lyrics as lyrics_display
 from VenomX.utils.stream.queue import put_queue, put_queue_index
 from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
-from VenomX.utils.notify import notify_owner
 slog = logging.getLogger("VenomX.utils.stream.stream")
 
 
@@ -49,19 +52,7 @@ def _video_height() -> int:
 
 
 _prefetch_tasks = {}
-# The media API permalink is stable and never expires, so it is safe to keep.
-_permalink_cache = {}
-
-
-def _cached_permalink(vidid, video):
-    return _permalink_cache.get((vidid, bool(video)))
-
-
-def _remember_permalink(vidid, video, url):
-    if url:
-        _permalink_cache[(vidid, bool(video))] = url
-        if len(_permalink_cache) > 512:
-            _permalink_cache.pop(next(iter(_permalink_cache)))
+_stream_locks = WeakValueDictionary()
 
 
 async def _start_lyrics(chat_id, title, duration, playback_started=None):
@@ -129,8 +120,8 @@ def _prefetch_next(chat_id):
 
     async def _warm():
         try:
-            await _api_stream_url(vidid, bool(video))
-            slog.info("[%s] prefetched permalink for next track %s", _STREAM_LOG, vidid)
+            if await _api_stream_url(vidid, bool(video)):
+                slog.info("[%s] prefetched permalink for next track %s", _STREAM_LOG, vidid)
         except Exception:
             pass
 
@@ -138,43 +129,60 @@ def _prefetch_next(chat_id):
 
 
 async def _api_stream_url(vidid, video):
-    """Resolve a playable permalink through the local media API.
+    """Check the response body before giving the permalink to a player."""
+    params = {"type": "video", "height": _video_height()} if video else {}
+    if config.VENOM_API_KEY:
+        params["key"] = config.VENOM_API_KEY
+    url = f"{_VENOM_API_URL.rstrip('/')}/stream/{vidid}"
+    if params:
+        url += "?" + urlencode(params)
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
+            async with session.get(url, headers={"Range": "bytes=0-1023"}) as response:
+                if (response.status in (200, 206)
+                        and response.content_type.startswith(("audio/", "video/", "application/octet-stream"))
+                        and await response.content.read(1)):
+                    return url
+                slog.warning("Media API probe failed for %s (HTTP %s)", vidid, response.status)
+    except (aiohttp.ClientError, TimeoutError) as exc:
+        slog.warning("Media API probe failed for %s (%s)", vidid, type(exc).__name__)
+    return None
 
-    Returns None when the API is unreachable or the id cannot be resolved, so
-    the caller keeps its existing download path.
-    """
-    cached = _cached_permalink(vidid, video)
-    if cached:
-        slog.info("[%s] permalink cache hit for %s", _STREAM_LOG, vidid)
-        return cached
 
-    # The API's permalink is always /stream/<id>, so build it here instead of
-    # asking: /v1/link spends ~4s extracting metadata only to return a title we
-    # already have. A short ranged GET proves the id is servable.
-    local_url = f"{_VENOM_API_URL.rstrip('/')}/stream/{vidid}"
-    if video:
-        local_url += f"?type=video&height={_video_height()}"
-    # Playback engines (ffmpeg/PyTGCalls) cannot set custom headers on the URL
-    # they are handed, so the key rides the query string — the API accepts it
-    # on the permalink surfaces for exactly this shape of caller.
-    _key = (getattr(config, "VENOM_API_KEY", "") or "").strip()
-    if _key:
-        local_url += ("&" if "?" in local_url else "?") + f"key={_key}"
-    # Checking it inline would mean waiting for the first bytes, and on a track
-    # the API has never fetched that is the whole cold-start cost — exactly the
-    # delay this path exists to remove. Hand the URL over and verify behind the
-    # playback instead.
-    _remember_permalink(vidid, video, local_url)
-    return local_url
+async def play_youtube_source(vidid, video, mystic, play, instant=True):
+    """Try each source once. Only source errors should move playback to another source."""
+    if instant:
+        permalink = await _api_stream_url(vidid, video)
+        if permalink:
+            try:
+                await play(permalink)
+                return permalink
+            except MEDIA_ERRORS as exc:
+                slog.warning("Media API playback failed for %s (%s)", vidid, type(exc).__name__)
+        try:
+            ok, direct = await Platform.youtube.stream_url(vidid, videoid=True, video=video)
+        except Exception as exc:
+            slog.warning("Direct URL lookup failed for %s (%s)", vidid, type(exc).__name__)
+        else:
+            if ok and direct:
+                try:
+                    await play(direct)
+                    return direct
+                except MEDIA_ERRORS as exc:
+                    slog.warning("Direct playback failed for %s (%s)", vidid, type(exc).__name__)
+    try:
+        path, _ = await Platform.youtube.download(vidid, mystic, videoid=True, video=video)
+    except Exception as exc:
+        raise AssistantErr(f"Could not download this track ({type(exc).__name__}).") from exc
+    try:
+        await play(path)
+    except MEDIA_ERRORS as exc:
+        raise AssistantErr(f"Could not play the downloaded media ({type(exc).__name__}).") from exc
+    return path
+
 
 _STREAM_LOG = "Stream"
-
-_PROXY_URL = getattr(config, "PROXY_URL", None)
-# GoogleVideo direct URLs are bound to the proxy exit IP (which WARP rotates),
-# so they 403 at playback time. The media API hands back a stable permalink on
-# this box instead, which streams instantly. Falls back to download when absent.
-_VENOM_API_URL = getattr(config, "VENOM_API_URL", "http://127.0.0.1:3200")
-_FORCE_DOWNLOAD = False
+_VENOM_API_URL = config.VENOM_API_URL
 
 
 def _play_source_tag(stream_link) -> str | None:
@@ -195,6 +203,28 @@ def _play_source_tag(stream_link) -> str | None:
 
 
 async def stream(
+    _,
+    mystic,
+    user_id,
+    result,
+    chat_id,
+    user_name,
+    original_chat_id,
+    video: Union[bool, str] = None,
+    streamtype: Union[bool, str] = None,
+    spotify: Union[bool, str] = None,
+    forceplay: Union[bool, str] = None,
+):
+    lock = _stream_locks.setdefault(chat_id, asyncio.Lock())
+    async with lock:
+        try:
+            return await _stream(_, mystic, user_id, result, chat_id, user_name,
+                                 original_chat_id, video, streamtype, spotify, forceplay)
+        except MEDIA_ERRORS as exc:
+            raise AssistantErr(f"Playback failed ({type(exc).__name__}).") from exc
+
+
+async def _stream(
     _,
     mystic,
     user_id,
@@ -232,6 +262,7 @@ async def stream(
         video = None
         msg = f"{_['playlist_16']}\n\n"
         count = 0
+        started_track = False
         # Resolving one track to its video id takes the better part of a
         # second, and a playlist has hundreds of them: done one after another a
         # fifty-track list spends most of a minute in silence before the first
@@ -273,8 +304,6 @@ async def stream(
                 continue
             if duration_sec > config.DURATION_LIMIT:
                 continue
-            if count == 0:
-                pass
             if await Ayush.is_live_chat(chat_id):
                 await put_queue(
                     chat_id,
@@ -297,61 +326,10 @@ async def stream(
                     db[chat_id] = []
                 status = True if video else None
                 instant = await get_instant_play(chat_id)
-                slog.info(
-                    "[%s] playlist first-track: vidid=%s instant=%s",
-                    _STREAM_LOG, vidid, instant,
-                )
-                if instant:
-                    n = 0
-                    stream_link = await _api_stream_url(vidid, bool(status))
-                    if stream_link:
-                        n = 1
-                        direct = True
-                        slog.info(
-                            "[%s] playlist first-track permalink %s", _STREAM_LOG, vidid
-                        )
-                    else:
-                        try:
-                            n, stream_link = await Platform.youtube.stream_url(
-                                vidid, videoid=True, video=status
-                            )
-                            slog.info("[%s] playlist stream_url() returned n=%s", _STREAM_LOG, n)
-                        except Exception as e:
-                            slog.error("[%s] playlist stream_url() EXCEPTION: %s", _STREAM_LOG, e)
-                    if n == 0:
-                        try:
-                            stream_link, direct = await Platform.youtube.download(
-                                vidid, mystic, video=status, videoid=True
-                            )
-                        except Exception as e:
-                            try:
-                                await notify_owner(
-                                    "Stream.playlist.download(fallback)",
-                                    e,
-                                    f"vidid={vidid} chat={chat_id}",
-                                )
-                            except Exception:
-                                pass
-                            raise AssistantErr(_["play_16"])
-                    else:
-                        direct = True
-                else:
-                    try:
-                        stream_link, direct = await Platform.youtube.download(
-                            vidid, mystic, video=status, videoid=True
-                        )
-                    except Exception as e:
-                        try:
-                            await notify_owner(
-                                "Stream.playlist.download",
-                                e,
-                                f"vidid={vidid} chat={chat_id}",
-                            )
-                        except Exception:
-                            pass
-                        raise AssistantErr(_["play_16"])
-                await Ayush.join_call(
-                    chat_id, original_chat_id, stream_link, video=status, image=thumbnail
+                stream_link = await play_youtube_source(
+                    vidid, status, mystic,
+                    partial(Ayush.join_call, chat_id, original_chat_id, video=status, image=thumbnail),
+                    instant=instant,
                 )
                 # The playlist path joins the call but never told the lyrics
                 # display anything, so a track started from a playlist produced no
@@ -377,12 +355,15 @@ async def stream(
                     db[chat_id][0]["source"] = _play_source_tag(stream_link)
                 except Exception:
                     pass
+                started_track = True
                 img = await gen_thumb(vidid)
                 mid_np = await spawn_now_playing(
                     _, chat_id, vidid, title, duration_min, user_name,
                     thumb=img,
                 )
         if count == 0:
+            if started_track:
+                return
             # Radio/Mix playlists resolve to nothing — a silent return used to
             # leave the user staring at a dead status card with no feedback, so
             # surface the failure so the play handler shows an error card.
@@ -407,80 +388,6 @@ async def stream(
         duration_min = result["duration_min"]
         thumbnail = result["thumb"]
         status = True if video else None
-        instant = await get_instant_play(chat_id)
-        # Force download when proxy is configured (ffmpeg proxy issues cause no sound)
-        if _FORCE_DOWNLOAD:
-            instant = False
-        slog.info(
-            "[%s] youtube branch: vidid=%s title=%s instant=%s (force_download=%s) age=%.1fs",
-            _STREAM_LOG, vidid, title[:40], instant, _FORCE_DOWNLOAD, _time.monotonic() - st0,
-        )
-        stream_link = None
-        direct = None
-        if instant:
-            _warm = asyncio.create_task(
-                Ayush.warm_join(chat_id)
-            ) if not getattr(config, "SEQUENTIAL_WARMUP", False) else None
-            api_url = await _api_stream_url(vidid, bool(status))
-            if _warm is not None:
-                _warm.cancel()
-            if api_url:
-                slog.info(
-                    "[%s] media API permalink ready for vidid=%s video=%s in %.1fs",
-                    _STREAM_LOG, vidid, bool(status), _time.monotonic() - st0,
-                )
-                stream_link = api_url
-                direct = True
-            else:
-                n = 0
-                try:
-                    n, stream_link = await Platform.youtube.stream_url(
-                        vidid, videoid=True, video=status
-                    )
-                    slog.info("[%s] stream_url() returned n=%s", _STREAM_LOG, n)
-                except Exception as e:
-                    slog.error("[%s] stream_url() EXCEPTION: %s", _STREAM_LOG, e)
-                    n = 0
-                if n != 0 and stream_link:
-                    direct = True
-                else:
-                    n = 0
-            if not direct:
-                try:
-                    slog.info("[%s] instant path unavailable, fallback download()...", _STREAM_LOG)
-                    stream_link, direct = await Platform.youtube.download(
-                        vidid, mystic, videoid=True, video=status
-                    )
-                    slog.info("[%s] download() returned direct=%s", _STREAM_LOG, direct)
-                except Exception as e:
-                    slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
-                    try:
-                        await notify_owner(
-                            "Stream.youtube.download(fallback)",
-                            e,
-                            f"vidid={vidid} chat={chat_id}",
-                        )
-                    except Exception:
-                        pass
-                    raise AssistantErr(_["play_16"])
-        else:
-            try:
-                slog.info("[%s] instant OFF, downloading...", _STREAM_LOG)
-                stream_link, direct = await Platform.youtube.download(
-                    vidid, mystic, videoid=True, video=status
-                )
-                slog.info("[%s] download() returned direct=%s", _STREAM_LOG, direct)
-            except Exception as e:
-                slog.error("[%s] download() EXCEPTION: %s", _STREAM_LOG, e)
-                try:
-                    await notify_owner(
-                        "Stream.youtube.download",
-                        e,
-                        f"vidid={vidid} chat={chat_id}",
-                    )
-                except Exception:
-                    pass
-                raise AssistantErr(_["play_16"])
         if await Ayush.is_live_chat(chat_id):
             await put_queue(
                 chat_id,
@@ -493,10 +400,6 @@ async def stream(
                 user_id,
                 "video" if video else "audio",
             )
-            try:
-                db[chat_id][-1]["source"] = _play_source_tag(stream_link)
-            except Exception:
-                pass
             position = len(db.get(chat_id)) - 1
             mid_np = await notice_card(
                 _, original_chat_id, "Qᴜᴇᴜᴇ",
@@ -507,8 +410,10 @@ async def stream(
             if not forceplay:
                 db[chat_id] = []
             _jt = _time.monotonic()
-            await Ayush.join_call(
-                chat_id, original_chat_id, stream_link, video=status, image=thumbnail
+            stream_link = await play_youtube_source(
+                vidid, status, mystic,
+                partial(Ayush.join_call, chat_id, original_chat_id, video=status, image=thumbnail),
+                instant=await get_instant_play(chat_id),
             )
             asyncio.create_task(
                 _start_lyrics(chat_id, title, duration_min,

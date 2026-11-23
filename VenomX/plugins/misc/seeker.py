@@ -113,7 +113,7 @@ async def markup_timer():
             except Exception:
                 pass
 
-            if m is None and not await _chat_has_live_call(chat_id, Ayush.calls):
+            if m is None and await _chat_has_live_call(chat_id, Ayush.calls) is False:
                 misses = _call_presence_failures.get(chat_id, 0) + 1
                 _call_presence_failures[chat_id] = misses
                 if misses >= 5:

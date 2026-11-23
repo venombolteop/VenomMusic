@@ -2,6 +2,7 @@
 # All rights reserved.
 #
 import glob
+from functools import partial
 import random
 
 from pyrogram import filters
@@ -314,38 +315,20 @@ async def admin_callback(client, CallbackQuery, _):
             await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=img)
             await _rich_status_edit(CallbackQuery, txt, chat_id)
         elif "vid_" in queued:
-            # Same order as the /skip command: the API permalink is stable
-            # (raw googlevideo URLs are bound to the proxy exit IP and 403).
-            from VenomX.utils.stream.stream import _api_stream_url
+            from VenomX.utils.stream.stream import play_youtube_source
 
-            stream_link = await _api_stream_url(videoid, bool(status))
-            mystic = None
-            if not stream_link:
-                n, stream_link = await Platform.youtube.stream_url(
-                    videoid, videoid=True, video=status
-                )
-                if n == 0:
-                    mystic = await status_card(chat_id, _["call_8"])
-                    try:
-                        stream_link, direct = await Platform.youtube.download(
-                            videoid,
-                            mystic,
-                            videoid=True,
-                            video=status,
-                        )
-                    except Exception:
-                        return await mystic.edit_text(_["call_7"])
+            mystic = await status_card(chat_id, _["call_8"])
             try:
-                await Ayush.skip_stream(chat_id, stream_link, video=status)
+                await play_youtube_source(
+                    videoid, status, mystic, partial(Ayush.skip_stream, chat_id, video=status),
+                    instant=await get_instant_play(chat_id),
+                )
             except Exception:
-                if mystic:
-                    return await mystic.edit_text(_["call_7"])
-                return await send_note(chat_id, _["call_7"])
+                return await mystic.edit_text(_["call_7"])
             img = await gen_thumb(videoid)
             await spawn_now_playing(_, chat_id, videoid, title, duration_min, user, thumb=img)
             await _rich_status_edit(CallbackQuery, txt, chat_id)
-            if mystic:
-                await mystic.delete()
+            await mystic.delete()
         elif "index_" in queued:
             try:
                 await Ayush.skip_stream(chat_id, videoid, video=status)
