@@ -31,7 +31,10 @@ from pytgcalls.types import (
     MediaStream,
     Update,
 )
-from pytgcalls.types import StreamEnded
+from pytgcalls.types import Device, StreamEnded
+from pyrogram import raw
+from VenomX.utils.stream.playback import Playback, current, playback_lock
+from VenomX.utils.stream import lyrics
 
 import pytgcalls.ffmpeg as _pytgcalls_ffmpeg
 import pytgcalls.types.stream.media_stream as _pytgcalls_media_stream
@@ -68,6 +71,8 @@ def _pytgcalls_supported_flags(process: str) -> set:
 async def _pytgcalls_cleanup_commands(commands, process_name=None, blacklist=None):
     process = process_name or commands[0]
     supported = _pytgcalls_supported_flags(process)
+    if process == "ffmpeg":
+        blacklist = [*(blacklist or ()), "-reconnect_at_eof"]
     new_commands = []
     ignore_next = False
     for value in commands:
@@ -109,7 +114,7 @@ from VenomX.utils.database import (
     set_loop,
 )
 from VenomX.utils.exceptions import AssistantErr
-from VenomX.utils.rich_panels import spawn_now_playing
+from VenomX.utils.rich_panels import replace_panel, spawn_now_playing
 from VenomX.utils.rich_msg import RichMystic, send_rich
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
@@ -148,26 +153,7 @@ _PROXY_FFMPEG = f"-http_proxy {_PROXY} " if _PROXY else ""
 VC_IDLE_GRACE = int(getattr(config, "VC_IDLE_GRACE", 600) or 600)
 _idle_leave_tasks = {}
 
-# stream_end for a video track can fire twice (audio and video source ends
-# reported separately), and the two change_stream() runs then race: each pops
-# its own queue head, the second play() call replaces the first, and the user
-# sees the second queued song instead of the first plus a doubled
-# "downloading your next song" card. A per-chat lock serialises runs and a
-# short dedup window throws away the echo.
-_END_DEDUP_WINDOW = 2.5
-_end_locks: dict = {}
-_end_last: dict = {}
 _stop_log_last: dict = {}
-
-# When each track actually began streaming, stamped at every play point. A
-# 2.5s dedup window is not enough for video MediaStreams: their audio and
-# video decoders EOF separately, and the second stream_end can land well past
-# the window. That late echo used to run _advance_queue again, which popped
-# the NEXT (already playing) track, saw an empty queue and left the call —
-# the queued song died seconds after starting. Knowing when the current
-# track started lets an end event be rejected as an echo whenever far less
-# than the track's own duration has elapsed.
-_track_started: dict = {}
 
 # Two /play commands landing on the same chat within the ~13s group-call
 # handshake used to race each other into join_call: both saw "not active",
@@ -208,17 +194,8 @@ async def _rollback_join(chat_id: int) -> None:
     Without this a failed join leaves the chat 'active' and every following
     /play silently queues behind a call that nobody is in.
     """
-    from VenomX.utils.stream.autoclear import auto_clean as _ac
+    await _clear_(chat_id, "Playback could not start.")
 
-    try:
-        popped = db.pop(chat_id, None)
-        if popped:
-            await _ac(popped)
-        db[chat_id] = []
-        await remove_active_video_chat(chat_id)
-        await remove_active_chat(chat_id)
-    except Exception:  # noqa: BLE001
-        LOGGER(__name__).warning("[Call] rollback_join cleanup failed for %s", chat_id)
 
 def _needs_proxy(link) -> bool:
     """Only external remote URLs need the ffmpeg proxy.
@@ -238,14 +215,12 @@ def _needs_proxy(link) -> bool:
 _REMOTE_FFMPEG_PARAMS = (
     f"{_PROXY_FFMPEG}"
     "-analyzeduration 5000000 -probesize 131072 "
-    "-thread_queue_size 4096 "
     "-fflags +genpts+discardcorrupt "
     "-flags low_delay"
 )
 
-# For local files: buffer tuning to prevent pipe starvation
+# For local files:
 _LOCAL_FFMPEG_PARAMS = (
-    "-thread_queue_size 4096 "
     "-analyzeduration 5000000 -probesize 1000000 "
     "-fflags +genpts+discardcorrupt "
     ""
@@ -255,27 +230,31 @@ _LOCAL_FFMPEG_PARAMS = (
 _REMOTE_FFMPEG_PARAMS_VIDEO = (
     f"{_PROXY_FFMPEG}"
     "-analyzeduration 3000000 -probesize 65536 "
-    "-thread_queue_size 2048 "
     "-fflags +genpts+discardcorrupt+nobuffer "
     "-flags low_delay"
 )
 
 _LOCAL_FFMPEG_PARAMS_VIDEO = (
-    "-thread_queue_size 2048 "
     "-analyzeduration 3000000 -probesize 65536 "
     "-fflags +genpts+discardcorrupt+nobuffer "
     "-flags low_delay"
 )
 
 
-async def _clear_(chat_id):
+async def _clear_(chat_id, reason="Playback stopped."):
+    current.pop(chat_id, None)
+    lyrics.stop(chat_id)
+    lyrics.forget(chat_id)
     popped = db.pop(chat_id, None)
-    if popped:
-        await auto_clean(popped)
     db[chat_id] = []
     await remove_active_video_chat(chat_id)
     await remove_active_chat(chat_id)
     await set_loop(chat_id, 0)
+    if popped:
+        mid = popped[0].get("rich_mid")
+        if mid:
+            await replace_panel(chat_id, mid, reason)
+        await auto_clean(popped)
 
 
 async def _chat_has_live_call(chat_id: int, calls) -> bool | None:
@@ -295,24 +274,38 @@ async def _chat_has_live_call(chat_id: int, calls) -> bool | None:
     return None if missing else False
 
 
-async def _assistant_still_in_call(chat_id: int):
-    """Telegram-side answer to 'is the assistant really in this call?'.
-
-    True/False are definitive, None means the check itself failed. Used by the
-    LEFT_CALL handler so an old leave echo cannot kill a fresh session while a
-    genuine VC end is still cleaned up immediately.
-    """
+async def call_presence(chat_id):
+    """Return (own participant, total participants), or None for an unknown result."""
     try:
-        assistant = await get_assistant(chat_id)
-        members = []
-        async for member in assistant.get_call_members(chat_id):
-            if member is not None:
-                members.append(member)
-        return any(m.chat.id == assistant.id for m in members)
-    except ValueError:
-        return False
-    except Exception:
+        async with asyncio.timeout(8):
+            assistant = await get_assistant(chat_id)
+            peer = await assistant.resolve_peer(chat_id)
+            if isinstance(peer, raw.types.InputPeerChannel):
+                info = await assistant.invoke(raw.functions.channels.GetFullChannel(channel=peer))
+            else:
+                info = await assistant.invoke(raw.functions.messages.GetFullChat(chat_id=peer.chat_id))
+            call = getattr(info.full_chat, "call", None)
+            if call is None:
+                return None, 0
+            snapshot = await assistant.invoke(raw.functions.phone.GetGroupCall(call=call, limit=2))
+            count = snapshot.call.participants_count
+            participants = snapshot.participants
+            if count > len(participants) and not any(p.is_self for p in participants):
+                result = await assistant.invoke(raw.functions.phone.GetGroupParticipants(
+                    call=call, ids=[raw.types.InputPeerSelf()], sources=[], offset="", limit=1,
+                ))
+                participants = result.participants
+            member = next((p for p in participants if not p.left and
+                           (p.is_self or getattr(p.peer, "user_id", None) == assistant.id)), None)
+            return member, count
+    except Exception as exc:
+        LOGGER(__name__).debug("VC membership unknown for %s (%s)", chat_id, type(exc).__name__)
         return None
+
+
+async def _assistant_still_in_call(chat_id):
+    presence = await call_presence(chat_id)
+    return None if presence is None else presence[0] is not None
 
 
 async def _drop_old_card(mystic) -> None:
@@ -374,28 +367,17 @@ class Call:
         await _clear_(chat_id)
         return False
 
-    async def _reconcile_active_chats(self):
-        """Clear active state whose VC is gone, even if no LEFT_CALL arrived."""
-        while True:
-            await asyncio.sleep(_RECONCILE_INTERVAL)
-            for chat_id in list(await get_active_chats()):
-                lock = _join_locks.get(chat_id)
-                if lock is not None and lock.locked():
-                    continue
-                try:
-                    await self.is_live_chat(chat_id)
-                except Exception as e:
-                    LOGGER(__name__).debug(
-                        "[Call] reconcile failed for %s: %s", chat_id, e
-                    )
-
     async def pause_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         await assistant.pause(chat_id)
+        if chat_id in current:
+            current[chat_id].pause()
 
     async def resume_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         await assistant.resume(chat_id)
+        if chat_id in current:
+            current[chat_id].resume()
 
     async def mute_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
@@ -405,10 +387,11 @@ class Call:
         assistant = await group_assistant(self, chat_id)
         await assistant.unmute(chat_id)
 
-    async def stop_stream(self, chat_id: int):
+    async def stop_stream(self, chat_id: int, reason="Playback stopped."):
         # Cleanup must not depend on resolving the assistant: if that lookup
         # fails, the stale active flag would keep growing the queue forever.
-        await _clear_(chat_id)
+        _mark_self_left(chat_id)
+        await _clear_(chat_id, reason)
         try:
             assistant = await group_assistant(self, chat_id)
             await assistant.leave_call(chat_id)
@@ -429,6 +412,9 @@ class Call:
                 )
 
     async def force_stop_stream(self, chat_id: int):
+        _mark_self_left(chat_id)
+        current.pop(chat_id, None)
+        lyrics.stop(chat_id)
         assistant = await group_assistant(self, chat_id)
         try:
             check = db.get(chat_id)
@@ -454,7 +440,7 @@ class Call:
         self._cancel_idle_leave(chat_id)
         # Arm the advance dedup: the replaced stream's echo must not pop the
         # just-started track within the dedup window afterwards.
-        _end_last[chat_id] = _t.monotonic()
+
         assistant = await group_assistant(self, chat_id)
         LOGGER(__name__).info("[Call] join_call: group_assistant %.1fs", _t.monotonic() - _j0)
         audio_stream_quality = await get_audio_bitrate(chat_id)
@@ -491,7 +477,7 @@ class Call:
         await assistant.play(chat_id, stream, config=call_config)
         # A skipped-in track just began: its end event must not be mistaken
         # for the replaced track's echo (or the reverse).
-        _track_started[chat_id] = time.monotonic()
+        current[chat_id] = Playback(link)
         self._schedule_idle_leave(assistant, chat_id)
 
     async def seek_stream(self, chat_id, file_path, to_seek, duration, mode):
@@ -506,24 +492,27 @@ class Call:
                 file_path,
                 audio_parameters=audio_stream_quality,
                 video_parameters=video_stream_quality,
-                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 2048 -analyzeduration 3000000 -probesize 65536 -fflags +genpts+discardcorrupt+nobuffer -flags low_delay",
+                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -analyzeduration 3000000 -probesize 65536 -fflags +genpts+discardcorrupt+nobuffer -flags low_delay",
             )
             if mode == "video"
             else MediaStream(
                 file_path,
                 audio_parameters=audio_stream_quality,
-                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -thread_queue_size 4096 -analyzeduration 5000000 -probesize 131072 -fflags +genpts+discardcorrupt -flags low_delay",
+                ffmpeg_parameters=f"{proxy_part}-ss {to_seek} -to {duration} -analyzeduration 5000000 -probesize 131072 -fflags +genpts+discardcorrupt -flags low_delay",
                 video_flags=MediaStream.Flags.IGNORE,
             )
         )
+        LOGGER(__name__).info(
+            "[Call] seek_stream chat=%s seek=%s duration=%s mode=%s",
+            chat_id, to_seek, duration, mode,
+        )
         await assistant.play(chat_id, stream, config=call_config)
-        # Seek restarts the source at to_seek: keep the start stamp aligned
-        # with media position so the end-echo check in change_stream still
-        # measures remaining time correctly.
-        try:
-            _track_started[chat_id] = time.monotonic() - float(to_seek)
-        except (TypeError, ValueError):
-            _track_started[chat_id] = time.monotonic()
+        offset = 0
+        for part in str(to_seek).split(":"):
+            offset = offset * 60 + float(part)
+        current[chat_id] = Playback(file_path, offset)
+        if db.get(chat_id):
+            db[chat_id][0]["played"] = int(offset)
 
     async def stream_call(self, link):
         assistant = await group_assistant(self, config.LOGGER_ID)
@@ -788,7 +777,7 @@ class Call:
             )
         # Fresh join: the stream begins now. Covers every replay path above
         # since this is the common tail of join_call.
-        _track_started[chat_id] = time.monotonic()
+        current[chat_id] = Playback(link)
         self._schedule_idle_leave(assistant, chat_id)
 
     async def warm_join(self, chat_id):
@@ -838,33 +827,44 @@ class Call:
             self._delayed_leave(client, chat_id, delay)
         )
 
-    async def change_stream(self, client, chat_id):
-        lock = _end_locks.setdefault(chat_id, asyncio.Lock())
-        async with lock:
-            now = time.monotonic()
-            if now - _end_last.get(chat_id, 0.0) < _END_DEDUP_WINDOW:
+    async def change_stream(self, client, chat_id, *, ended=False):
+        source = current.get(chat_id)
+        async with playback_lock(chat_id):
+            if source is None or current.get(chat_id) is not source or not db.get(chat_id):
+                return
+            if await group_assistant(self, chat_id) is not client:
+                return
+            entry = db[chat_id][0]
+            elapsed = int(source.position())
+            duration = entry.get("seconds", 0)
+            age = time.monotonic() - source.started if source.started is not None else None
+            if ended and source.recovered and age is not None and age < 15:
                 LOGGER(__name__).info(
-                    "[Call] duplicate stream_end suppressed for chat %s", chat_id
+                    "[Call] recovered stream_end echo ignored for chat=%s track=%s age=%.1fs elapsed=%ss",
+                    chat_id, entry.get("vidid"), age, elapsed,
                 )
                 return
-            # An end event that arrives while the current track has barely
-            # played cannot be its own natural end — it is the echo of a
-            # replaced or previously finished stream. Without this check the
-            # echo popped the playing track and left the call mid-song.
-            check = db.get(chat_id) or []
-            cur = check[0] if check else None
-            if cur and cur.get("seconds"):
-                started = _track_started.get(chat_id, 0.0)
-                elapsed = now - started if started else 0.0
-                if elapsed + 10.0 < cur["seconds"]:
-                    LOGGER(__name__).info(
-                        "[Call] stream_end echo of replaced track suppressed "
-                        "for chat %s (elapsed %.1fs < dur %.1fs)",
-                        chat_id, elapsed, cur["seconds"],
-                    )
+            early = ended and duration and elapsed + 10 < duration
+            LOGGER(__name__).info("[Call] audio ended chat=%s track=%s elapsed=%s duration=%s",
+                                  chat_id, entry.get("vidid"), elapsed, duration)
+            if early and not source.recovered and source.started is not None:
+                source.recovered = True
+                # Re-open a truncated finite source once at the last playing position.
+                try:
+                    await self.seek_stream(chat_id, source.source, elapsed, entry["dur"], entry["streamtype"])
+                except Exception as exc:
+                    LOGGER(__name__).warning("[Call] source recovery failed chat=%s (%s)", chat_id, type(exc).__name__)
+                else:
+                    current[chat_id].recovered = True
                     return
-            _end_last[chat_id] = now
-            await self._advance_queue(client, chat_id)
+            if early:
+                await set_loop(chat_id, 0)
+            lyrics.stop(chat_id)
+            try:
+                await self._advance_queue(client, chat_id)
+            finally:
+                if current.get(chat_id) is source:
+                    await self.stop_stream(chat_id, "Could not start the next track.")
 
     async def _advance_queue(self, client, chat_id):
         check = db.get(chat_id)
@@ -898,7 +898,10 @@ class Call:
                 # anchor is still a live message at that moment.
                 old_mystic = popped.get("mystic")
             if not check:
-                await _drop_old_card(old_mystic)
+                if popped and popped.get("rich_mid"):
+                    await replace_panel(chat_id, popped["rich_mid"], "Playback ended.")
+                else:
+                    await _drop_old_card(old_mystic)
                 await _clear_(chat_id)
                 _mark_self_left(chat_id)
                 try:
@@ -966,7 +969,7 @@ class Call:
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
-                    _track_started[chat_id] = time.monotonic()
+                    current[chat_id] = Playback(link)
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
@@ -1049,7 +1052,7 @@ class Call:
                 )
                 try:
                     await client.play(chat_id, stream, config=call_config)
-                    _track_started[chat_id] = time.monotonic()
+                    current[chat_id] = Playback(play_source)
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
@@ -1105,7 +1108,7 @@ class Call:
                         )
                 try:
                     await client.play(chat_id, stream, config=call_config)
-                    _track_started[chat_id] = time.monotonic()
+                    current[chat_id] = Playback(queued)
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await send_rich(original_chat_id, f"<p>{_['call_7']}</p>")
@@ -1151,7 +1154,7 @@ class Call:
         LOGGER(__name__).info(f"Starting PyTgCall Clients")
         await asyncio.gather(*[c.start() for c in self.calls])
         await self.decorators()
-        asyncio.create_task(self._reconcile_active_chats())
+
 
 
     
@@ -1160,27 +1163,29 @@ class Call:
 
             @call.on_update(filters.chat_update(ChatUpdate.Status.LEFT_CALL))
             async def stream_services_handler(client, update):
-                # Ignore only a PROVABLE echo of our own leave: the assistant
-                # must really be in a fresh call. A plain time window swallowed
-                # genuine VC ends, leaving the chat "active" with no assistant
-                # so every /play just appended to a dead queue.
-                if _was_self_left(update.chat_id):
-                    still_in = await _assistant_still_in_call(update.chat_id)
-                    _self_left.pop(update.chat_id, None)
+                chat_id = update.chat_id
+                if await group_assistant(self, chat_id) is not client:
+                    return
+                source = current.get(chat_id)
+                async with playback_lock(chat_id):
+                    if source is not None and current.get(chat_id) is not source:
+                        return
+                    still_in = await _assistant_still_in_call(chat_id)
                     if still_in is not False:
                         LOGGER(__name__).info(
-                            "[Call] LEFT_CALL echo of our own leave ignored for chat %s",
-                            update.chat_id,
+                            "[Call] LEFT_CALL echo ignored for chat %s", chat_id
                         )
                         return
-                LOGGER(__name__).info(
-                    "[Call] VC end detected for chat %s; clearing queue", update.chat_id
-                )
-                await self.stop_stream(update.chat_id)
+                    LOGGER(__name__).info("[Call] VC left chat=%s status=%s", chat_id, update.status)
+                    await _clear_(chat_id, "Playback stopped. The assistant left the voice chat.")
 
-            @call.on_update(filters.stream_end())
+            @call.on_update(filters.stream_end(StreamEnded.Type.AUDIO, Device.MICROPHONE))
             async def stream_end_handler(client, update: Update):
-                await self.change_stream(client, update.chat_id)
+                LOGGER(__name__).info(
+                    "[Call] stream_end update chat=%s type=%s device=%s",
+                    update.chat_id, update.stream_type, update.device,
+                )
+                await self.change_stream(client, update.chat_id, ended=True)
 
 
     def __getattr__(self, name):

@@ -426,10 +426,6 @@ async def admin_callback(client, CallbackQuery, _):
             )
         except Exception:
             return await mystic.edit_text(_["admin_34"])
-        if int(command) in [1, 3]:
-            db[chat_id][0]["played"] -= duration_to_skip
-        else:
-            db[chat_id][0]["played"] += duration_to_skip
         string = _["admin_33"].format(seconds_to_min(to_seek))
         await edit_any(mystic, f"{string}\n\nChanges Done by: {mention} !")
 

@@ -9,7 +9,7 @@ import os
 import time as _time
 from functools import partial
 from urllib.parse import urlencode
-from weakref import WeakValueDictionary
+from VenomX.utils.stream.playback import playback_lock
 from random import randint
 from typing import Union
 
@@ -22,6 +22,7 @@ from VenomX.misc import db
 from VenomX.utils.database import (
     add_active_video_chat,
     get_vc_lyrics,
+    get_assistant,
     is_video_allowed,
     get_instant_play,
 )
@@ -52,7 +53,6 @@ def _video_height() -> int:
 
 
 _prefetch_tasks = {}
-_stream_locks = WeakValueDictionary()
 
 
 async def _start_lyrics(chat_id, title, duration, playback_started=None):
@@ -78,7 +78,7 @@ async def _start_lyrics(chat_id, title, duration, playback_started=None):
     except Exception:
         seconds = None
     try:
-        assistant = userbot.clients[0]
+        assistant = await get_assistant(chat_id)
     except Exception:
         assistant = None
     if assistant is None:
@@ -137,7 +137,7 @@ async def _api_stream_url(vidid, video):
     if params:
         url += "?" + urlencode(params)
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
             async with session.get(url, headers={"Range": "bytes=0-1023"}) as response:
                 if (response.status in (200, 206)
                         and response.content_type.startswith(("audio/", "video/", "application/octet-stream"))
@@ -152,24 +152,43 @@ async def _api_stream_url(vidid, video):
 async def play_youtube_source(vidid, video, mystic, play, instant=True):
     """Try each source once. Only source errors should move playback to another source."""
     if instant:
-        permalink = await _api_stream_url(vidid, video)
-        if permalink:
-            try:
-                await play(permalink)
-                return permalink
-            except MEDIA_ERRORS as exc:
-                slog.warning("Media API playback failed for %s (%s)", vidid, type(exc).__name__)
+        direct_task = asyncio.create_task(
+            Platform.youtube.stream_url(vidid, videoid=True, video=video)
+        )
+        api_used = False
         try:
-            ok, direct = await Platform.youtube.stream_url(vidid, videoid=True, video=video)
-        except Exception as exc:
-            slog.warning("Direct URL lookup failed for %s (%s)", vidid, type(exc).__name__)
-        else:
-            if ok and direct:
+            permalink = await _api_stream_url(vidid, video)
+            if permalink:
                 try:
-                    await play(direct)
-                    return direct
+                    await play(permalink)
+                    api_used = True
+                    return permalink
                 except MEDIA_ERRORS as exc:
-                    slog.warning("Direct playback failed for %s (%s)", vidid, type(exc).__name__)
+                    slog.warning("Media API playback failed for %s (%s)", vidid, type(exc).__name__)
+        finally:
+            if api_used:
+                if direct_task.done():
+                    try:
+                        direct_task.result()
+                    except Exception:
+                        pass
+                else:
+                    direct_task.cancel()
+                    await asyncio.gather(direct_task, return_exceptions=True)
+        if direct_task.cancelled():
+            ok, direct = False, None
+        else:
+            try:
+                ok, direct = await direct_task
+            except Exception as exc:
+                slog.warning("Direct URL lookup failed for %s (%s)", vidid, type(exc).__name__)
+                ok, direct = False, None
+        if ok and direct:
+            try:
+                await play(direct)
+                return direct
+            except MEDIA_ERRORS as exc:
+                slog.warning("Direct playback failed for %s (%s)", vidid, type(exc).__name__)
     try:
         path, _ = await Platform.youtube.download(vidid, mystic, videoid=True, video=video)
     except Exception as exc:
@@ -215,7 +234,7 @@ async def stream(
     spotify: Union[bool, str] = None,
     forceplay: Union[bool, str] = None,
 ):
-    lock = _stream_locks.setdefault(chat_id, asyncio.Lock())
+    lock = playback_lock(chat_id)
     async with lock:
         try:
             return await _stream(_, mystic, user_id, result, chat_id, user_name,

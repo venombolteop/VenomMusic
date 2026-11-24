@@ -11,6 +11,9 @@
 import asyncio
 import re
 import time
+from weakref import WeakValueDictionary
+
+from VenomX.utils.stream.playback import current
 
 from VenomX import LOGGER
 from VenomX.misc import db
@@ -34,13 +37,12 @@ from VenomX.utils.rich_msg import (
 _TICK = 18
 
 _panel_content = {}
-_closed_panels = set()
+_edit_locks = WeakValueDictionary()
 _menu_page: dict = {}
 
 
 def mark_panel_closed(chat_id: int, message_id: int) -> None:
     """Stop the refresher when the panel is closed/replaced."""
-    _closed_panels.add((chat_id, message_id))
     _panel_content.pop((chat_id, message_id), None)
     _menu_page.pop((chat_id, message_id), None)
 
@@ -67,9 +69,12 @@ def _ctl_style() -> str:
     return "primary"
 
 
-def _toggle_button(chat_id: int) -> str:
+def _toggle_button(chat_id: int, playing=None) -> str:
     """Single play/pause toggle — label shows the ACTION next press performs."""
-    if db.get(chat_id):
+    if playing is None:
+        source = current.get(chat_id)
+        playing = source is not None and source.started is not None
+    if playing:
         return rich_button(
             f"{pemoji('⏸')} ᴘᴀᴜsᴇ",
             callback_data=f"ADMIN Pp|{chat_id}",
@@ -115,7 +120,7 @@ def _rows(chat_id: int, videoid, elapsed: float, total_sec: float, playing: bool
         align="center",
     )
     rows += rich_button_row(
-        _toggle_button(chat_id),
+        _toggle_button(chat_id, playing),
         rich_button(f"{pemoji('⏩')} sᴋɪᴘ", callback_data=f"ADMIN Skip|{chat_id}", style=_ctl_style()),
         rich_button(f"{pemoji('🛑')} sᴛᴏᴘ", callback_data=f"ADMIN Stop|{chat_id}", style="danger"),
         align="center",
@@ -330,37 +335,38 @@ async def _board_bump(chat_id: int, title: str) -> None:
 
 
 async def _ticker(chat_id: int, mid: int, videoid, body: str, snapshot: tuple) -> None:
-    _body_s, videoid, total_sec, start_t = snapshot
-    entry = _panel_content.get((chat_id, mid))
-    if entry:
-        start_t = entry[3]
-    try:
-        dur_float = float(total_sec or 0)
-    except Exception:
-        dur_float = 0
-    fail_streak = 0
-    while (chat_id, mid) not in _closed_panels:
+    key = (chat_id, mid)
+    total = float(snapshot[2] or 0)
+    last_html = None
+    failures = 0
+    lock = _edit_locks.setdefault(key, asyncio.Lock())
+    while _panel_content.get(key) is snapshot:
         await asyncio.sleep(_TICK)
-        if (chat_id, mid) in _closed_panels:
-            break
-        playing = db.get(chat_id)
-        if not playing or playing[0].get("rich_mid") != mid:
-            break
-        if (chat_id, mid) in _menu_page:
-            continue
-        played = float(playing[0].get("played", 0) or 0)
-        html = body + _rows(chat_id, videoid, played, dur_float, playing=True)
-        ok = await edit_rich(chat_id, mid, html)
-        # A permanently dead message (deleted card, cleared history) used to
-        # keep the ticker editing every tick forever — spamming the log with
-        # a retry warning each time. Three consecutive failed edits mean the
-        # panel is not coming back.
-        fail_streak = 0 if ok else fail_streak + 1
-        if fail_streak >= 3:
-            _closed_panels.add((chat_id, mid))
-            break
-        if dur_float and played >= dur_float:
-            break
+        async with lock:
+            if _panel_content.get(key) is not snapshot:
+                return
+            queue = db.get(chat_id)
+            source = current.get(chat_id)
+            if not source or not queue or queue[0].get("rich_mid") != mid:
+                mark_panel_closed(chat_id, mid)
+                return
+            if key in _menu_page:
+                last_html = None
+                continue
+            # Live streams have no finite progress bar. Paused clocks stay fixed.
+            elapsed = min(int(source.position()), total) if total else 0
+            html = body + _rows(chat_id, videoid, elapsed, total, playing=source.started is not None)
+            if html == last_html:
+                continue
+            if await edit_rich(chat_id, mid, html):
+                last_html = html
+                failures = 0
+            else:
+                failures += 1
+                if failures >= 3:
+                    LOGGER(__name__).warning("Player card edits failed chat=%s mid=%s", chat_id, mid)
+                    mark_panel_closed(chat_id, mid)
+                    return
 
 
 async def refresh_after_toggle(chat_id: int, message_id: int, paused: bool) -> bool:
@@ -401,7 +407,8 @@ async def refresh_panel(chat_id: int, message_id: int, paused: bool = False) -> 
 async def replace_panel(chat_id: int, message_id: int, text: str) -> bool:
     """Kill the ticker and leave a short status line on the old panel."""
     mark_panel_closed(chat_id, message_id)
-    return await edit_rich(chat_id, message_id, f"<p>{rich_esc(text)}</p>")
+    async with _edit_locks.setdefault((chat_id, message_id), asyncio.Lock()):
+        return await edit_rich(chat_id, message_id, f"<p>{rich_esc(text)}</p>")
 
 
 async def snapshot_card(chat_id: int) -> int | None:
@@ -554,7 +561,6 @@ async def reattach_from_db(_, chat_id: int, mid: int) -> bool:
     played = float(playing[0].get("played", 0) or 0)
     ok = await edit_rich(chat_id, mid, body + _rows(chat_id, videoid, played, total_sec))
     if ok:
-        _closed_panels.discard((chat_id, mid))
         _menu_page.pop((chat_id, mid), None)
         _panel_content[(chat_id, mid)] = (body, videoid, total_sec, time.time())
         _register(chat_id, mid, videoid, total_sec)

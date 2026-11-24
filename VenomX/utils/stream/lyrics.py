@@ -32,6 +32,7 @@ def no_preview():
 LRC_LINE = re.compile(r"\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]")
 
 _timers = {}
+_pending = {}
 # Timed lines for a track do not change, and a queue replays the same songs.
 # The API caches too, but a hit there still costs a round trip from here.
 _lines_cache = {}
@@ -269,16 +270,9 @@ async def send_call_message(client, chat_id, text):
     except RPCError as e:
         message = str(e).upper()
         if "GROUPCALL_JOIN_MISSING" in message:
-            # The cached handle belongs to a call that has since ended. A music
-            # bot starts a new one as soon as a track finishes, well inside the
-            # cache's ten-minute lifetime, and the stale handle then fails every
-            # send until it expires — the panel going quiet for the rest of the
-            # song. Dropping it here lets the next line re-resolve the live call,
-            # so the display recovers on its own without a restart.
-            _call_cache.pop(chat_id, None)
-            LOGGER(__name__).info(
-                "call had changed; stale handle dropped, next line re-resolves"
-            )
+            forget(chat_id)
+            LOGGER(__name__).info("Lyrics sender is outside the VC chat=%s; stopping lyrics", chat_id)
+            stop(chat_id)
         elif "MESSAGE_TOO_LONG" in message:
             LOGGER(__name__).info("call message too long, skipped")
         else:
@@ -497,6 +491,8 @@ async def start(client, chat_id, track_title, duration=None,
     only in that chat.
     """
     stop(chat_id)
+    generation = object()
+    _pending[chat_id] = generation
     new_track(chat_id)
     try:
         from VenomX.utils.database import get_vc_lyrics
@@ -511,7 +507,8 @@ async def start(client, chat_id, track_title, duration=None,
         )
         return None
     lines = await fetch(track_title, duration, chat_id=chat_id)
-    stop(chat_id)
+    if _pending.get(chat_id) is not generation:
+        return None
     started_at = playback_started or time.monotonic()
     if not lines:
         LOGGER(__name__).info("lyrics: none found for %r", track_title[:50])
@@ -536,6 +533,8 @@ async def start(client, chat_id, track_title, duration=None,
             LOGGER(__name__).debug(
                 "could not post lyrics message: %s: %s", type(e).__name__, e
             )
+    if _pending.get(chat_id) is not generation:
+        return None
     task = asyncio.create_task(
         _run(chat_id, message, lines, started_at, client, use_title)
     )
@@ -556,6 +555,7 @@ def forget(chat_id):
 
 
 def stop(chat_id):
+    _pending.pop(chat_id, None)
     entry = _timers.pop(chat_id, None)
     if not entry:
         return
