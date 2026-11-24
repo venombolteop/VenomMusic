@@ -28,6 +28,7 @@ _LOG_TAG = "Youtube"
 _YT_SEARCH_TIMEOUT = 10
 _YT_DLP_TIMEOUT = 60
 _YT_SUBPROCESS_TIMEOUT = 60
+_YT_DIRECT_TIMEOUT = 18
 _YT_STREAM_CHECK_TIMEOUT = 8
 
 
@@ -753,7 +754,7 @@ class YouTube:
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=_YT_SUBPROCESS_TIMEOUT
+                proc.communicate(), timeout=_YT_DIRECT_TIMEOUT
             )
             elapsed = time.monotonic() - t0
             if stdout:
@@ -778,13 +779,6 @@ class YouTube:
             _log("error", "stream_url() TIMEOUT after %.1fs for: %s", elapsed, link[:80])
             try:
                 proc.kill()
-            except Exception:
-                pass
-            try:
-                import asyncio as _aio
-                _aio.get_event_loop().create_task(
-                    notify_owner("Youtube.stream_url", Exception(f"yt-dlp subprocess timed out after {elapsed:.0f}s"), f"link={link[:80]} video={video}")
-                )
             except Exception:
                 pass
             return 0, "timeout"

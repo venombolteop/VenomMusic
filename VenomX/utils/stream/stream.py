@@ -137,7 +137,7 @@ async def _api_stream_url(vidid, video):
     if params:
         url += "?" + urlencode(params)
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=16)) as session:
             async with session.get(url, headers={"Range": "bytes=0-1023"}) as response:
                 if (response.status in (200, 206)
                         and response.content_type.startswith(("audio/", "video/", "application/octet-stream"))
@@ -155,31 +155,29 @@ async def play_youtube_source(vidid, video, mystic, play, instant=True):
         direct_task = asyncio.create_task(
             Platform.youtube.stream_url(vidid, videoid=True, video=video)
         )
-        api_used = False
         try:
             permalink = await _api_stream_url(vidid, video)
-            if permalink:
-                try:
-                    await play(permalink)
-                    api_used = True
-                    return permalink
-                except MEDIA_ERRORS as exc:
-                    slog.warning("Media API playback failed for %s (%s)", vidid, type(exc).__name__)
-        finally:
-            if api_used:
-                if direct_task.done():
-                    try:
-                        direct_task.result()
-                    except Exception:
-                        pass
-                else:
-                    direct_task.cancel()
-                    await asyncio.gather(direct_task, return_exceptions=True)
+        except Exception as exc:
+            slog.warning("Media API lookup failed for %s (%s)", vidid, type(exc).__name__)
+            permalink = None
+        if permalink:
+            direct_task.cancel()
+            await asyncio.gather(direct_task, return_exceptions=True)
+            try:
+                await play(permalink)
+                return permalink
+            except MEDIA_ERRORS as exc:
+                slog.warning("Media API playback failed for %s (%s)", vidid, type(exc).__name__)
         if direct_task.cancelled():
             ok, direct = False, None
         else:
             try:
-                ok, direct = await direct_task
+                ok, direct = await asyncio.wait_for(direct_task, timeout=12)
+            except (asyncio.TimeoutError, TimeoutError):
+                slog.warning("Direct URL lookup timed out for %s", vidid)
+                direct_task.cancel()
+                await asyncio.gather(direct_task, return_exceptions=True)
+                ok, direct = False, None
             except Exception as exc:
                 slog.warning("Direct URL lookup failed for %s (%s)", vidid, type(exc).__name__)
                 ok, direct = False, None

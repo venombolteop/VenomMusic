@@ -664,6 +664,25 @@ class Call:
                 raise AssistantErr(_["call_3"].format(friendly))
             raise AssistantErr(_["call_3"].format(f"{type(e).__name__}: {e}"))
 
+    async def _reset_stale_call(self, client, chat_id):
+        LOGGER(__name__).warning("[Call] resetting stale VC state for chat %s", chat_id)
+        try:
+            await client._app.leave_group_call(chat_id)
+        except Exception as e:
+            LOGGER(__name__).debug(
+                "[Call] leave_group_call reset skipped for %s: %s", chat_id, e
+            )
+        try:
+            await client._clear_call(chat_id)
+        except Exception as e:
+            LOGGER(__name__).debug(
+                "[Call] clear_call reset skipped for %s: %s", chat_id, e
+            )
+        try:
+            client._app.set_in_call(chat_id, False)
+        except Exception:
+            pass
+
     async def join_call(
         self,
         chat_id: int,
@@ -775,6 +794,40 @@ class Call:
             raise AssistantErr(
                 "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
             )
+        except (asyncio.TimeoutError, TimeoutError):
+            for attempt in (1, 2, 3):
+                LOGGER(__name__).warning(
+                    "[Call] play timed out for chat %s; retry %d", chat_id, attempt
+                )
+                if attempt == 2:
+                    await self._reset_stale_call(assistant, chat_id)
+                await asyncio.sleep(3 * attempt)
+                try:
+                    await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
+                    break
+                except AlreadyJoinedError:
+                    await asyncio.sleep(0.75)
+                    try:
+                        await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
+                        break
+                    except Exception as e:
+                        LOGGER(__name__).warning(
+                            "[Call] replay after timeout failed for chat %s: %s: %s",
+                            chat_id, type(e).__name__, e,
+                        )
+                except (NoActiveGroupCall, UserNotParticipant, ChannelPrivate):
+                    await self.join_chat(chat_id)
+                    assistant = await group_assistant(self, chat_id)
+                except (asyncio.TimeoutError, TimeoutError):
+                    continue
+                except TelegramServerError:
+                    raise AssistantErr(
+                        "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
+                    )
+            else:
+                raise AssistantErr(
+                    "**VOICE CONNECTION TIMEOUT**\n\nPlease restart the voicechat and try again."
+                )
         # Fresh join: the stream begins now. Covers every replay path above
         # since this is the common tail of join_call.
         current[chat_id] = Playback(link)
