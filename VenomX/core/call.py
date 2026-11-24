@@ -72,7 +72,13 @@ async def _pytgcalls_cleanup_commands(commands, process_name=None, blacklist=Non
     process = process_name or commands[0]
     supported = _pytgcalls_supported_flags(process)
     if process == "ffmpeg":
-        blacklist = [*(blacklist or ()), "-reconnect_at_eof"]
+        blacklist = [
+            *(blacklist or ()),
+            "-reconnect",
+            "-reconnect_at_eof",
+            "-reconnect_streamed",
+            "-reconnect_delay_max",
+        ]
     new_commands = []
     ignore_next = False
     for value in commands:
@@ -95,6 +101,7 @@ _pytgcalls_media_stream.cleanup_commands = _pytgcalls_cleanup_commands
 
 import config
 from strings import get_string
+from VenomX.platforms.Youtube import _YT_HTTP_HEADERS
 from VenomX import LOGGER, Platform, app, userbot
 from VenomX.misc import db
 from VenomX.utils.database import (
@@ -212,8 +219,11 @@ def _needs_proxy(link) -> bool:
 # IMPORTANT: only INPUT-side options allowed here — pytgcalls places these
 # before the input file. Output/encoder options (-acodec/-ar/-vn etc.) will
 # crash ffmpeg with "Option not found" and kill the stream instantly.
+_FFMPEG_USER_AGENT = f"-user_agent '{_YT_HTTP_HEADERS['User-Agent']}' "
 _REMOTE_FFMPEG_PARAMS = (
     f"{_PROXY_FFMPEG}"
+    f"{_FFMPEG_USER_AGENT}"
+    "-rw_timeout 15000000 "
     "-analyzeduration 5000000 -probesize 131072 "
     "-fflags +genpts+discardcorrupt "
     "-flags low_delay"
@@ -229,6 +239,8 @@ _LOCAL_FFMPEG_PARAMS = (
 # Video-specific: faster decode + lower buffer for real-time pipe streaming
 _REMOTE_FFMPEG_PARAMS_VIDEO = (
     f"{_PROXY_FFMPEG}"
+    f"{_FFMPEG_USER_AGENT}"
+    "-rw_timeout 15000000 "
     "-analyzeduration 3000000 -probesize 65536 "
     "-fflags +genpts+discardcorrupt+nobuffer "
     "-flags low_delay"
