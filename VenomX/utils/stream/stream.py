@@ -151,36 +151,33 @@ async def _api_stream_url(vidid, video):
 
 async def play_youtube_source(vidid, video, mystic, play, instant=True):
     """Try each source once. Only source errors should move playback to another source."""
+    try:
+        async with asyncio.timeout(100):
+            return await _play_youtube_source(vidid, video, mystic, play, instant)
+    except TimeoutError as exc:
+        raise AssistantErr("Playback setup exceeded its deadline.") from exc
+
+
+async def _play_youtube_source(vidid, video, mystic, play, instant):
     if instant:
-        direct_task = asyncio.create_task(
-            Platform.youtube.stream_url(vidid, videoid=True, video=video)
-        )
         try:
             permalink = await _api_stream_url(vidid, video)
         except Exception as exc:
             slog.warning("Media API lookup failed for %s (%s)", vidid, type(exc).__name__)
             permalink = None
         if permalink:
-            direct_task.cancel()
-            await asyncio.gather(direct_task, return_exceptions=True)
             try:
                 await play(permalink)
                 return permalink
             except MEDIA_ERRORS as exc:
                 slog.warning("Media API playback failed for %s (%s)", vidid, type(exc).__name__)
-        if direct_task.cancelled():
+        # Once playback starts the caller must immediately commit the queue and panel.
+        # Start the fallback resolver only when this request actually needs it.
+        try:
+            ok, direct = await Platform.youtube.stream_url(vidid, videoid=True, video=video)
+        except Exception as exc:
+            slog.warning("Direct URL lookup failed for %s (%s)", vidid, type(exc).__name__)
             ok, direct = False, None
-        else:
-            try:
-                ok, direct = await asyncio.wait_for(direct_task, timeout=12)
-            except (asyncio.TimeoutError, TimeoutError):
-                slog.warning("Direct URL lookup timed out for %s", vidid)
-                direct_task.cancel()
-                await asyncio.gather(direct_task, return_exceptions=True)
-                ok, direct = False, None
-            except Exception as exc:
-                slog.warning("Direct URL lookup failed for %s (%s)", vidid, type(exc).__name__)
-                ok, direct = False, None
         if ok and direct:
             try:
                 await play(direct)
@@ -232,13 +229,17 @@ async def stream(
     spotify: Union[bool, str] = None,
     forceplay: Union[bool, str] = None,
 ):
-    lock = playback_lock(chat_id)
-    async with lock:
-        try:
-            return await _stream(_, mystic, user_id, result, chat_id, user_name,
-                                 original_chat_id, video, streamtype, spotify, forceplay)
-        except MEDIA_ERRORS as exc:
-            raise AssistantErr(f"Playback failed ({type(exc).__name__}).") from exc
+    admission = asyncio.timeout(15)
+    try:
+        async with admission:
+            async with playback_lock(chat_id):
+                admission.reschedule(None)
+                return await _stream(_, mystic, user_id, result, chat_id, user_name,
+                                     original_chat_id, video, streamtype, spotify, forceplay)
+    except MEDIA_ERRORS as exc:
+        if admission.expired():
+            raise AssistantErr("Another playback operation is still running. Please try again.") from exc
+        raise AssistantErr(f"Playback failed ({type(exc).__name__}).") from exc
 
 
 async def _stream(
@@ -373,11 +374,12 @@ async def _stream(
                 except Exception:
                     pass
                 started_track = True
-                img = await gen_thumb(vidid)
                 mid_np = await spawn_now_playing(
                     _, chat_id, vidid, title, duration_min, user_name,
-                    thumb=img,
+                    thumb=thumbnail,
                 )
+                if not mid_np:
+                    raise AssistantErr("Playback started, but Telegram could not send the player card.")
         if count == 0:
             if started_track:
                 return
@@ -459,8 +461,10 @@ async def _stream(
                 pass
             mid_np = await spawn_now_playing(
                 _, chat_id, vidid, title, duration_min, user_name,
-                thumb=await gen_thumb(vidid),
+                thumb=thumbnail,
             )
+            if not mid_np:
+                raise AssistantErr("Playback started, but Telegram could not send the player card.")
         slog.info("[%s] youtube branch completed in %.1fs for vidid=%s", _STREAM_LOG, _time.monotonic() - st0, vidid)
 
     elif "saavn" in streamtype:

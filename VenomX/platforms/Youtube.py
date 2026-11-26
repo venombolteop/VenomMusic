@@ -3,6 +3,7 @@
 #
 import asyncio
 import os
+import subprocess
 import re
 import shlex
 import shutil
@@ -23,6 +24,7 @@ import config
 from VenomX.utils.decorators import asyncify
 from VenomX.utils.formatters import seconds_to_min, time_to_seconds
 from VenomX.utils.notify import notify_owner
+from VenomX.utils.media_process import run_media_process
 
 _LOG_TAG = "Youtube"
 _YT_SEARCH_TIMEOUT = 10
@@ -710,10 +712,12 @@ class YouTube:
                 headers=headers,
                 proxy=PROXY or None,
             ) as client:
-                resp = await client.get(url)
-            if resp.status_code in (200, 206):
-                return True, ""
-            return False, f"http_{resp.status_code}"
+                async with client.stream("GET", url) as resp:
+                    if resp.status_code in (200, 206):
+                        if await anext(resp.aiter_raw(chunk_size=1), b""):
+                            return True, ""
+                        return False, "empty response"
+                    return False, f"http_{resp.status_code}"
         except Exception as e:
             return False, type(e).__name__
 
@@ -746,16 +750,8 @@ class YouTube:
             "--user-agent", _YT_HTTP_HEADERS["User-Agent"],
             f"{link}",
         ]
-        _log("info", "stream_url() subprocess: %s", " ".join(cmd[:10]))
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=_YT_DIRECT_TIMEOUT
-            )
+            _, stdout, stderr = await run_media_process(cmd, _YT_DIRECT_TIMEOUT, stderr=subprocess.PIPE)
             elapsed = time.monotonic() - t0
             if stdout:
                 # yt-dlp -g may print multiple lines (video+audio); take first http URL
@@ -777,10 +773,6 @@ class YouTube:
         except asyncio.TimeoutError:
             elapsed = time.monotonic() - t0
             _log("error", "stream_url() TIMEOUT after %.1fs for: %s", elapsed, link[:80])
-            try:
-                proc.kill()
-            except Exception:
-                pass
             return 0, "timeout"
         except Exception as e:
             _log("error", "stream_url() EXCEPTION: %s", e)

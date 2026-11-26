@@ -28,5 +28,28 @@ current: dict[int, Playback] = {}
 _locks = WeakValueDictionary()
 
 
+class _PlaybackLock(asyncio.Lock):
+    """Allow nested playback operations only within the owning asyncio task."""
+
+    def __init__(self):
+        super().__init__()
+        self.owner = None
+        self.depth = 0
+
+    async def __aenter__(self):
+        task = asyncio.current_task()
+        if self.owner is not task:
+            await self.acquire()
+            self.owner = task
+        self.depth += 1
+        return self
+
+    async def __aexit__(self, *args):
+        self.depth -= 1
+        if self.depth == 0:
+            self.owner = None
+            self.release()
+
+
 def playback_lock(chat_id):
-    return _locks.setdefault(chat_id, asyncio.Lock())
+    return _locks.setdefault(chat_id, _PlaybackLock())

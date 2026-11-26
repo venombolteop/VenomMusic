@@ -5,36 +5,28 @@ import asyncio
 import re
 import subprocess
 import time
-from functools import partial
+from functools import partial, wraps
 from typing import Union
 
 from json import JSONDecodeError
 from ntgcalls import FFmpegError, TelegramServerError
 from pytgcalls.exceptions import (InvalidVideoProportion, NoActiveGroupCall,
-                                  NoAudioSourceFound, NoVideoSourceFound)
+                                  NoAudioSourceFound, NoVideoSourceFound, NotInCallError)
 from pyrogram.types import InlineKeyboardMarkup
 from pytgcalls import PyTgCalls, filters
-# py-tgcalls 3.x dropped AlreadyJoinedError. Aliasing it to NoActiveGroupCall
-# used to make every retry play that hit a plain "No active group call" get
-# caught as "already joined" and abort the settle loop after the first
-# attempt — misreporting a missing-call problem as an AlreadyInVoiceChat
-# splash. Keep a distinct sentinel so NoActiveGroupCall keeps falling through
-# to the real retries.
-try:
-    from pytgcalls.exceptions import AlreadyJoinedError
-except ImportError:
-    class AlreadyJoinedError(Exception):
-        pass
 from pytgcalls.types import (
     ChatUpdate,
     GroupCallConfig,
     MediaStream,
     Update,
 )
+from pytgcalls.types.raw import Stream
 from pytgcalls.types import Device, StreamEnded
 from pyrogram import raw
 from VenomX.utils.stream.playback import Playback, current, playback_lock
 from VenomX.utils.stream import lyrics
+
+from VenomX.core.media_probe import check_stream
 
 import pytgcalls.ffmpeg as _pytgcalls_ffmpeg
 import pytgcalls.types.stream.media_stream as _pytgcalls_media_stream
@@ -70,7 +62,9 @@ def _pytgcalls_supported_flags(process: str) -> set:
 
 async def _pytgcalls_cleanup_commands(commands, process_name=None, blacklist=None):
     process = process_name or commands[0]
-    supported = _pytgcalls_supported_flags(process)
+    supported = _PYTGCALLS_SUPPORTED_FLAGS.get(process)
+    if supported is None:
+        supported = await asyncio.to_thread(_pytgcalls_supported_flags, process)
     if process == "ffmpeg":
         blacklist = [
             *(blacklist or ()),
@@ -96,6 +90,7 @@ async def _pytgcalls_cleanup_commands(commands, process_name=None, blacklist=Non
     return new_commands
 
 
+_pytgcalls_media_stream.check_stream = check_stream
 _pytgcalls_ffmpeg.cleanup_commands = _pytgcalls_cleanup_commands
 _pytgcalls_media_stream.cleanup_commands = _pytgcalls_cleanup_commands
 
@@ -162,13 +157,7 @@ _idle_leave_tasks = {}
 
 _stop_log_last: dict = {}
 
-# Two /play commands landing on the same chat within the ~13s group-call
-# handshake used to race each other into join_call: both saw "not active",
-# the second wiped the first track's queue and started its own join, and the
-# result was a card with no audio (only lyrics) or an assistant that never
-# appeared. join_call is serialised per chat, the chat is marked active
-# BEFORE the handshake so a second play queues itself instead of racing, and
-# the active flag is rolled back if the join actually fails.
+# Tracks joins separately so status checks can recognize an in-flight handshake.
 _join_locks: dict = {}
 MEDIA_ERRORS = (TimeoutError, FileNotFoundError, JSONDecodeError, FFmpegError,
                 NoAudioSourceFound, NoVideoSourceFound, InvalidVideoProportion)
@@ -196,11 +185,7 @@ def _was_self_left(chat_id: int) -> bool:
 
 
 async def _rollback_join(chat_id: int) -> None:
-    """Undo the pre-handshake active-marking when the join truly fails.
-
-    Without this a failed join leaves the chat 'active' and every following
-    /play silently queues behind a call that nobody is in.
-    """
+    """Discard local playback state after a failed connection or state commit."""
     await _clear_(chat_id, "Playback could not start.")
 
 
@@ -279,7 +264,7 @@ async def _chat_has_live_call(chat_id: int, calls) -> bool | None:
     missing = False
     for client in calls:
         try:
-            if chat_id in await client._binding.calls():
+            if chat_id in await client.calls:
                 return True
         except Exception:
             missing = True
@@ -341,6 +326,14 @@ async def _spawn_then_clean(_, chat_id, old_mystic, *spawn_args, **spawn_kw):
     return mid_np
 
 
+def _serialize_playback(method):
+    @wraps(method)
+    async def locked(self, chat_id, *args, **kwargs):
+        async with playback_lock(chat_id):
+            return await method(self, chat_id, *args, **kwargs)
+    return locked
+
+
 class Call:
     def __init__(self):
         self.calls = []
@@ -367,10 +360,14 @@ class Call:
         lock = _join_locks.get(chat_id)
         if lock is not None and lock.locked():
             return True
-        if await _chat_has_live_call(chat_id, self.calls) is not False:
+        # A previous join may have completed before its queue entry was saved.
+        # Start the requested track instead of appending behind a missing head.
+        if not db.get(chat_id):
+            return False
+        native = await _chat_has_live_call(chat_id, self.calls)
+        if native is True:
             return True
-        in_call = await _assistant_still_in_call(chat_id)
-        if in_call is not False:
+        if native is None and await _assistant_still_in_call(chat_id) is not False:
             return True
         LOGGER(__name__).info(
             "[Call] stale active chat %s (assistant not in call); clearing queue",
@@ -379,12 +376,14 @@ class Call:
         await _clear_(chat_id)
         return False
 
+    @_serialize_playback
     async def pause_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         await assistant.pause(chat_id)
         if chat_id in current:
             current[chat_id].pause()
 
+    @_serialize_playback
     async def resume_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         await assistant.resume(chat_id)
@@ -399,6 +398,7 @@ class Call:
         assistant = await group_assistant(self, chat_id)
         await assistant.unmute(chat_id)
 
+    @_serialize_playback
     async def stop_stream(self, chat_id: int, reason="Playback stopped."):
         # Cleanup must not depend on resolving the assistant: if that lookup
         # fails, the stale active flag would keep growing the queue forever.
@@ -423,6 +423,7 @@ class Call:
                     f"Failed to stop stream for chat {chat_id}: {e}"
                 )
 
+    @_serialize_playback
     async def force_stop_stream(self, chat_id: int):
         _mark_self_left(chat_id)
         current.pop(chat_id, None)
@@ -440,6 +441,7 @@ class Call:
         except Exception as e:
             LOGGER(__name__).error(f"Failed to force leave call for chat {chat_id}: {e}")
 
+    @_serialize_playback
     async def skip_stream(
         self,
         chat_id: int,
@@ -486,12 +488,13 @@ class Call:
                 ffmpeg_parameters=ffmpeg_params,
             )
 
-        await assistant.play(chat_id, stream, config=call_config)
+        await self._switch_source(assistant, chat_id, stream, call_config)
         # A skipped-in track just began: its end event must not be mistaken
         # for the replaced track's echo (or the reverse).
         current[chat_id] = Playback(link)
         self._schedule_idle_leave(assistant, chat_id)
 
+    @_serialize_playback
     async def seek_stream(self, chat_id, file_path, to_seek, duration, mode):
         assistant = await group_assistant(self, chat_id)
         audio_stream_quality = await get_audio_bitrate(chat_id)
@@ -518,7 +521,7 @@ class Call:
             "[Call] seek_stream chat=%s seek=%s duration=%s mode=%s",
             chat_id, to_seek, duration, mode,
         )
-        await assistant.play(chat_id, stream, config=call_config)
+        await self._switch_source(assistant, chat_id, stream, call_config)
         offset = 0
         for part in str(to_seek).split(":"):
             offset = offset * 60 + float(part)
@@ -568,7 +571,7 @@ class Call:
             if member.status == ChatMemberStatus.BANNED:
                 raise AssistantErr(_["call_2"].format(userbot.username, userbot.id))
             if member.status != ChatMemberStatus.LEFT:
-                return
+                return False
         try:
             chat = await app.get_chat(chat_id)
         except ChatAdminRequired:
@@ -634,7 +637,7 @@ class Call:
                 raise AssistantErr(_["call_9"].format(config.SUPPORT_GROUP))
         except FloodWait as e:
             time = e.value
-            if time < 20:
+            if time < 20 and attempts == 1:
                 await asyncio.sleep(time)
                 attempts += 1
                 return await self.join_chat(chat_id, attempts)
@@ -675,26 +678,52 @@ class Call:
             if friendly:
                 raise AssistantErr(_["call_3"].format(friendly))
             raise AssistantErr(_["call_3"].format(f"{type(e).__name__}: {e}"))
+        return True
+
+    async def _prepare_stream(self, chat_id, stream):
+        started = time.monotonic()
+        try:
+            async with asyncio.timeout(48):
+                await stream.check_stream()
+        except TimeoutError as exc:
+            LOGGER(__name__).warning("[Call] media probe timed out chat=%s elapsed=%.1fs",
+                                     chat_id, time.monotonic() - started)
+            raise FFmpegError("Media probe timed out") from exc
+        if stream.microphone is None and stream.camera is None and stream.screen is None:
+            raise FFmpegError("No playable media tracks")
+        return Stream(stream.microphone, stream.speaker, stream.camera, stream.screen)
+
+    async def _switch_source(self, client, chat_id, stream, call_config):
+        prepared = await self._prepare_stream(chat_id, stream)
+        try:
+            async with asyncio.timeout(28):
+                await client.play(chat_id, prepared, config=call_config)
+        except (TimeoutError, asyncio.CancelledError) as exc:
+            try:
+                await self._reset_stale_call(client, chat_id)
+            finally:
+                await _rollback_join(chat_id)
+            if isinstance(exc, TimeoutError):
+                raise AssistantErr("Voice connection timed out.") from exc
+            raise
 
     async def _reset_stale_call(self, client, chat_id):
-        LOGGER(__name__).warning("[Call] resetting stale VC state for chat %s", chat_id)
         try:
-            await client._app.leave_group_call(chat_id)
-        except Exception as e:
-            LOGGER(__name__).debug(
-                "[Call] leave_group_call reset skipped for %s: %s", chat_id, e
-            )
-        try:
-            await client._clear_call(chat_id)
-        except Exception as e:
-            LOGGER(__name__).debug(
-                "[Call] clear_call reset skipped for %s: %s", chat_id, e
-            )
-        try:
-            client._app.set_in_call(chat_id, False)
-        except Exception:
+            async with asyncio.timeout(6):
+                await client.leave_call(chat_id)
+        except NotInCallError:
+            # _connect_call can stop the native binding before raising.
+            # Its public leave then returns before sending the MTProto leave.
+            async with asyncio.timeout(6):
+                if await _assistant_still_in_call(chat_id) is True:
+                    await client._app.leave_group_call(chat_id)
+        except NoActiveGroupCall:
             pass
+        except Exception as exc:
+            LOGGER(__name__).warning("[Call] leave failed chat=%s error=%s", chat_id, type(exc).__name__)
+            raise
 
+    @_serialize_playback
     async def join_call(
         self,
         chat_id: int,
@@ -707,13 +736,10 @@ class Call:
         # ~13s handshake is running must queue, not race.
         lock = _join_locks.setdefault(chat_id, asyncio.Lock())
         async with lock:
-            try:
+            async with asyncio.timeout(80):
                 return await self._join_call_locked(
                     chat_id, original_chat_id, link, video, image
                 )
-            except (Exception, asyncio.CancelledError):
-                await _rollback_join(chat_id)
-                raise
 
     async def _join_call_locked(
         self,
@@ -725,11 +751,6 @@ class Call:
     ):
         import time as _t
         _j0 = _t.monotonic()
-        self._cancel_idle_leave(chat_id)
-        await add_active_chat(chat_id)
-        await music_on(chat_id)
-        if video:
-            await add_active_video_chat(chat_id)
         assistant = await group_assistant(self, chat_id)
         LOGGER(__name__).info("[Call] join_call: group_assistant %.1fs", _t.monotonic() - _j0)
         audio_stream_quality = await get_audio_bitrate(chat_id)
@@ -763,119 +784,71 @@ class Call:
                 ffmpeg_parameters=ffmpeg_params,
             )
 
-        LOGGER(__name__).info("[Call] join_call: MediaStream built at %.1fs", _t.monotonic() - _j0)
+        prepared = await self._prepare_stream(chat_id, stream)
+        self._cancel_idle_leave(chat_id)
+        started = _t.monotonic()
+        LOGGER(__name__).info("[Call] media ready chat=%s elapsed=%.1fs", chat_id, started - _j0)
         try:
-            await assistant.play(
-                chat_id=chat_id,
-                stream=stream,
-                config=call_config,
-            )
-            LOGGER(__name__).info("[Call] join_call: assistant.play done at %.1fs", _t.monotonic() - _j0)
-        except (NoActiveGroupCall, UserNotParticipant, ChannelPrivate):
-            await self.join_chat(chat_id)
-            assistant = await group_assistant(self, chat_id)
-            for settle in (0.6, 2.5, 6.0):
-                await asyncio.sleep(settle)
+            async with asyncio.timeout(28):
+                if chat_id not in current and chat_id in await assistant.calls:
+                    if await _assistant_still_in_call(chat_id) is False:
+                        await self._reset_stale_call(assistant, chat_id)
                 try:
-                    await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
-                    break
-                except NoActiveGroupCall:
-                    continue
-            else:
-                raise AssistantErr("**No Active Voice Chat Found**")
-        except AlreadyJoinedError:
-            # The assistant is already in the call: the behaviour users need
-            # is a clean source switch, not an error splash. A short settle
-            # then replay also heals the mid-handshake "mic off / silent"
-            # state left over from racing plays.
-            LOGGER(__name__).info(
-                "[Call] AlreadyJoinedError on first play for chat %s; settle+replay", chat_id
-            )
-            await asyncio.sleep(0.75)
-            try:
-                await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
-            except Exception as e:
-                LOGGER(__name__).warning(
-                    "[Call] replay after AlreadyJoinedError failed for chat %s: %s: %s",
-                    chat_id, type(e).__name__, e,
-                )
-                raise AssistantErr(
-                    "**ASSISTANT IS ALREADY IN VOICECHAT **\n\nMusic bot system detected that assistant is already in the voicechat, if the problem continues restart the videochat and try again."
-                )
-        except TelegramServerError:
-            raise AssistantErr(
-                "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
-            )
-        except (asyncio.TimeoutError, TimeoutError):
-            for attempt in (1, 2, 3):
-                LOGGER(__name__).warning(
-                    "[Call] play timed out for chat %s; retry %d", chat_id, attempt
-                )
-                if attempt == 2:
-                    await self._reset_stale_call(assistant, chat_id)
-                await asyncio.sleep(3 * attempt)
-                try:
-                    await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
-                    break
-                except AlreadyJoinedError:
-                    await asyncio.sleep(0.75)
-                    try:
-                        await assistant.play(chat_id=chat_id, stream=stream, config=call_config)
-                        break
-                    except Exception as e:
-                        LOGGER(__name__).warning(
-                            "[Call] replay after timeout failed for chat %s: %s: %s",
-                            chat_id, type(e).__name__, e,
-                        )
-                except (NoActiveGroupCall, UserNotParticipant, ChannelPrivate):
-                    await self.join_chat(chat_id)
+                    await assistant.play(chat_id, prepared, config=call_config)
+                except (UserNotParticipant, ChannelPrivate, NoActiveGroupCall):
+                    if not await self.join_chat(chat_id):
+                        raise
                     assistant = await group_assistant(self, chat_id)
-                except (asyncio.TimeoutError, TimeoutError):
-                    continue
-                except TelegramServerError:
-                    raise AssistantErr(
-                        "**TELEGRAM SERVER ERROR**\n\nPlease restart Your voicechat."
-                    )
-            else:
-                raise AssistantErr(
-                    "**VOICE CONNECTION TIMEOUT**\n\nPlease restart the voicechat and try again."
-                )
-        # Fresh join: the stream begins now. Covers every replay path above
-        # since this is the common tail of join_call.
+                    await assistant.play(chat_id, prepared, config=call_config)
+            await add_active_chat(chat_id)
+            await music_on(chat_id)
+            if video:
+                await add_active_video_chat(chat_id)
+        except (Exception, asyncio.CancelledError) as exc:
+            LOGGER(__name__).warning("[Call] voice join failed chat=%s elapsed=%.1fs error=%s",
+                                     chat_id, _t.monotonic() - started, type(exc).__name__)
+            try:
+                await self._reset_stale_call(assistant, chat_id)
+            except Exception as cleanup_error:
+                LOGGER(__name__).warning("[Call] cleanup incomplete chat=%s error=%s",
+                                         chat_id, type(cleanup_error).__name__)
+            await _rollback_join(chat_id)
+            if isinstance(exc, TimeoutError):
+                raise AssistantErr("**Voice connection timed out. Please try again.**") from exc
+            if isinstance(exc, NoActiveGroupCall):
+                raise AssistantErr("**No active voice chat found.**") from exc
+            if isinstance(exc, TelegramServerError):
+                raise AssistantErr("**Telegram could not connect the assistant. Please try again.**") from exc
+            raise
+        LOGGER(__name__).info("[Call] voice connected chat=%s elapsed=%.1fs", chat_id, _t.monotonic() - started)
         current[chat_id] = Playback(link)
         self._schedule_idle_leave(assistant, chat_id)
 
     async def warm_join(self, chat_id):
-        """Resolve the peer and the active group call ahead of the real join.
-
-        Both round trips are Telegram-side, so doing them while the stream URL
-        is being resolved hides most of the handshake latency.
-        """
+        """Warm the selected assistant's peer resolution without mutating call state."""
         try:
-            assistant = await group_assistant(self, chat_id)
-            if chat_id in await assistant._binding.calls():
-                return
-            resolved = await assistant.resolve_chat_id(chat_id)
-            await assistant._app.get_input_call(resolved)
-            assistant._cache_user_peer.put(resolved, assistant._cache_local_peer)
+            async with asyncio.timeout(5):
+                assistant = await group_assistant(self, chat_id)
+                await assistant.resolve_chat_id(chat_id)
         except Exception as e:
             LOGGER(__name__).debug("warm_join for %s skipped: %s", chat_id, e)
 
     async def _delayed_leave(self, client, chat_id, delay=None):
         await asyncio.sleep(delay if delay is not None else VC_IDLE_GRACE)
-        if db.get(chat_id):
-            return
-        try:
-            await client.leave_call(chat_id, close=False)
-            _mark_self_left(chat_id)
-            LOGGER(__name__).info("[Call] idle leave done for chat %s", chat_id)
-        except Exception as e:
-            LOGGER(__name__).error(f"Failed idle leave for chat {chat_id}: {e}")
-        finally:
-            # We are out of the call: drop the active flag too, otherwise the
-            # next /play queues behind a call that no longer exists.
-            await _clear_(chat_id)
-            _idle_leave_tasks.pop(chat_id, None)
+        async with playback_lock(chat_id):
+            if db.get(chat_id):
+                return
+            try:
+                await client.leave_call(chat_id, close=False)
+                _mark_self_left(chat_id)
+                LOGGER(__name__).info("[Call] idle leave done for chat %s", chat_id)
+            except Exception as e:
+                LOGGER(__name__).error(f"Failed idle leave for chat {chat_id}: {e}")
+            finally:
+                # We are out of the call: drop the active flag too, otherwise the
+                # next /play queues behind a call that no longer exists.
+                await _clear_(chat_id)
+                _idle_leave_tasks.pop(chat_id, None)
 
     def _cancel_idle_leave(self, chat_id):
         task = _idle_leave_tasks.pop(chat_id, None)
@@ -895,9 +868,19 @@ class Call:
     async def change_stream(self, client, chat_id, *, ended=False):
         source = current.get(chat_id)
         async with playback_lock(chat_id):
-            if source is None or current.get(chat_id) is not source or not db.get(chat_id):
+            if source is None or current.get(chat_id) is not source:
                 return
             if await group_assistant(self, chat_id) is not client:
+                return
+            if not db.get(chat_id):
+                if ended:
+                    LOGGER(__name__).info("[Call] audio ended with empty queue chat=%s; leaving", chat_id)
+                    self._cancel_idle_leave(chat_id)
+                    _mark_self_left(chat_id)
+                    try:
+                        await self._reset_stale_call(client, chat_id)
+                    finally:
+                        await _clear_(chat_id, "Playback ended.")
                 return
             entry = db[chat_id][0]
             elapsed = int(source.position())
@@ -1033,7 +1016,7 @@ class Call:
                             ffmpeg_parameters=ffmpeg_params,
                         )
                 try:
-                    await client.play(chat_id, stream, config=call_config)
+                    await self._switch_source(client, chat_id, stream, call_config)
                     current[chat_id] = Playback(link)
                 except Exception:
                     await _drop_old_card(old_mystic)
@@ -1116,7 +1099,7 @@ class Call:
                     )
                 )
                 try:
-                    await client.play(chat_id, stream, config=call_config)
+                    await self._switch_source(client, chat_id, stream, call_config)
                     current[chat_id] = Playback(play_source)
                 except Exception:
                     await _drop_old_card(old_mystic)
@@ -1172,7 +1155,7 @@ class Call:
                             ffmpeg_parameters=ffmpeg_params,
                         )
                 try:
-                    await client.play(chat_id, stream, config=call_config)
+                    await self._switch_source(client, chat_id, stream, call_config)
                     current[chat_id] = Playback(queued)
                 except Exception:
                     await _drop_old_card(old_mystic)
