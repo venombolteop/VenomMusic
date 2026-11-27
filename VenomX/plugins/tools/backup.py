@@ -12,7 +12,7 @@ from pyrogram.errors import FloodWait
 from config import BANNED_USERS, MONGO_DB_URI, OWNER_ID
 from VenomX import app
 from VenomX.core.mongo import DB_NAME
-from VenomX.utils.rich_msg import ids_of, send_rich
+from VenomX.utils.rich_msg import no_preview, ids_of, send_rich
 from VenomX.utils.rich_msg import reply_note, status_card
 
 
@@ -50,10 +50,10 @@ async def edit_or_reply(mystic, text):
     if chat_id and mid and await send_rich(chat_id, f"<p>{text}</p>"):
         return None
     try:
-        return await mystic.edit_text(text, disable_web_page_preview=True)
+        return await mystic.edit_text(text, link_preview_options=no_preview())
     except FloodWait as e:
         await asyncio.sleep(e.value)
-        return await mystic.edit_text(text, disable_web_page_preview=True)
+        return await mystic.edit_text(text, link_preview_options=no_preview())
 
 
 @app.on_message(filters.command("export") & ~BANNED_USERS)

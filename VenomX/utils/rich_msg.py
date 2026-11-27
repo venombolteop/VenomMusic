@@ -17,6 +17,7 @@ from pathlib import Path
 
 import httpx
 from pyrogram import ContinuePropagation
+from pyrogram.types import LinkPreviewOptions
 
 from VenomX.utils.premium import _DB_EMOJI_FALLBACK
 
@@ -972,6 +973,10 @@ def _style_status(text: str) -> str:
     return heading
 
 
+def no_preview() -> LinkPreviewOptions:
+    return LinkPreviewOptions(is_disabled=True)
+
+
 async def status_card(chat_id: int, text: str, fallback_message=None):
     """Send a rich 'working on it...' card and return its adapter handle.
 
@@ -986,7 +991,7 @@ async def status_card(chat_id: int, text: str, fallback_message=None):
     if not mid and fallback_message is not None:
         try:
             return await fallback_message.reply_text(
-                text, disable_web_page_preview=True
+                text, link_preview_options=no_preview()
             )
         except Exception:  # noqa: BLE001
             return RichMystic(chat_id, None)
@@ -1035,7 +1040,7 @@ async def edit_any(mystic, text: str, reply_markup=None) -> bool:
             pass
     try:
         await mystic.edit_text(text, reply_markup=reply_markup,
-                               disable_web_page_preview=True)
+                               link_preview_options=no_preview())
         return True
     except Exception:  # noqa: BLE001
         return False

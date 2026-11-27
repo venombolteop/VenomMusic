@@ -14,6 +14,7 @@ from VenomX.utils import bot_sys_stats
 from VenomX.utils.decorators.language import language
 from VenomX.utils.inline import support_group_markup
 from VenomX.utils.rich_msg import (
+    no_preview,
     edit_rich,
     pemoji,
     rich_esc,
@@ -64,7 +65,7 @@ async def ping_com(client, message, _):
                 f"🛑 ᴄᴘᴜ: {CPU}\n"
                 f"🌩 ᴅɪsᴋ: {DISK}\n"
                 f"📞 ᴄʙ ʟᴀᴛᴇɴᴄʏ: {pytgping}",
-                disable_web_page_preview=True,
+                link_preview_options=no_preview(),
             )
         except Exception:
             pass

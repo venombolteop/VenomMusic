@@ -7,7 +7,7 @@ from pyrogram.types import Message
 from strings import command
 from VenomX import app
 from VenomX.misc import SUDOERS, db
-from VenomX.utils.rich_msg import reply_note, status_card
+from VenomX.utils.rich_msg import no_preview, reply_note, status_card
 from VenomX.utils.database.memorydatabase import (
     get_active_chats,
     get_active_video_chats,
@@ -46,7 +46,7 @@ async def activevc(_, message: Message):
     else:
         await mystic.edit_text(
             f"**Active Voice Chat's:-**\n\n{text}",
-            disable_web_page_preview=True,
+            link_preview_options=no_preview(),
         )
 
 
@@ -73,7 +73,7 @@ async def activevi_(_, message: Message):
     else:
         await mystic.edit_text(
             f"**Active Video Chat's:-**\n\n{text}",
-            disable_web_page_preview=True,
+            link_preview_options=no_preview(),
         )
 
 

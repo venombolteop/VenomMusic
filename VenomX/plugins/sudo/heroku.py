@@ -34,7 +34,7 @@ from VenomX.utils.database import (
 from VenomX.utils.decorators import AdminActual, language
 from VenomX.utils.decorators.language import language
 from VenomX.utils.pastebin import Ayushbin
-from VenomX.utils.rich_msg import send_note, send_rich
+from VenomX.utils.rich_msg import no_preview, send_note, send_rich
 from VenomX.utils.rich_msg import reply_note, status_card
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -278,10 +278,10 @@ async def update_(client, message, _):
         url = await Ayushbin(updates)
         nrs = await response.edit(
             f"**A new update is available for the Bot!**\n\n➣ Pushing updates Now\n\n__**Updates:**__\n\n[Check Updates]({url})",
-            disable_web_page_preview=True,
+            link_preview_options=no_preview(),
         )
     else:
-        nrs = await response.edit(_final_updates_, disable_web_page_preview=True)
+        nrs = await response.edit(_final_updates_, link_preview_options=no_preview())
     os.system("git stash &> /dev/null && git pull")
 
     try:
@@ -299,7 +299,7 @@ async def update_(client, message, _):
         await response.edit(
             _final_updates_
             + f"» Bot Updated Sucessfully Now wait until the bot starts",
-            disable_web_page_preview=True,
+            link_preview_options=no_preview(),
         )
     except Exception:
         pass

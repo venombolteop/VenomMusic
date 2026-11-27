@@ -1,5 +1,6 @@
 from VenomX import app
 from VenomX.utils.rich_msg import (
+    no_preview,
     reply_note,
     rich_esc,
     send_rich,
@@ -70,6 +71,6 @@ async def getid(client, message):
 
     await reply_note(message, 
         text,
-        disable_web_page_preview=True,
+        link_preview_options=no_preview(),
         parse_mode=ParseMode.DEFAULT,
   )

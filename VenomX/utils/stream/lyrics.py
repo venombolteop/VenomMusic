@@ -16,18 +16,9 @@ import time
 import aiohttp
 
 import config
-from pyrogram.types import LinkPreviewOptions
 
 from VenomX import LOGGER
-
-
-def no_preview():
-    """Send with the link preview off.
-
-    `disable_web_page_preview` is the old spelling and pyrogram now takes the
-    options object; the flag still works but is on its way out.
-    """
-    return LinkPreviewOptions(is_disabled=True)
+from VenomX.utils.rich_msg import no_preview
 
 LRC_LINE = re.compile(r"\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]")
 

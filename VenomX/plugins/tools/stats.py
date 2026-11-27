@@ -41,6 +41,7 @@ from VenomX.utils.inline.stats import (
     top_ten_stats_markup,
 )
 from VenomX.utils.rich_msg import (
+    no_preview,
     edit_rich,
     pemoji,
     rich_esc,
@@ -68,7 +69,7 @@ async def stats_global(client, message, _):
             await message.reply_text(
                 f"📊 ᴠᴇɴᴏᴍ sᴛᴀᴛs — @{app.username}\n"
                 + _["gstats_11"].format(f"@{app.username}"),
-                disable_web_page_preview=True,
+                link_preview_options=no_preview(),
             )
         except Exception:
             pass
@@ -84,7 +85,7 @@ async def gstats_global(client, message, _):
         # Status card failed — answer now so the command is never silent.
         try:
             await message.reply_text(
-                _["gstats_1"], disable_web_page_preview=True
+                _["gstats_1"], link_preview_options=no_preview()
             )
         except Exception:
             pass
@@ -98,7 +99,7 @@ async def gstats_global(client, message, _):
         if not await send_rich(message.chat.id, body):
             try:
                 await message.reply_text(
-                    fallback_text, disable_web_page_preview=True
+                    fallback_text, link_preview_options=no_preview()
                 )
             except Exception:
                 pass

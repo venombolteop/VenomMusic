@@ -42,7 +42,7 @@ from VenomX.utils.database import (
 )
 from VenomX.utils.exceptions import AssistantErr
 from VenomX.utils.rich_panels import spawn_now_playing
-from VenomX.utils.rich_msg import RichMystic, send_rich
+from VenomX.utils.rich_msg import no_preview, RichMystic, send_rich
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
 
@@ -771,7 +771,7 @@ class Call:
                         )
                     except Exception:
                         return await mystic.edit_text(
-                            _["call_7"], disable_web_page_preview=True
+                            _["call_7"], link_preview_options=no_preview()
                         )
                 is_remote = _needs_proxy(stream_link)
                 ffmpeg_params = (_REMOTE_FFMPEG_PARAMS_VIDEO if is_remote else _LOCAL_FFMPEG_PARAMS_VIDEO) if video else (_REMOTE_FFMPEG_PARAMS if is_remote else _LOCAL_FFMPEG_PARAMS)

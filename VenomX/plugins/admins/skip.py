@@ -21,7 +21,7 @@ from VenomX.utils.database import get_instant_play, get_loop
 from VenomX.utils.decorators import AdminRightsCheck
 from VenomX.utils.stream.autoclear import auto_clean
 from VenomX.utils.thumbnails import gen_thumb
-from VenomX.utils.rich_msg import reply_note, status_card
+from VenomX.utils.rich_msg import no_preview, reply_note, status_card
 
 
 async def _start_lyrics_for_skip(chat_id, title, duration):
@@ -77,7 +77,7 @@ async def skip(cli, message: Message, _, chat_id):
                             _["admin_10"].format(
                                 message.from_user.first_name
                             ),
-                            disable_web_page_preview=True,
+                            link_preview_options=no_preview(),
                         )
                         await Ayush.stop_stream(chat_id)
                     except Exception:
@@ -100,7 +100,7 @@ async def skip(cli, message: Message, _, chat_id):
             if not check:
                 await reply_note(message, 
                     _["admin_10"].format(message.from_user.first_name),
-                    disable_web_page_preview=True,
+                    link_preview_options=no_preview(),
                 )
                 try:
                     return await Ayush.stop_stream(chat_id)
@@ -110,7 +110,7 @@ async def skip(cli, message: Message, _, chat_id):
             try:
                 await reply_note(message, 
                     _["admin_10"].format(message.from_user.first_name),
-                    disable_web_page_preview=True,
+                    link_preview_options=no_preview(),
                 )
                 return await Ayush.stop_stream(chat_id)
             except Exception:
@@ -141,7 +141,7 @@ async def skip(cli, message: Message, _, chat_id):
     elif "vid_" in queued:
         from VenomX.utils.stream.stream import play_youtube_source
 
-        mystic = await status_card(message.chat.id, _["call_8"], disable_web_page_preview=True)
+        mystic = await status_card(message.chat.id, _["call_8"], fallback_message=message)
         try:
             await play_youtube_source(
                 videoid, status, mystic, partial(Ayush.skip_stream, chat_id, video=status),
