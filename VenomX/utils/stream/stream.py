@@ -10,6 +10,7 @@ import time as _time
 from functools import partial
 from urllib.parse import urlencode
 from VenomX.utils.stream.playback import playback_lock
+from VenomX.utils.playback_download import cached_playback
 from random import randint
 from typing import Union
 
@@ -43,6 +44,7 @@ from VenomX.utils.thumbnails import gen_qthumb, gen_thumb
 slog = logging.getLogger("VenomX.utils.stream.stream")
 
 
+_PLAYBACK_SETUP_SECONDS = 100
 _VIDEO_HEIGHTS = (144, 240, 360, 480, 720, 1080, 1440, 2160)
 
 
@@ -152,13 +154,22 @@ async def _api_stream_url(vidid, video):
 async def play_youtube_source(vidid, video, mystic, play, instant=True):
     """Try each source once. Only source errors should move playback to another source."""
     try:
-        async with asyncio.timeout(100):
-            return await _play_youtube_source(vidid, video, mystic, play, instant)
+        deadline = _time.monotonic() + _PLAYBACK_SETUP_SECONDS
+        async with asyncio.timeout(_PLAYBACK_SETUP_SECONDS):
+            return await _play_youtube_source(vidid, video, play, instant, deadline)
     except TimeoutError as exc:
         raise AssistantErr("Playback setup exceeded its deadline.") from exc
 
 
-async def _play_youtube_source(vidid, video, mystic, play, instant):
+async def _play_youtube_source(vidid, video, play, instant, deadline):
+    cached = await cached_playback(vidid, video)
+    if cached:
+        try:
+            await play(cached)
+            return cached
+        except MEDIA_ERRORS as exc:
+            slog.warning("Cached playback failed for %s (%s)", vidid, type(exc).__name__)
+
     if instant:
         try:
             permalink = await _api_stream_url(vidid, video)
@@ -185,7 +196,9 @@ async def _play_youtube_source(vidid, video, mystic, play, instant):
             except MEDIA_ERRORS as exc:
                 slog.warning("Direct playback failed for %s (%s)", vidid, type(exc).__name__)
     try:
-        path, _ = await Platform.youtube.download(vidid, mystic, videoid=True, video=video)
+        path = await Platform.youtube.playback_file(vidid, video, _video_height(), deadline)
+    except AssistantErr:
+        raise
     except Exception as exc:
         raise AssistantErr(f"Could not download this track ({type(exc).__name__}).") from exc
     try:

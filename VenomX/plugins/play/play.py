@@ -533,7 +533,7 @@ async def play_commnd(
             except Exception:
                 pass
             if ex_type == "AssistantErr":
-                err = e
+                err = str(e)
             else:
                 LOGGER(__name__).error("An error occurred", exc_info=True)
 

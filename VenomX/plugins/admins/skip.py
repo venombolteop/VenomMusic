@@ -14,6 +14,7 @@ from config import BANNED_USERS
 from strings import command
 from VenomX import LOGGER, Platform, app
 from VenomX.core.call import Ayush
+from VenomX.utils.exceptions import AssistantErr
 from VenomX.misc import db
 from VenomX.utils.rich_panels import spawn_now_playing
 from VenomX.utils.stream import lyrics as lyrics_display
@@ -147,6 +148,8 @@ async def skip(cli, message: Message, _, chat_id):
                 videoid, status, mystic, partial(Ayush.skip_stream, chat_id, video=status),
                 instant=await get_instant_play(chat_id),
             )
+        except AssistantErr as exc:
+            return await mystic.edit_text(str(exc))
         except Exception:
             return await mystic.edit_text(_["call_7"])
         asyncio.create_task(_start_lyrics_for_skip(chat_id, title, check[0]["dur"]))

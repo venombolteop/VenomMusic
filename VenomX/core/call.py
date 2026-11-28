@@ -1042,6 +1042,9 @@ class Call:
                         partial(self.skip_stream, chat_id, video=video, image=image),
                         instant=await get_instant_play(chat_id),
                     )
+                except AssistantErr as exc:
+                    await _drop_old_card(old_mystic)
+                    return await mystic.edit_text(str(exc))
                 except Exception:
                     await _drop_old_card(old_mystic)
                     return await mystic.edit_text(_["call_7"])

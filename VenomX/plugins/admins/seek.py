@@ -1,13 +1,13 @@
 
 # All rights reserved.
 #
-import glob
 
 from pyrogram import filters
 from pyrogram.types import Message
 
 from config import BANNED_USERS
 from strings import command
+from VenomX.utils.playback_download import cached_playback
 from VenomX import Platform, app
 from VenomX.core.call import Ayush
 from VenomX.misc import db
@@ -55,10 +55,8 @@ async def seek_comm(cli, message: Message, _, chat_id):
         streamtype = playing[0]["streamtype"]
         video = True if str(streamtype) == "video" else False
         vidid = playing[0]["vidid"]
-        downloaded = glob.glob(f"downloads/{vidid}.*")
-        if downloaded:
-            file_path = downloaded[0]
-        else:
+        file_path = await cached_playback(vidid, video)
+        if not file_path:
             from VenomX.utils.stream.stream import _api_stream_url
 
             file_path = await _api_stream_url(vidid, video)

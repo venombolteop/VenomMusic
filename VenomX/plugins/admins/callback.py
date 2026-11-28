@@ -1,7 +1,6 @@
 
 # All rights reserved.
 #
-import glob
 from functools import partial
 import random
 
@@ -19,8 +18,10 @@ from config import (
     adminlist,
     lyrical,
 )
+from VenomX.utils.playback_download import cached_playback
 from VenomX import Platform, app
 from VenomX.core.call import Ayush
+from VenomX.utils.exceptions import AssistantErr
 from VenomX.misc import SUDOERS, db
 from VenomX.utils import seconds_to_min, time_to_seconds
 from VenomX.utils.channelplay import get_channeplayCB
@@ -323,6 +324,8 @@ async def admin_callback(client, CallbackQuery, _):
                     videoid, status, mystic, partial(Ayush.skip_stream, chat_id, video=status),
                     instant=await get_instant_play(chat_id),
                 )
+            except AssistantErr as exc:
+                return await mystic.edit_text(str(exc))
             except Exception:
                 return await mystic.edit_text(_["call_7"])
             img = await gen_thumb(videoid)
@@ -401,10 +404,8 @@ async def admin_callback(client, CallbackQuery, _):
             # are bound to the proxy exit IP and can 403 at playback.
             video = True if str(playing[0]["streamtype"]) == "video" else False
             _vidid = playing[0]["vidid"]
-            _cached = glob.glob(f"downloads/{_vidid}.*")
-            if _cached:
-                file_path = _cached[0]
-            else:
+            file_path = await cached_playback(_vidid, video)
+            if not file_path:
                 from VenomX.utils.stream.stream import _api_stream_url
 
                 file_path = await _api_stream_url(_vidid, video)

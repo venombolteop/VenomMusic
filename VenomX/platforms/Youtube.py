@@ -25,6 +25,7 @@ from VenomX.utils.decorators import asyncify
 from VenomX.utils.formatters import seconds_to_min, time_to_seconds
 from VenomX.utils.notify import notify_owner
 from VenomX.utils.media_process import run_media_process
+from VenomX.utils.playback_download import download_playback
 
 _LOG_TAG = "Youtube"
 _YT_SEARCH_TIMEOUT = 10
@@ -721,6 +722,20 @@ class YouTube:
         except Exception as e:
             return False, type(e).__name__
 
+    def _playback_command(self, video):
+        clients = _YT_CLIENTS_STR if video else "web_embedded," + _YT_CLIENTS_STR
+        return [
+            yt_dlp_binary(), "--ignore-config", "--no-playlist", "--no-warnings",
+            *_proxy_args(), *_cookie_args(),
+            "--extractor-args", f"youtube:player_client={clients}",
+            *_pot_args(), "--remote-components", "ejs:github", *_js_runtime_args(),
+            "--user-agent", _YT_HTTP_HEADERS["User-Agent"],
+        ]
+
+    async def playback_file(self, video_id, video, height, deadline):
+        command = await asyncio.to_thread(self._playback_command, video)
+        return await download_playback(command, self.base + video_id, video_id, video, height, deadline)
+
     async def stream_url(
         self,
         link: str,
@@ -734,27 +749,16 @@ class YouTube:
             link = self.base + link
         if "&" in link:
             link = link.split("&")[0]
-        fmt = _VIDEO_FMT if video else _AUDIO_FMT
-        cmd = [
-            yt_dlp_binary(),
-            *_proxy_args(),
-            *_cookie_args(),
-            "-g",
-            "-f",
-            fmt,
-            "--no-playlist",
-            "--extractor-args", f"youtube:player_client={_YT_CLIENTS_STR}",
-            *_pot_args(),
-            "--remote-components", "ejs:github",
-            *_js_runtime_args(),
-            "--user-agent", _YT_HTTP_HEADERS["User-Agent"],
-            f"{link}",
-        ]
+        # A direct player accepts one URL. Separate video/audio formats can
+        # only be used by the local download path, where yt-dlp merges them.
+        height = max(144, min(2160, config.VIDEO_STREAM_LIMIT or 720))
+        fmt = f"best[height<=?{height}]" if video else _AUDIO_FMT
+        command = await asyncio.to_thread(self._playback_command, video)
+        cmd = [*command, "-g", "-f", fmt, "--", link]
         try:
             _, stdout, stderr = await run_media_process(cmd, _YT_DIRECT_TIMEOUT, stderr=subprocess.PIPE)
             elapsed = time.monotonic() - t0
             if stdout:
-                # yt-dlp -g may print multiple lines (video+audio); take first http URL
                 lines = [ln.strip() for ln in stdout.decode().splitlines() if ln.strip()]
                 url = next((ln for ln in lines if ln.startswith("http")), lines[0] if lines else "")
                 if not url:
